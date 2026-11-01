@@ -1,6 +1,6 @@
 # Progress ledger
 
-## Current state — 2026-11-01 23:00 UTC
+## Current state — 2026-11-01
 
 There is no finished custom browser package yet. The current implementation is
 the exact-source **15-file** patch at `6cea97a`, on Chromium `156.0.8078.80`.
@@ -12,8 +12,17 @@ have not yet passed on a custom binary.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Run 41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689), immutable source `67dea4dbe7e2`: source/toolchain/native14/GN preparation passed; Ninja compilation started at 22:05:43 UTC and the job has now entered checkpoint saving. The compiler outcome is not established by that step alone. | Let the existing stage finish saving, inspect its compiler logs/state, then migrate the exact native source changes and rebuild affected outputs. |
-| Windows x64 | [Run 41355069621](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355069621), immutable source `f2f4e1335f61`: complete source extraction, dependency hydration, self-tests and native14 application passed. GN could not execute the extensionless `bin/python3` path, although `bin/python3.exe --version` passed. A complete source/tool checkpoint was saved. | Correct the Windows GN interpreter invocation, migrate the checkpoint to native15 and run GN/Ninja. |
+| macOS arm64 | [Run 41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689), immutable source `67dea4dbe7e2`: completed 10,753 of 57,570 Ninja actions, then Dawn's source generator failed because its nested pinned Go executable was missing. The complete source/compiler checkpoint was saved. | Hydrate the exact nested-DEPS Go toolchain, migrate native14 to native15, regenerate GN and resume the retained objects. |
+| Windows x64 | [Run 41360825174](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41360825174), immutable source `f11cc000794d`: corrected 29-test suite passed, approved source checkpoint restored, native15 migration/verification and GN preparation passed. Compilation ended shortly afterward; the job is saving its checkpoint, with detailed compiler logs pending. | Let checkpoint saving finish, inspect the actual diagnostic, then resume with the measured tool fixes. |
+
+The complete Mac draft checkpoint is
+`checkpoint-mac-arm64-7e08baa8b9ce4a8216f8-41353967689-1`: five SHA-256 checked
+chunks totaling **7,566,257,986 bytes**, with `ready.json` uploaded last before
+the job ended at 23:26:17 UTC. It records `build-ready/failed`, not a finished
+browser. The Go repair uses Dawn's exact `version:3@1.26.6` host package with
+fixed immutable CIPD ZIP hashes and an absolute executable version/host check;
+it leaves the original build pins, compiler arguments and native fingerprints
+unchanged.
 
 The complete Windows draft checkpoint is
 `checkpoint-win-x64-1e3461dc246407d5a3bc-41355069621-1`: five SHA-256 checked
@@ -28,7 +37,8 @@ checkpoints are preserved. Migration is opt-in, allows only these two exact
 seed commits with identical build pins, validates original/patched source
 hashes, preserves unchanged outputs/timestamps, and requires a fresh real build.
 
-Local CI tests currently pass: 29 tests, including bounded no-debugger cleanup, real Ninja
+Local CI tests currently pass: 32 tests, including exact nested-Go selection and
+rejection checks, bounded no-debugger cleanup, real Ninja
 incremental reuse and the real selected-file native14-to-native15 transition;
 the Windows-only extraction integration is skipped locally and has passed on
 the hosted Windows image. These tests establish CI mechanics, not native
@@ -48,6 +58,23 @@ POSIX-only; two Windows process-tree cleanup cases exercise bounded taskkill
 and failure reporting on every host. Production cleanup code is unchanged.
 The retained source checkpoint is unaffected; the corrected 29-test suite
 passes locally and still needs its next hosted Windows execution.
+
+That corrected suite subsequently passed on hosted Windows in run
+`41360825174`; source restoration, native migration and GN preparation also
+passed there. This establishes preparation, not a completed native binary.
+
+Hosted normal Store prerequisite inspection
+[41362212167](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41362212167)
+passed both platforms: six finite capture checks per OS, actual HTTP 200 listing,
+**enabled** Add-to-Chrome DOM/AX buttons, and owned visible native window access
+through the strict platform helpers. All four report/provenance/status/checksum
+assets per OS were downloaded and their asset and manifest hashes verified.
+No Add click, permission acceptance or extension installation occurred. The
+earlier local disabled Add button does not establish a general compatibility
+failure; a local brand-only counterfactual did not enable it. No production
+user-agent/branding patch is justified by those observations. Actual Store
+permission-dialog, install/restart/update/removal checks remain required on
+the custom binaries.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.

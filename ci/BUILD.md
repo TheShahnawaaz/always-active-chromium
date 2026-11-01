@@ -17,7 +17,12 @@ The archive contains the source dependencies. `build.py` hydrates the selected
 host Clang, Rust/libclang, GN's CPython interpreter, Ninja, Node, TypeScript and DevTools build
 dependencies using the **archive's own pinned DEPS**, not moving upstream main.
 It also hydrates Windows WTL/WebView2/7z, Mac ANGLE Metal libraries, and the
-subresource-filter ruleset data. Host Mac Swift comes from the selected Xcode;
+subresource-filter ruleset data. Dawn's source generator uses its own nested
+[DEPS-pinned Go 1.26.6](https://dawn.googlesource.com/dawn/+/8114a24a35eed1db88d1d897e8bd193a8c334712/DEPS):
+the host Mac arm64 or Windows amd64 CIPD package is SHA-256 checked against
+the immutable ZIP digest in `build.py`, then its absolute executable must report
+the expected version and host. It never substitutes a system Go installation.
+Host Mac Swift comes from the selected Xcode;
 the hermetic Swift package is an iOS requirement.
 GCS downloads are SHA-256/size checked against DEPS. GN/Ninja CIPD zip hashes are
 also fixed in `pins.json`; other CIPD build packages use their DEPS version and

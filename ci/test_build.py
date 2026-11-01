@@ -8,6 +8,7 @@ import shutil
 import stat
 import tempfile
 import tarfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 import zipfile
@@ -66,6 +67,66 @@ class HydrationTests(unittest.TestCase):
             metadata = unpack(archive, destination, strip=1, source_archive=True)
             self.assertIn('GNU tar', metadata['version'])
             self.assertEqual((destination / relative).read_bytes(), content)
+
+
+class DawnGoTests(unittest.TestCase):
+    def dawn_fixture(self, root, version=build.DAWN_GO_VERSION):
+        dawn = root / 'third_party/dawn'
+        dawn.mkdir(parents=True)
+        dependencies = {}
+        for host, condition in (('mac-arm64', 'checkout_mac and non_git_source'),
+                                ('windows-amd64', 'checkout_win and non_git_source')):
+            dependencies[f'tools/golang/{host}'] = {
+                'dep_type': 'cipd', 'condition': condition,
+                'packages': [{'package': f'infra/3pp/tools/go/{host}', 'version': version}]}
+        (dawn / 'DEPS').write_text(f'vars = {{"dawn_go_version": {version!r}}}\n'
+                                  f'deps = {dependencies!r}\n', encoding='utf-8')
+        return dawn
+
+    def test_host_go_uses_nested_pin_checksum_and_absolute_executable(self):
+        for platform, host, binary, version in (
+                ('mac-arm64', 'mac-arm64', 'go', 'darwin/arm64'),
+                ('win-x64', 'windows-amd64', 'go.exe', 'windows/amd64')):
+            with self.subTest(platform=platform), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                dawn = self.dawn_fixture(root)
+                hydrate = mock.Mock()
+                with mock.patch.object(build, 'run', return_value=SimpleNamespace(
+                        stdout=f'go version go1.26.6 {version}\n')) as run:
+                    build.hydrate_dawn_go(root, platform, hydrate)
+                entries, base, selected, enabled, checksums = hydrate.call_args.args
+                relative = f'tools/golang/{host}'
+                package = f'infra/3pp/tools/go/{host}'
+                self.assertEqual(base, dawn)
+                self.assertEqual(selected, {relative})
+                self.assertTrue(enabled(entries[relative]['condition']))
+                other = 'windows-amd64' if host == 'mac-arm64' else 'mac-arm64'
+                self.assertFalse(enabled(entries[f'tools/golang/{other}']['condition']))
+                self.assertEqual(checksums, {package: build.DAWN_GO_SHA256[package]})
+                run.assert_called_once_with([dawn / relative / 'bin' / binary, 'version'],
+                                            cwd=dawn, capture_output=True, text=True)
+
+    def test_unexpected_nested_go_pin_is_rejected_before_download(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.dawn_fixture(root, 'version:3@1.26.7')
+            hydrate = mock.Mock()
+            with mock.patch.object(build, 'run') as run:
+                with self.assertRaisesRegex(RuntimeError, 'pinned nested DEPS'):
+                    build.hydrate_dawn_go(root, 'mac-arm64', hydrate)
+            hydrate.assert_not_called()
+            run.assert_not_called()
+
+    def test_wrong_go_version_or_host_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.dawn_fixture(root)
+            for output in ('go version go1.26.5 darwin/arm64\n',
+                           'go version go1.26.6 darwin/amd64\n'):
+                with self.subTest(output=output), mock.patch.object(build, 'run',
+                        return_value=SimpleNamespace(stdout=output)):
+                    with self.assertRaisesRegex(RuntimeError, 'version/host mismatch'):
+                        build.hydrate_dawn_go(root, 'mac-arm64', mock.Mock())
 
 
 class SourceRetentionTests(unittest.TestCase):

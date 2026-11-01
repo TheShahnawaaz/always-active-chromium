@@ -18,6 +18,15 @@ import zipfile
 
 PROJECT = Path(__file__).resolve().parents[1]
 PINS = json.loads((PROJECT / 'ci/pins.json').read_text())
+# Dawn 8114a24a's own DEPS pins these host tools to version:3@1.26.6.
+# SHA256s are the immutable CIPD ZIP object digests, independently resolved
+# from that version. This fulfills the original nested DEPS without changing
+# the pinned compiler/GN configuration or the native patch.
+DAWN_GO_VERSION = 'version:3@1.26.6'
+DAWN_GO_SHA256 = {
+    'infra/3pp/tools/go/mac-arm64': '195ef9ddebdf0b7d3149f8a223ac9c07aea698d26ea410069e4709a3c17f9a7e',
+    'infra/3pp/tools/go/windows-amd64': 'a058eacbccbd7d700ae8a1d8559ea8240871a73585ee1f260098158b13da88f9',
+}
 
 
 def run(command, **kwargs):
@@ -218,6 +227,30 @@ def load_deps(path, platform):
     return scope, variables, enabled
 
 
+def hydrate_dawn_go(src, platform, hydrate_entries):
+    """Install the exact Go that Dawn's source generator calls, never PATH Go."""
+    dawn = src / 'third_party/dawn'
+    scope, variables, enabled = load_deps(dawn / 'DEPS', platform)
+    host = 'windows-amd64' if platform == 'win-x64' else 'mac-arm64'
+    relative = f'tools/golang/{host}'
+    package = f'infra/3pp/tools/go/{host}'
+    dependency = scope['deps'].get(relative)
+    if (variables.get('dawn_go_version') != DAWN_GO_VERSION or
+            not isinstance(dependency, dict) or dependency.get('dep_type') != 'cipd' or
+            dependency.get('packages') != [{'package': package, 'version': DAWN_GO_VERSION}] or
+            not enabled(dependency.get('condition', True))):
+        raise RuntimeError('Dawn Go dependency differs from the pinned nested DEPS')
+    hydrate_entries(scope['deps'], dawn, {relative}, enabled,
+                    {package: DAWN_GO_SHA256[package]})
+    executable = dawn / relative / 'bin' / ('go.exe' if platform == 'win-x64' else 'go')
+    result = run([executable, 'version'], cwd=dawn, capture_output=True, text=True)
+    expected = f'go version go{DAWN_GO_VERSION.split("@", 1)[1]} ' + (
+        'windows/amd64' if platform == 'win-x64' else 'darwin/arm64')
+    if result.stdout.strip() != expected:
+        raise RuntimeError(f'Dawn Go executable version/host mismatch: {result.stdout!r}')
+    print(result.stdout.strip(), flush=True)
+
+
 def hydrate(src, platform):
     scope, variables, enabled = load_deps(src / 'DEPS', platform)
     host = 'windows-amd64' if platform == 'win-x64' else 'mac-arm64'
@@ -237,13 +270,16 @@ def hydrate(src, platform):
         selected.add('src/ui/gl/resources/angle-metal')
     records = []
 
-    def hydrate_entries(entries, base, accept, check):
+    def hydrate_entries(entries, base, accept, check, checksums=None):
         for relative, dep in entries.items():
             if relative not in accept or not isinstance(dep, dict) or not check(dep.get('condition', True)):
                 continue
             target = base / relative
             target.mkdir(parents=True, exist_ok=True)
-            plan = hashlib.sha256(json.dumps([relative, dep, platform, PINS['hydration_revision']], sort_keys=True).encode()).hexdigest()
+            inputs = [relative, dep, platform, PINS['hydration_revision']]
+            if checksums is not None:
+                inputs.append(checksums)
+            plan = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
             marker = target / '.aacc-dependency.json'
             if marker.is_file():
                 previous = json.loads(marker.read_text())
@@ -275,7 +311,8 @@ def hydrate(src, platform):
                         raise RuntimeError('Ninja version differs from the source pin')
                     url = f'https://chrome-infra-packages.appspot.com/dl/{name}/+/{quote(version, safe=":@")}'
                     archive = target / '.aacc-package.zip'
-                    actual = fetch(url, archive, PINS['cipd_sha256'].get(name))
+                    expected_sha = (checksums or {}).get(name, PINS['cipd_sha256'].get(name))
+                    actual = fetch(url, archive, expected_sha)
                     records.append({'url': url, 'sha256': actual})
                     unpack(archive, target)
                     archive.unlink()
@@ -287,6 +324,7 @@ def hydrate(src, platform):
     devtools = src / 'third_party/devtools-frontend/src'
     nested, _, nested_enabled = load_deps(devtools / 'DEPS', platform)
     hydrate_entries(nested['deps'], devtools, {'third_party/esbuild', 'node_modules'}, nested_enabled)
+    hydrate_dawn_go(src, platform, hydrate_entries)
     # This file is normally emitted by gclient, which archive builds do not run.
     values = {}
     for key in scope['gclient_gn_args']:

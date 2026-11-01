@@ -412,7 +412,10 @@ Both are CFT reference observations, not native-browser compatibility results:
 - The native helper verified the owned PID/profile and reported AX trusted and
   available. Its bounded/truncated traversal used an `AXApplication` fallback
   rather than an observed `AXWindow`, so it does not prove that a permission
-  dialog target is available. No native UI action was performed.
+  dialog target is available. That permissive helper readiness result is
+  superseded: the current helper requires an actual same-PID `AXWindow` with
+  known visible/non-minimized state; application/menu fallback roots cannot
+  make it ready. No native UI action was performed.
 - The owned browser closed cleanly; root and POSIX process group were gone.
 
 The installation and permission-dialog gate remains **not tested**, and the
