@@ -24,10 +24,15 @@ other external/self-hosted compute and no additional spending is authorized.
 - Extension source and REA evidence from the initial investigation are retained
   locally, outside the public repository. The binary implementation and
   behavioral verification are still pending.
+- Native C++/Web IDL patch committed as `74613f1`: 13 exact upstream source
+  files, with unchanged browser UI and extension implementation. The applicator
+  validates the complete source set before writing. Independent patch dry-run,
+  apply/verify/idempotence/reverse, partial recovery and wrong-input rejection
+  checks passed. C++ compilation and native runtime behavior are not verified.
 
 ## Work in progress
 
-- Exact-version native patch design and implementation.
+- First hosted compilation and native behavior verification of the written patch.
 - Source/resource-aware resumable GitHub-hosted build pipeline.
 - Extension runtime oracle, behavioral feature matrix, and regression harness.
 - Toolchain hydration and resource-aware runner preparation.

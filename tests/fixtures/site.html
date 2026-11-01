@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Always Active controlled fixture</title>
+<script>
+const events = [];
+const nativeVisibility = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState').get;
+const nativeHidden = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden').get;
+const nativeFullscreen = Object.getOwnPropertyDescriptor(Document.prototype, 'fullscreenElement').get;
+const nativeHasFocus = Document.prototype.hasFocus;
+function readProbe() {
+  return {hidden:document.hidden,visibilityState:document.visibilityState,hasFocus:document.hasFocus(),
+    webkitHidden:document.webkitHidden,webkitVisibilityState:document.webkitVisibilityState,
+    prototypeHidden:nativeHidden.call(document),prototypeVisibilityState:nativeVisibility.call(document),
+    ownHidden:Object.hasOwn(document,'hidden'),ownVisibility:Object.hasOwn(document,'visibilityState'),
+    ownFullscreen:Object.hasOwn(document,'fullscreenElement'),
+    fullscreenElement:document.fullscreenElement?.id ?? null,prototypeFullscreen:nativeFullscreen.call(document)?.id ?? null,
+    fullscreen:document.fullscreen,webkitIsFullScreen:document.webkitIsFullScreen,readyState:document.readyState};
+}
+window.initialProbe = readProbe();
+for (const type of ['visibilitychange','webkitvisibilitychange','pagehide','focus','blur','mouseout','mouseleave','lostpointercapture','fullscreenchange','webkitfullscreenchange','fullscreenerror']) {
+  window.addEventListener(type, e => events.push({type,listener:'window',target:e.target === window?'window':e.target===document?'document':e.target.id||e.target.nodeName,trusted:e.isTrusted,hidden:document.hidden,prototypeVisibilityState:nativeVisibility.call(document),cachedHasFocus:nativeHasFocus.call(document)}), true);
+  document.addEventListener(type, e => events.push({type,listener:'document',target:e.target===document?'document':e.target.id||e.target.nodeName,trusted:e.isTrusted,hidden:document.hidden,prototypeVisibilityState:nativeVisibility.call(document),cachedHasFocus:nativeHasFocus.call(document)}), true);
+}
+window.probeEvents = events;
+window.raf = {count:0,times:[],running:false};
+window.startRaf = () => {
+  raf.running = true; raf.count=0; raf.times=[];
+  const tick = t => { if (!raf.running) return; raf.count++; if (raf.times.length < 1000) raf.times.push(t); raf.id=requestAnimationFrame(tick); };
+  raf.id=requestAnimationFrame(tick);
+};
+window.stopRaf = () => { raf.running=false; cancelAnimationFrame(raf.id); return {count:raf.count,times:raf.times}; };
+window.syntheticProbe = () => {
+  events.length=0;
+  const dispatch = (target,type,init={}) => target.dispatchEvent(new Event(type,{bubbles:true,cancelable:true,...init}));
+  dispatch(document,'visibilitychange'); dispatch(window,'pagehide'); dispatch(window,'blur');
+  dispatch(window,'focus'); dispatch(window,'focus');
+  dispatch(window,'mouseleave'); dispatch(document.body,'mouseout'); dispatch(document.body,'lostpointercapture');
+  dispatch(document.querySelector('input'),'blur'); dispatch(document.querySelector('input'),'focus');
+  dispatch(document.querySelector('input'),'mouseout'); dispatch(document.querySelector('input'),'mouseleave');
+  return events.slice();
+};
+window.frameProbes = async () => {
+  const out = [];
+  for (const f of document.querySelectorAll('iframe')) {
+    const channel = new MessageChannel();
+    out.push(await new Promise((resolve,reject) => {
+      const timer=setTimeout(()=>reject(Error('Frame probe timeout')),5000);
+      channel.port1.onmessage=e=>{clearTimeout(timer);resolve({id:f.id,...e.data});channel.port1.close();};
+      f.contentWindow.postMessage({probe:true},'*',[channel.port2]);
+    }));
+  }
+  return out;
+};
+window.addEventListener('message',e=> {
+  if(e.data?.probe && e.ports[0]) e.ports[0].postMessage({initial:window.initialProbe,current:readProbe(),url:location.href});
+  if(e.data?.source==='always-active-mv3-reply') window.mv3Reply=e.data;
+});
+</script>
+<style>body{font:16px system-ui;margin:32px}iframe{width:300px;height:80px}input,button{margin:8px;padding:8px}</style>
+<body id="fixture-body">
+<h1>Controlled browser fixture</h1>
+<input id="input" aria-label="ordinary input"><input id="second" aria-label="second input">
+<button id="fullscreen" onclick="document.documentElement.requestFullscreen()">Fullscreen</button>
+<div id="frames"></div>
+<script>
+document.documentElement.id='fixture-root';
+if(!new URLSearchParams(location.search).has('frame')) {
+  const port=location.port;
+  document.querySelector('#frames').innerHTML=`<iframe id="same" src="/fixture?frame=same"></iframe><iframe id="cross" src="http://localhost:${port}/fixture?frame=cross"></iframe>`;
+  const blank=document.createElement('iframe'); blank.id='blank'; blank.src='about:blank';
+  blank.addEventListener('load',()=>{
+    blank.contentDocument.write('<script>addEventListener("message",e=>{if(e.data?.probe)e.ports[0].postMessage({current:{hidden:document.hidden,visibilityState:document.visibilityState,hasFocus:document.hasFocus()}})})<\/script>');
+  },{once:true});
+  document.querySelector('#frames').append(blank);
+}
+window.probeReady=true;
+</script>

@@ -5,15 +5,20 @@ behavior for macOS Apple Silicon and Windows x64, while retaining Chromium's
 standard interface and extension support.
 
 **There is no custom browser binary yet.** The implementation goal is active.
-The repository currently records the requirements and contains a manually
-triggered GitHub-hosted runner preflight.
+The repository contains the native patch and its exact-source applicator, along
+with a GitHub-hosted runner preflight. Build and runtime results are tracked in
+[the progress ledger](docs/PROGRESS.md).
+
+The [native behavior notes](native/BEHAVIOR.md) describe defaults, command-line
+compatibility controls, and deliberate differences from the extension's bugs.
+[Distribution notes](docs/DISTRIBUTION.md) explain branding, signing, and updates.
 
 ## Requirements
 
 - Implement the observed behavior of
   [Always active Window - Always Visible](https://chromewebstore.google.com/detail/always-active-window-alwa/ehllkhjndgnlokhomdlhgbineffifcbj)
   in Chromium's native browser/renderer code. The investigated artifact is version
-  0.4.8; recheck the shipped version before implementation.
+  0.4.8; its exact CRX digest is recorded in the behavior/evidence notes.
 - Cover visibility/hidden getters, document focus, relevant focus/visibility,
   mouse and pointer events, animation scheduling, and the extension's optional
   fullscreen and attempted background-navigation behavior. Record observed
