@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Native visibility observation</title>
+<h1>Native visibility observation</h1>
+<p>This page only reads browser state and reports it to its own HTTP server.</p>
+<script>
+const configuration = __NO_DEBUG_CONFIGURATION__;
+let sequence = 0;
+let fullVersionList = [];
+let versionError = null;
+async function report() {
+  const observation = {
+    run: configuration.run, page: configuration.page, sequence: ++sequence,
+    elapsedMs: performance.now(), hidden: document.hidden,
+    visibilityState: document.visibilityState, hasFocus: document.hasFocus(),
+    webkitHidden: document.webkitHidden, webkitVisibilityState: document.webkitVisibilityState,
+    webdriver: navigator.webdriver, userAgent: navigator.userAgent,
+    fullVersionList, versionError
+  };
+  try {
+    await fetch('/report', {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(observation),keepalive:true});
+  } catch {}
+}
+(async () => {
+  try {
+    if (navigator.userAgentData) {
+      fullVersionList = (await navigator.userAgentData.getHighEntropyValues(['fullVersionList'])).fullVersionList ?? [];
+    }
+  } catch (error) { versionError = error.message; }
+  report();
+  setInterval(report, 250);
+})();
+</script>

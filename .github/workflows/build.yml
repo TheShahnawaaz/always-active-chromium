@@ -20,6 +20,10 @@ on:
         description: Dispatch the next bounded stage after a successful checkpoint
         type: boolean
         default: true
+      migrate_native:
+        description: Allow exact-hash native migration from the two explicitly approved seed refs
+        type: boolean
+        default: false
       stage:
         description: Continuation counter (leave 0 for a manual start/resume)
         type: number
@@ -53,6 +57,7 @@ jobs:
       AA_PLATFORM: ${{ matrix.platform }}
       AA_STAGE: ${{ inputs.stage }}
       AA_MAX_STAGES: ${{ inputs.max_stages }}
+      AA_MIGRATE_NATIVE: ${{ inputs.migrate_native }}
       PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -85,7 +90,7 @@ jobs:
       - name: Restore the last complete compiler checkpoint
         id: restore
         timeout-minutes: 60
-        run: python ci/checkpoint.py restore --platform ${{ matrix.platform }}
+        run: python ci/checkpoint.py restore --platform ${{ matrix.platform }} ${{ inputs.migrate_native && '--migrate-native' || '' }}
       - name: Verify source, tools, native patch, and GN configuration
         id: prepare
         timeout-minutes: 180
@@ -103,7 +108,7 @@ jobs:
         id: package
         if: ${{ steps.compile.outputs.status == 'complete' }}
         run: python ci/build.py package --platform ${{ matrix.platform }}
-      - name: Verify baseline, native defaults, optional flags, and MV3 extensions
+      - name: Verify native behavior, MV3 extensions, and zero-debugger operation
         id: tests
         if: ${{ steps.package.outcome == 'success' }}
         continue-on-error: true

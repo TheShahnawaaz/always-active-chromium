@@ -26,6 +26,31 @@ Compatibility with restricted Google services, Google account sync, DRM
 components, and individual third-party extensions requires separate evidence;
 retaining Chromium's extension system alone does not establish those results.
 
+## Extension verification
+
+The pinned source enables desktop extensions on Mac/Windows without a branding
+gate in [buildflags.gni](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/buildflags/buildflags.gni#L43).
+The stable [Store API declaration](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/common/api/_api_features.json#L967)
+allows the real Chrome Web Store origin. Native install approval, CRX signature
+and origin checks remain unchanged. This is source evidence, not a successful
+Store installation on the custom build.
+
+Release verification must use a fresh owned profile, minimal launch flags, the
+actual Store Add button, and the actual identified, enabled native permission
+button. The [normal dialog](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/chrome/browser/ui/views/extensions/extension_install_dialog_view.cc#L260)
+defaults to Cancel and briefly disables acceptance; blind Enter and test-only
+auto-confirm hooks are unsuitable. Verify functionality and persistence after
+restart, then normal update-check and removal paths on each OS. Do not alter
+Store URLs, signatures, permission prompts, policies or OS accessibility
+protections to manufacture a passing result.
+
+The extensions page's [Update action](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/chrome/browser/extensions/api/developer_private/developer_private_functions.cc#L451)
+performs a real foreground updater check. A completed check with no newer
+version proves only that path. An actual Store version upgrade needs an older
+Store-installed version and a newer real Store release. The automated unpacked
+MV3 fixture verifies APIs, reload, storage, restart and removal separately; it
+cannot establish Store installation or automatic Store upgrade.
+
 ## Build and package requirements
 
 Both targets compile on standard GitHub-hosted runners: macOS arm64 and Windows

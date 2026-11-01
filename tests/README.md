@@ -105,3 +105,46 @@ data, but profiles are not suitable release artifacts. UI chrome pixels,
 extension-store services, enterprise policies, indefinite background execution,
 discard/freeze/sleep behavior, and broad third-party extension compatibility
 remain outside these finite checks.
+
+## Normal launch without a debugging connection
+
+```sh
+node tests/no-debug.mjs --browser /path/to/chromium --output reports/no-debug
+```
+
+This separate dependency-free controller uses **no CDP, WebDriver, automation
+flags, extension, focus emulation, or injected browser-control script**. It
+launches the normal executable with a fresh owned profile and two loopback URLs.
+Each website's inline script only reads visibility/focus aliases and version
+metadata, then posts observations to its own HTTP server. The controller neither
+selects tabs nor changes focus. It accepts whichever control website actually
+becomes hidden; startup URL order is not assumed.
+
+The default `paired` mode first runs the same executable with
+`--disable-features=AlwaysActive` and requires stable later reports from a
+genuinely hidden/unfocused page. It then launches a separate default profile and
+requires **both** pages to stably report visible/focused state. Both phases must
+pass. Each phase has a 45-second deadline, a five-second settling period measured
+both after launch and within each website, and a 2.5-second stable observation span; successful pairs normally finish much
+sooner. `--timeout-ms`, `--settle-ms`, and `--stable-ms` can bound experiments.
+
+For unmodified CFT, `--mode control` validates the passive mechanics. Its
+`--mode native` check must fail; a reference browser is not accepted as a native
+implementation. A native-only result does not replace the paired control.
+The fixture reports `navigator.webdriver=false`; the controller also verifies
+the absence of `DevToolsActivePort` in the owned profile. Website UA-CH full
+version metadata is checked against the expected pin, while an exact source
+revision is explicitly outside this connection-free observation.
+
+Cleanup checks the exact spawned PID's executable/profile/start identity before
+signalling. POSIX uses a new verified owned process group; Windows verifies the
+owned process through CIM before terminating its exact PID/tree. It does not
+quit applications by name or signal unrelated browser processes. Interruptions
+request cleanup and an incomplete run fails. Cleanup has an 18-second deadline;
+individual identity queries and Windows tree termination have smaller bounded
+timeouts. Unverifiable ownership or incomplete cleanup fails the run.
+
+Publish **only** the no-debug `results.json`. Exclude its `profile-control/`,
+`profile-native/`, and `*-browser.log` files. The JSON retains bounded samples,
+precise launch arguments, version expectations, ownership/cleanup evidence,
+and the finite test's limits.

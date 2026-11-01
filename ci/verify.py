@@ -11,6 +11,43 @@ import sys
 from build import PROJECT
 
 
+def cleanup_timeout(process, variant, windows=None):
+    windows = os.name == 'nt' if windows is None else windows
+    report = {'controller_exited': False, 'detached_browser_cleanup_uncertain': variant == 'no-debug'}
+    if variant == 'no-debug' and not windows:
+        # This controller owns detached browser groups and traps SIGTERM to run
+        # verified PID/profile cleanup. Killing its group first would orphan them.
+        report['method'] = 'controller-sigterm'
+        try:
+            process.send_signal(signal.SIGTERM)
+            process.wait(timeout=30)
+            report['controller_exited'] = True
+            report['note'] = 'Timed-out run remains a failure; inspect the harness owned-process cleanup evidence.'
+            return report
+        except ProcessLookupError:
+            report['controller_exited'] = True
+            return report
+        except subprocess.TimeoutExpired:
+            report['method'] = 'forced-controller-group-after-sigterm'
+    else:
+        report['method'] = 'windows-process-tree' if windows else 'process-group'
+    try:
+        if windows:
+            result = subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                                    check=False, timeout=30)
+            if result.returncode:
+                report['cleanup_error'] = f'taskkill returned {result.returncode}'
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait(timeout=30)
+        report['controller_exited'] = True
+    except (OSError, subprocess.TimeoutExpired) as problem:
+        report['cleanup_error'] = str(problem)
+    if variant == 'no-debug':
+        report['note'] = 'Detached browser cleanup after a late timeout is uncertain; this run cannot verify native operation.'
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--browser', required=True)
@@ -18,36 +55,34 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     modes = [
-        ('baseline', ['--mode', 'baseline', '--disable-features', 'AlwaysActive']),
-        ('native', ['--mode', 'native']),
-        ('optional', ['--mode', 'native', '--features', 'AlwaysActiveFullscreen,AlwaysActiveBlockBackgroundReload']),
+        ('baseline', 'run.mjs', ['--mode', 'baseline', '--disable-features', 'AlwaysActive'], 240),
+        ('native', 'run.mjs', ['--mode', 'native'], 240),
+        ('optional', 'run.mjs', ['--mode', 'native', '--features', 'AlwaysActiveFullscreen,AlwaysActiveBlockBackgroundReload'], 240),
+        ('no-debug', 'no-debug.mjs', [], 180),
     ]
     variants = {}
     logs = []
     failed = False
-    for name, flags in modes:
+    for name, entrypoint, flags, limit in modes:
         destination = args.output / name
-        command = ['node', str(PROJECT / 'tests/run.mjs'), '--browser', args.browser,
+        command = ['node', str(PROJECT / 'tests' / entrypoint), '--browser', args.browser,
                    *flags, '--output', str(destination)]
         print(f'Running built-browser verification: {name}', flush=True)
         try:
             # Each output directory owns a distinct temporary browser profile.
-            # Three five-minute bounds leave room inside the workflow's 20min step.
+            # 3x4min + 3min paired no-debug = 15min, with bounded cleanup
+            # reserved for timeout process-tree cleanup inside the 20min step.
             process = subprocess.Popen(command,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0,
                 start_new_session=os.name != 'nt')
-            code = process.wait(timeout=300)
+            code = process.wait(timeout=limit)
             error = None
+            timeout_report = None
         except subprocess.TimeoutExpired:
-            if os.name == 'nt':
-                subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
-                               check=False, timeout=30)
-            else:
-                os.killpg(process.pid, signal.SIGKILL)
-            process.wait(timeout=30)
+            timeout_report = cleanup_timeout(process, name)
             code = 124
-            error = 'Test process exceeded its five-minute limit.'
-        record = {'exit_code': code, 'error': error, 'flags': flags}
+            error = f'Test process exceeded its {limit}-second limit.'
+        record = {'exit_code': code, 'error': error, 'flags': flags, 'timeout_cleanup': timeout_report}
         if (destination / 'results.json').is_file():
             try:
                 record['results'] = json.loads((destination / 'results.json').read_text())
@@ -61,11 +96,13 @@ def main():
             code = code or 1
         variants[name] = record
         failed = failed or code != 0
-        if (destination / 'browser.log').is_file():
+        # The zero-debug report alone is publishable; never collect its profile
+        # directories or per-process *-browser.log files.
+        if name != 'no-debug' and (destination / 'browser.log').is_file():
             logs.append(f'===== {name} =====\n' + (destination / 'browser.log').read_text(errors='replace'))
     (args.output / 'results.json').write_text(json.dumps({
         'schema': 1, 'status': 'failed' if failed else 'passed', 'variants': variants,
-        'scope': 'Built-browser baseline, native defaults and optional native flags. '
+        'scope': 'Built-browser baseline, native defaults, optional native flags, and paired zero-debugger control/native checks. '
                  'Inspect per-check coverage; automation does not substitute for install/Web Store review.'
     }, indent=2) + '\n')
     (args.output / 'browser.log').write_text('\n'.join(logs))

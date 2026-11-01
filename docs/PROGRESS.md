@@ -1,5 +1,48 @@
 # Progress ledger
 
+## Current state — 2026-11-01 23:00 UTC
+
+There is no finished custom browser package yet. The current implementation is
+the exact-source **15-file** patch at `6cea97a`, on Chromium `156.0.8078.80`.
+It includes detached-document safety and the optional fullscreen tab-switch
+ordering fix. Application/reversal/digest checks pass; actual native C++ and
+runtime verification remain pending. Ordinary extensions and Web Store support
+are retained in the design and source; normal Store installation/update checks
+have not yet passed on a custom binary.
+
+| Target | Authoritative hosted state | Next action |
+| --- | --- | --- |
+| macOS arm64 | [Run 41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689), immutable source `67dea4dbe7e2`: source/toolchain/native14/GN preparation passed; Ninja compilation started at 22:05:43 UTC and remains active. | Let the existing stage save its compiler checkpoint, then migrate the exact native source changes and rebuild affected outputs. |
+| Windows x64 | [Run 41355069621](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355069621), immutable source `f2f4e1335f61`: complete source extraction, dependency hydration, self-tests and native14 application passed. GN could not execute the extensionless `bin/python3` path, although `bin/python3.exe --version` passed. A complete source/tool checkpoint was saved. | Correct the Windows GN interpreter invocation, migrate the checkpoint to native15 and run GN/Ninja. |
+
+The complete Windows draft checkpoint is
+`checkpoint-win-x64-1e3461dc246407d5a3bc-41355069621-1`: five SHA-256 checked
+chunks totaling **7,667,423,246 bytes**, with `ready.json` uploaded last at
+22:49:47 UTC. Its state is explicitly `source-ready/bootstrap-incomplete`; it
+contains no completed browser or compiled C++ objects.
+
+Both seed campaigns predate the detached-document fix. Their undelivered final
+release tags were removed after checking that no corresponding release existed,
+so they cannot publish an obsolete browser. Source refs and draft compiler
+checkpoints are preserved. Migration is opt-in, allows only these two exact
+seed commits with identical build pins, validates original/patched source
+hashes, preserves unchanged outputs/timestamps, and requires a fresh real build.
+
+Local CI tests currently pass: 27 tests, including bounded no-debugger cleanup, real Ninja
+incremental reuse and the real selected-file native14-to-native15 transition;
+the Windows-only extraction integration is skipped locally and has passed on
+the hosted Windows image. These tests establish CI mechanics, not native
+browser behavior. The passive no-debugger control passed 7/7 on original CFT,
+and its native expectation correctly rejected that unmodified browser. Actual
+native paired checks remain required on both packages. A temporary hosted
+final-release authorization probe
+[41355439888](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355439888)
+also passed create/upload/download/hash/delete using only the workflow token
+and an exact pre-created source tag; it did not publish a browser.
+
+The older entries below are historical observations. The state above takes
+precedence over their former "current" campaign labels.
+
 Goal: native always-active desktop Chromium with its standard interface unchanged,
 ordinary extension support preserved, and verified macOS arm64 and Windows x64
 packages. All compilation must run on standard GitHub-hosted runners; no AWS or

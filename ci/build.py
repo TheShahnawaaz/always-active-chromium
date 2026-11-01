@@ -88,6 +88,12 @@ def fingerprint(platform):
     return digest.hexdigest()
 
 
+def rendered_gn_args(platform):
+    values = dict(PINS['common_gn_args'])
+    values.update(PINS['platform_gn_args'][platform])
+    return ''.join(f'{key} = {json.dumps(value)}\n' for key, value in values.items())
+
+
 def output(name, value):
     print(f'{name}={value}', flush=True)
     if os.environ.get('GITHUB_OUTPUT'):
@@ -360,12 +366,16 @@ def prepare(platform):
     hydrate(src, platform)
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src])
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src, '--verify-applied'])
-    args = dict(PINS['common_gn_args'])
-    args.update(PINS['platform_gn_args'][platform])
     out = src / 'out/AlwaysActive'
     out.mkdir(parents=True, exist_ok=True)
-    write_if_changed(out / 'args.gn', ''.join(f'{key} = {json.dumps(value)}\n' for key, value in args.items()))
-    run([gn_path(src, platform), 'gen', 'out/AlwaysActive', '--fail-on-unused-args'], cwd=src)
+    write_if_changed(out / 'args.gn', rendered_gn_args(platform))
+    command = [gn_path(src, platform), 'gen', 'out/AlwaysActive', '--fail-on-unused-args']
+    if platform == 'win-x64':
+        # GN's dotfile names extensionless python3; this Windows CIPD host
+        # package exposes the verified executable as python3.exe. GN persists
+        # its official override in the generated Ninja regeneration command.
+        command.append('--script-executable=//third_party/cpython3/host/bin/python3.exe')
+    run(command, cwd=src)
     state['phase'] = 'build-ready'
     state['status'] = 'prepared'
     state_file.write_text(json.dumps(state, indent=2) + '\n')

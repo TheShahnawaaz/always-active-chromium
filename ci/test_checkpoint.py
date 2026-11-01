@@ -101,6 +101,23 @@ class CheckpointTests(unittest.TestCase):
             self.assertEqual((destination / 'src/source.cc').read_text(), 'source')
             self.assertFalse((destination / 'src/out/AlwaysActive/sdk/xcode_links').exists())
 
+    def test_restore_measures_output_time_without_unrelated_future_sources(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / 'before'
+            output = root / 'src/out/AlwaysActive/obj/seed.o'
+            output.parent.mkdir(parents=True)
+            output.write_bytes(b'compiler output')
+            expected = 1712345678123456000
+            os.utime(output, ns=(expected, expected))
+            future = root / 'src/future-test-data.txt'
+            future.write_bytes(b'unrelated test fixture')
+            os.utime(future, ns=(expected + 10_000_000_000, expected + 10_000_000_000))
+            parts, blobs = self.capture(root)
+            destination = Path(temporary) / 'after'
+            destination.mkdir()
+            maximum = restore_archive(destination, self.reader(parts, blobs))
+            self.assertEqual(maximum, expected)
+
     @unittest.skipUnless(shutil.which('ninja'), 'Ninja not available for the incremental database smoke check')
     def test_restored_ninja_dependency_database_needs_no_rebuild(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -84,6 +84,12 @@ version are recorded in build-state provenance.
 The hosted CI checks invoke this exact source-unpack helper on a tiny Unicode
 `.tar.xz` before the large download. GNU tar manages its compression provider;
 no unverified assumption about the location of a separate `xz.exe` is imposed.
+Windows GN explicitly selects the hydrated `bin/python3.exe` using its official
+`--script-executable` switch. The pinned GN's own help documents this override;
+a small local GN fixture confirmed it takes precedence over an unusable dotfile
+interpreter and is preserved in Ninja's regeneration command. This fixes the
+measured Windows interpreter-launch failure without editing upstream `.gn` or
+changing compiler arguments.
 
 Release-optimized, noncomponent Chromium is built without PGO, ThinLTO, or debug
 symbols. This reduces memory, disk and build time; it sacrifices some official
@@ -181,6 +187,54 @@ will finish. Its [migration discussion](https://github.com/ungoogled-software/un
 reports a GitHub build running around three days without finishing. A long
 sequence of successful resumable stages may therefore be required.
 
+## Explicit native cache migration
+
+Native runtime corrections do not justify silently accepting arbitrary older
+source trees. `migrate_native` is **off by default**. When explicitly enabled,
+restore still prefers an exact current-fingerprint checkpoint. Its only fallback
+is the corresponding approved immutable seed: Mac
+`ci-source-67dea4dbe7e2`, Windows `ci-source-f2f4e1335f61`. These seeds contain a
+known native constructor defect and are compiler caches, never deliverable
+browsers. Their undelivered final build tags are quarantined separately by the
+repository owner; immutable source refs and seed checkpoints remain available.
+
+Migration reads four small Git blobs at the seed state's exact repository
+commit: pins, provenance, applicator and patch. It verifies the immutable ref,
+recomputes the old fingerprint independently, requires identical PINS bytes,
+checks the same platform/root/upstream/schema, and compares restored `args.gn`
+to the exact current platform configuration. Old Python is never executed.
+The current stdlib patch parser alone handles exact hunks and hashes.
+One strict source-only case may omit GN arguments: the recorded phase/status
+must be `source-ready`/`bootstrap-incomplete`, `out/AlwaysActive` must be entirely
+absent, and the measured restored compiler-output timestamp must be zero.
+An existing output tree without matching `args.gn` is always rejected.
+
+The complete union is bounded to 64 existing `.cc`/`.h`/`.idl` files and 64 MiB
+of source; GN, DEPS and toolchain edits are forbidden. All file types, paths,
+input digests, reverse transformations and resulting digests are validated
+before any write. Recognized upstream/old-patched partial states are supported;
+foreign edits, changed configurations, unavailable metadata or unready seeds
+fail closed. Opting into migration without a ready approved seed does not start
+a surprise cold build.
+
+Only changed source files are replaced. Unchanged bytes/mtimes, Ninja databases
+and all compiled objects remain untouched. The restore tracks compiler-output
+timestamps; changed source receives at least a 100 ms newer timestamp, verified
+by `stat` after filesystem rounding. Unreasonable future output times are
+rejected. Failed writes or native verification roll back changed sources and
+never bless the new state. The remote seed is not modified by restoration.
+
+After current `--verify-applied` passes, the state records both commits,
+fingerprints, changed paths and timestamp evidence, and becomes
+`source-ready`/`bootstrap-incomplete`. Ordinary preparation revalidates the
+native source and regenerates GN. Only a successful real Ninja build can mark
+the new state complete, package it, and run browser verification. New checkpoints
+use the new fingerprint; seed drafts are retained. Focused tests cover rejection,
+rollback, partial states, unchanged mtimes, the 100 ms margin and actual Ninja
+selective rebuilds. The local selected-file test migrates the real 14-file seed
+to the current manifest and verifies every current native source digest without
+downloading or compiling full Chromium locally.
+
 ## Packages and verification
 
 Mac packaging verifies the generated `.app` signature structure and makes a
@@ -193,9 +247,19 @@ Chrome. See `docs/DISTRIBUTION.md` for installation and product differences.
 After compilation the workflow runs the repository's native behavior and MV3
 extension harness against the real executable in three modes: master feature
 disabled for the built-browser baseline, native defaults, and optional native
-fullscreen/background-navigation flags. Each mode has its own fixture profile
-and a five-minute limit, inside one 20-minute step. Results are aggregated with
-their mode/flags and individual checks; uncovered behaviors stay explicit.
+fullscreen/background-navigation flags. A required fourth variant runs paired
+control/native website reports with normal CLI launches and no CDP, WebDriver,
+extension or automation flag. Each variant has its own fixture profiles. The
+first three have four-minute bounds; the paired zero-debugger run has three
+minutes, with bounded process cleanup inside one 20-minute step. Results are
+aggregated with their mode/flags and individual checks; uncovered behaviors stay
+explicit. Only the zero-debugger `results.json` is collected; its profiles and
+per-process browser logs are excluded.
+On POSIX, an outer zero-debugger timeout first sends SIGTERM to its controller
+and allows 30 seconds for its own verified cleanup of detached browser groups.
+Only a still-hung controller is force-killed afterward. A timeout always fails
+verification; late detached-process cleanup is explicitly marked uncertain in
+the aggregate instead of being claimed successful.
 It uploads only the package,
 checksums, provenance, `results.json`, `browser.log`, and a test-status record to
 a **draft** build release. Browser profiles, cookies, storage and extension

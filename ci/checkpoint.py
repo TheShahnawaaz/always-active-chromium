@@ -230,6 +230,7 @@ class ChunkReader(io.RawIOBase):
 
 def restore_archive(root, reader):
     directories = []
+    max_output_mtime_ns = 0
     with zstandard.ZstdDecompressor().stream_reader(reader, read_across_frames=True, closefd=False) as decompressed:
         with tarfile.open(fileobj=decompressed, mode='r|') as archive:
             for member in archive:
@@ -243,6 +244,10 @@ def restore_archive(root, reader):
                         directories.append((path, ns))
                     else:
                         os.utime(path, ns=(ns, ns))
+                        if (member.name.startswith('src/out/AlwaysActive/') and
+                            (path.suffix in ('.o', '.obj', '.a', '.lib', '.so', '.dll', '.exe', '.dylib') or
+                             path.name in ('.ninja_log', '.ninja_deps'))):
+                            max_output_mtime_ns = max(max_output_mtime_ns, path.stat().st_mtime_ns)
         # Consume the framing/footer and finish verification of every chunk.
         while decompressed.read(1 << 20):
             pass
@@ -250,30 +255,62 @@ def restore_archive(root, reader):
         pass
     for path, ns in reversed(directories):
         os.utime(path, ns=(ns, ns))
+    return max_output_mtime_ns
 
 
-def restore(platform):
+def ready_manifest(release):
+    files = assets(release)
+    if 'ready.json' not in files:
+        print(f'Skipping incomplete checkpoint: {release["tag_name"]}', flush=True)
+        return None, files
+    manifest = json.loads(gh('api', files['ready.json']['url'], '-H', 'Accept: application/octet-stream', binary=True))
+    if manifest['schema'] != 1 or manifest['format'] != 'tar+zstd+pax-nanoseconds':
+        raise RuntimeError('Unsupported checkpoint format')
+    return manifest, files
+
+
+def restore_candidate(root, release, manifest, files):
+    reader = ChunkReader(manifest['parts'], files)
+    maximum = restore_archive(root, reader)
+    if json.loads((root / 'state.json').read_text()) != manifest['state']:
+        raise RuntimeError('Restored build-state manifest differs from ready.json')
+    return maximum
+
+
+def restore(platform, migrate_native=False):
     root = root_path()
-    for release in releases():
+    available = releases()
+    for release in available:
         if not release['draft'] or not release['tag_name'].startswith(prefix(platform)):
             continue
-        files = assets(release)
-        if 'ready.json' not in files:
-            print(f'Skipping incomplete checkpoint: {release["tag_name"]}', flush=True)
+        manifest, files = ready_manifest(release)
+        if manifest is None:
             continue
-        manifest = json.loads(gh('api', files['ready.json']['url'], '-H', 'Accept: application/octet-stream', binary=True))
-        if manifest['schema'] != 1 or manifest['format'] != 'tar+zstd+pax-nanoseconds':
-            raise RuntimeError('Unsupported checkpoint format')
         state = manifest['state']
         if state['fingerprint'] != fingerprint(platform) or Path(state['root']) != root:
             raise RuntimeError('Checkpoint pin/path mismatch')
-        reader = ChunkReader(manifest['parts'], files)
-        restore_archive(root, reader)
-        if json.loads((root / 'state.json').read_text()) != state:
-            raise RuntimeError('Restored build-state manifest differs from ready.json')
+        restore_candidate(root, release, manifest, files)
         output('restored', 'true')
         output('checkpoint_tag', release['tag_name'])
         return
+    if migrate_native:
+        from migrate import APPROVED_SEEDS, migrate_source, prove_seed
+        _, allowed_commit = APPROVED_SEEDS[platform]
+        for release in available:
+            if not release['draft'] or not release['tag_name'].startswith(f'checkpoint-{platform}-'):
+                continue
+            manifest, files = ready_manifest(release)
+            if manifest is None or manifest['state'].get('repository_commit') != allowed_commit:
+                continue
+            proof = prove_seed(manifest['state'], platform, root, release['tag_name'])
+            maximum = restore_candidate(root, release, manifest, files)
+            state = migrate_source(root, proof, maximum)
+            output('restored', 'true')
+            output('checkpoint_tag', release['tag_name'])
+            output('native_migration_from', proof.old_fingerprint)
+            output('native_migration_to', state['fingerprint'])
+            return
+        raise RuntimeError('No complete approved seed is ready for native migration; wait for its checkpoint instead of starting a cold build')
     print('No complete matching checkpoint; starting from the verified source archive.', flush=True)
     output('restored', 'false')
 
@@ -282,5 +319,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['restore', 'save'])
     parser.add_argument('--platform', required=True, choices=['mac-arm64', 'win-x64'])
+    parser.add_argument('--migrate-native', action='store_true')
     args = parser.parse_args()
-    (save if args.command == 'save' else restore)(args.platform)
+    if args.command == 'save':
+        save(args.platform)
+    else:
+        restore(args.platform, args.migrate_native)

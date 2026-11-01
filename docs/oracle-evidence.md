@@ -331,3 +331,51 @@ visibility anomaly, and real fullscreen was not held at the pre-switch sample.
 This validates the probe mechanics, not the new native fullscreen scenario.
 Its report `fullscreen-focus-baseline/results.json` SHA-256 is
 `7e7c892d634d00151beb47c9020a72448cb6ee274abc11854cef9209208bdf5c`.
+
+## Normal launch with no debugging connection
+
+`tests/no-debug.mjs` and its owned HTTP fixture close a separate verification
+gap: the browser is launched normally with a fresh profile and two website
+URLs, without CDP, WebDriver, remote-debugging/automation flags, extensions, or
+focus/lifecycle emulation. Website inline JavaScript only reads visibility/focus
+aliases and version metadata and posts observations; it does not override APIs
+or select tabs. The paired test requires the same executable to demonstrate
+stable genuine hidden state with `AlwaysActive` disabled, then stable visible
+and focused state for both websites with default settings. It does not assume
+which startup tab is selected. Samples must be later than the settling period
+both in controller time and website elapsed time, and remain stable for the
+declared observation span.
+
+The current control implementation passed **7/7** checks on the unmodified local
+CFT browser with no debugging connection. It observed genuinely hidden,
+unfocused website reports, `navigator.webdriver=false`, the exact expected full
+browser version, no `DevToolsActivePort`, and only normal launch flags. PID,
+profile, creation identity, and the owned POSIX process group were verified
+before cleanup; the root and process group were gone afterward. Report
+`.runtime/no-debug-reference-control-final/results.json` SHA-256:
+`4cabcad193e36304307fde284835f685012d27ade475d48a3276bedce5d89257`.
+
+Negative controls also behaved correctly: unmodified CFT **failed** the native
+visibility/focus requirement. A paired CFT run passed all seven control checks
+and failed that native requirement while passing its other six checks. Its
+report `.runtime/no-debug-reference-paired/results.json` SHA-256 is
+`6744d30f40b45e546bd7cc02b733ffea124b0c412ac82b3853a2b77cec71e235`.
+That negative run preceded the stricter website-elapsed settling filter; the
+new filter cannot turn its incorrect native state into a pass.
+
+These observations validate the connection-free test mechanics, not a native
+browser implementation. The native paired run remains required on actual built
+macOS and Windows packages. Publish only its finite `results.json`, excluding
+profiles and browser logs. Source revision is recorded as an expectation, not
+claimed observable from website metadata; exact build provenance remains a
+separate requirement. The successful normal-launch control also does not resolve
+the earlier local debugging-session visibility anomaly.
+
+A final interruption smoke sent SIGTERM to the controller at six seconds. It
+recorded the interruption, verified and terminated only its owned browser
+PID/group, wrote a failed/incomplete report, and exited at 6.401 seconds; both
+root and process group were gone. The report SHA-256 is
+`3f84a36f49e6c8d4b6b968adb6d18bb96f3639d5a60c378b9ca611cc4068e7d1`.
+Cleanup has an 18-second absolute budget with smaller command timeouts and
+refuses unverifiable ownership. The local cleanup evidence is macOS-only;
+Windows CIM/PID-tree handling still needs its hosted execution.

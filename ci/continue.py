@@ -15,4 +15,5 @@ else:
         '--field', f'platform={os.environ["AA_PLATFORM"]}',
         '--field', f'build_ref={os.environ.get("AA_SOURCE_TAG", os.environ["AA_BUILD_REF"])}',
         '--field', f'stage={stage + 1}', '--field', f'max_stages={limit}',
-        '--field', 'auto_resume=true', '--field', 'bootstrap_only=false'], check=True)
+        '--field', 'auto_resume=true', '--field', 'bootstrap_only=false',
+        '--field', f'migrate_native={os.environ.get("AA_MIGRATE_NATIVE", "false")}'], check=True)
