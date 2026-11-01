@@ -1,0 +1,55 @@
+name: Runner preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-arm64:
+    name: Inspect GitHub-hosted macOS arm64
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Hardware, disk, and Xcode inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -m
+          sw_vers
+          sysctl -n hw.memsize hw.ncpu
+          df -h
+          xcode-select -p
+          xcodebuild -version
+          xcodebuild -showsdks
+          git --version
+          python3 --version
+          for xcode in /Applications/Xcode*.app; do
+            if [ -d "$xcode" ]; then
+              printf '%s\n' "$xcode"
+            fi
+          done
+
+  windows-x64:
+    name: Inspect GitHub-hosted Windows x64
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 10
+    steps:
+      - name: Hardware, disk, Visual Studio, and SDK inventory
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory, NumberOfLogicalProcessors
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture
+          Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, FileSystem, Size, SizeRemaining
+          $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
+          if (Test-Path $vswhere) {
+            & $vswhere -all -products '*' -format json
+          }
+          $sdkIncludes = 'C:\Program Files (x86)\Windows Kits\10\Include'
+          if (Test-Path $sdkIncludes) {
+            Get-ChildItem $sdkIncludes -Directory | Select-Object -ExpandProperty Name
+          }
+          git --version
+          python --version
