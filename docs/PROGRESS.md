@@ -12,7 +12,7 @@ have not yet passed on a custom binary.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Run 41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689), immutable source `67dea4dbe7e2`: source/toolchain/native14/GN preparation passed; Ninja compilation started at 22:05:43 UTC and remains active. | Let the existing stage save its compiler checkpoint, then migrate the exact native source changes and rebuild affected outputs. |
+| macOS arm64 | [Run 41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689), immutable source `67dea4dbe7e2`: source/toolchain/native14/GN preparation passed; Ninja compilation started at 22:05:43 UTC and the job has now entered checkpoint saving. The compiler outcome is not established by that step alone. | Let the existing stage finish saving, inspect its compiler logs/state, then migrate the exact native source changes and rebuild affected outputs. |
 | Windows x64 | [Run 41355069621](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355069621), immutable source `f2f4e1335f61`: complete source extraction, dependency hydration, self-tests and native14 application passed. GN could not execute the extensionless `bin/python3` path, although `bin/python3.exe --version` passed. A complete source/tool checkpoint was saved. | Correct the Windows GN interpreter invocation, migrate the checkpoint to native15 and run GN/Ninja. |
 
 The complete Windows draft checkpoint is
@@ -28,7 +28,7 @@ checkpoints are preserved. Migration is opt-in, allows only these two exact
 seed commits with identical build pins, validates original/patched source
 hashes, preserves unchanged outputs/timestamps, and requires a fresh real build.
 
-Local CI tests currently pass: 27 tests, including bounded no-debugger cleanup, real Ninja
+Local CI tests currently pass: 29 tests, including bounded no-debugger cleanup, real Ninja
 incremental reuse and the real selected-file native14-to-native15 transition;
 the Windows-only extraction integration is skipped locally and has passed on
 the hosted Windows image. These tests establish CI mechanics, not native
@@ -39,6 +39,15 @@ final-release authorization probe
 [41355439888](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355439888)
 also passed create/upload/download/hash/delete using only the workflow token
 and an exact pre-created source tag; it did not publish a browser.
+
+The first native15 Windows migration dispatch,
+[41360489459](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41360489459),
+stopped before source restoration: two POSIX cleanup unit tests tried to mock
+`os.killpg`, which does not exist on Windows. Those two tests are now explicitly
+POSIX-only; two Windows process-tree cleanup cases exercise bounded taskkill
+and failure reporting on every host. Production cleanup code is unchanged.
+The retained source checkpoint is unaffected; the corrected 29-test suite
+passes locally and still needs its next hosted Windows execution.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.
