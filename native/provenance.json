@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "upstream_tag": "156.0.8078.80",
+  "upstream_revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
+  "patch": "patches/0001-native-always-active.patch",
+  "patch_sha256": "e02752688ebc42e10a23de5f32cd1044b52141b717bd3c89982289f5d9d9ac6c",
+  "files": [
+    {
+      "path": "third_party/blink/common/features.cc",
+      "upstream_sha256": "0cea368743ba20abdc1d6f76e2248865f5a4fa18a7a6ad475673ed7e78673e02",
+      "patched_sha256": "f51a174561de334d7bce26f10c566d756b531f5003df1fac7b1e652b01ad3c6c",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/common/features.cc"
+    },
+    {
+      "path": "third_party/blink/public/common/features.h",
+      "upstream_sha256": "2b98ce5540d18367bfca665b73eb2f26fad058f72351b486356528e012fc6535",
+      "patched_sha256": "2567e2f20860f8cdcf1fbb8f28f651a3c3da4bc032a4edc1966c446d3cdbe9a0",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/public/common/features.h"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/document.cc",
+      "upstream_sha256": "9f6b0a23062180fba604ebe4c73e6f03efdce2767af104605f9ffb0250466552",
+      "patched_sha256": "b0b46edab4ce1bef41f0e752041872620f1d9ee2485fd8450c4909b185d1ed7b",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/document.cc"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/document.h",
+      "upstream_sha256": "2a3c42f689b34a5ed5622da6283a0e31e65aec26cc80ad48bf9f83869363c051",
+      "patched_sha256": "46f14ce1b61911b8e1e4c4c91061d3d30426d001a6e58ef1f0db82e47554d18a",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/document.h"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/document.idl",
+      "upstream_sha256": "3e97d208a33bd79b4e6bcdd28da23e64d22513af09a30b281c2a831b38237fc6",
+      "patched_sha256": "9267aa2109f3e4ff516e092d474bd434edfe59946c7fa987e45d74bd5be004d6",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/document.idl"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/events/event_target.cc",
+      "upstream_sha256": "dfd02d762e2321c0fdf9cc1f6c799f02e0f7150d76d295bf07122cd571b841d8",
+      "patched_sha256": "c0c7c8eba60c860464b3a439e469d045dc27c9fe91bbd364a43a220c3756d33f",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/events/event_target.cc"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/events/event_target.h",
+      "upstream_sha256": "6a7a10b41bc6b729ba3debc81a7109c052f1e185cd3f8fe0555954f148f55a20",
+      "patched_sha256": "6d44bcce8fb94b6a7268c5c887faf97e965f27e870cb3128990592b01b611aaf",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/events/event_target.h"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/frame_request_callback_collection.cc",
+      "upstream_sha256": "a90d2e4a9da017f821d146f2165db4bcd9a1757adbef3b2e5de4590e26f6c01c",
+      "patched_sha256": "1c4b205c8212e773a017506e527b75abf8a833b87b69ce25c8c8a2fbd7c0f675",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/frame_request_callback_collection.cc"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/frame_request_callback_collection.h",
+      "upstream_sha256": "5e4f5490c480d71b54553633704d442913eeb3e88f347b2530d159f7288b097e",
+      "patched_sha256": "af376cb4c5cd36443a9dbe12e58bbcab2a0a9042ca66833a8cbba67636eab599",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/frame_request_callback_collection.h"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/scripted_animation_controller.cc",
+      "upstream_sha256": "79602f5cc8e7ea3bd84d0a55a730d0f0581db0be8756cd77bec7072a0b696e64",
+      "patched_sha256": "ac3b2a9d253ccadc8fd67ca2158a48f65bcf91be6573c645265f9b9a5caa833a",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/scripted_animation_controller.cc"
+    },
+    {
+      "path": "third_party/blink/renderer/core/dom/scripted_animation_controller.h",
+      "upstream_sha256": "559a1eca62c776fd24f6819cf0099439ea31937324047c9abf3253fba6b51c2d",
+      "patched_sha256": "d97188825cfdeafe5fc2a4c1316ca7a3ed5dec6adafea2fa8d1fcdd404b1d819",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/scripted_animation_controller.h"
+    },
+    {
+      "path": "third_party/blink/renderer/core/fullscreen/fullscreen.cc",
+      "upstream_sha256": "5ed2e96ec0f11a6b8cf879383c3d3e7243c3926da5fbe94579f2775764cddb0e",
+      "patched_sha256": "2ea7243586014d432d3293376ba94ff5710db88bfd9acc66c2b830c9ff05c70f",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/fullscreen/fullscreen.cc"
+    },
+    {
+      "path": "third_party/blink/renderer/core/navigation_api/navigation_api.cc",
+      "upstream_sha256": "11cd1a3056519a9e110130469023c846b0c27be565433390ee2b344f1bb46541",
+      "patched_sha256": "2842f1c23db99a15e7af3f924075b372ef4426ccf5a864185489fd68ef5e1db3",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/navigation_api/navigation_api.cc"
+    }
+  ]
+}

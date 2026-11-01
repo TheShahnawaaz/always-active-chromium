@@ -1,0 +1,571 @@
+diff --git a/third_party/blink/common/features.cc b/third_party/blink/common/features.cc
+--- a/third_party/blink/common/features.cc
++++ b/third_party/blink/common/features.cc
+@@ -41,6 +41,13 @@
+ // generation is unaffected.
+ BASE_FEATURE(kAIPageContentMissingSubframesFailSilently,
+              base::FEATURE_ENABLED_BY_DEFAULT);
++
++BASE_FEATURE(kAlwaysActive, base::FEATURE_ENABLED_BY_DEFAULT);
++BASE_FEATURE(kAlwaysActiveAnimationFrames, base::FEATURE_ENABLED_BY_DEFAULT);
++BASE_FEATURE(kAlwaysActiveBlockBackgroundReload,
++             base::FEATURE_DISABLED_BY_DEFAULT);
++BASE_FEATURE(kAlwaysActiveEvents, base::FEATURE_ENABLED_BY_DEFAULT);
++BASE_FEATURE(kAlwaysActiveFullscreen, base::FEATURE_DISABLED_BY_DEFAULT);
+ 
+ 
+ // Controls whether JavaScript execution inside AudioWorkletProcessor::Process()
+diff --git a/third_party/blink/public/common/features.h b/third_party/blink/public/common/features.h
+--- a/third_party/blink/public/common/features.h
++++ b/third_party/blink/public/common/features.h
+@@ -41,6 +41,13 @@
+ // generation is unaffected.
+ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(
+     kAIPageContentMissingSubframesFailSilently);
++
++// Native website-only always-active behavior. These have no browser UI.
++BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAlwaysActive);
++BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAlwaysActiveAnimationFrames);
++BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAlwaysActiveBlockBackgroundReload);
++BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAlwaysActiveEvents);
++BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAlwaysActiveFullscreen);
+ 
+ 
+ BLINK_COMMON_EXPORT BASE_DECLARE_FEATURE(kAudioWorkletJSDenormalEnabler);
+diff --git a/third_party/blink/renderer/core/dom/document.cc b/third_party/blink/renderer/core/dom/document.cc
+--- a/third_party/blink/renderer/core/dom/document.cc
++++ b/third_party/blink/renderer/core/dom/document.cc
+@@ -237,6 +237,7 @@
+ #include "third_party/blink/renderer/core/frame/visual_viewport.h"
+ #include "third_party/blink/renderer/core/frame/web_frame_widget_impl.h"
+ #include "third_party/blink/renderer/core/frame/web_local_frame_impl.h"
++#include "third_party/blink/renderer/core/fullscreen/fullscreen.h"
+ #include "third_party/blink/renderer/core/geometry/dom_point.h"
+ #include "third_party/blink/renderer/core/geometry/dom_quad.h"
+ #include "third_party/blink/renderer/core/html/anchor_element_metrics_sender.h"
+@@ -2371,6 +2372,104 @@
+   return !IsPageVisible();
+ }
+ 
++bool Document::AlwaysActiveEnabled() const {
++  if (!base::FeatureList::IsEnabled(features::kAlwaysActive) || !dom_window_ ||
++      !GetFrame() || !GetPage() || !IsActive() || IsPrerendering()) {
++    return false;
++  }
++  if (Url().ProtocolIsInHTTPFamily()) {
++    return true;
++  }
++  // Include web-origin inherited/opaque frames, but never browser UI or
++  // extension documents. This origin check only selects behavior; it grants
++  // no origin access, permissions, or user activation.
++  if (!Url().ProtocolIs("about") && !Url().ProtocolIs("blob") &&
++      !Url().ProtocolIsData() && !Url().ProtocolIs("filesystem")) {
++    return false;
++  }
++  const SecurityOrigin* origin = dom_window_->GetSecurityOrigin()
++                                     ->GetOriginOrPrecursorOriginIfOpaque();
++  return origin &&
++         (origin->Protocol() == "http" || origin->Protocol() == "https");
++}
++
++bool Document::hiddenForBindings() const {
++  return !AlwaysActiveEnabled() && hidden();
++}
++
++V8VisibilityState Document::visibilityStateForBindings() const {
++  return V8VisibilityState(hiddenForBindings()
++                               ? V8VisibilityState::Enum::kHidden
++                               : V8VisibilityState::Enum::kVisible);
++}
++
++String Document::visibilityStateAsStringForBindings() const {
++  return visibilityStateForBindings().AsString();
++}
++
++bool Document::ShouldSuppressAlwaysActiveEvent(const Event& event) {
++  if (!AlwaysActiveEnabled()) {
++    return false;
++  }
++  const AtomicString& type = event.type();
++  if (base::FeatureList::IsEnabled(features::kAlwaysActiveFullscreen) &&
++      !IsPageVisible() &&
++      (type == event_type_names::kFullscreenchange ||
++       type == event_type_names::kWebkitfullscreenchange ||
++       type == event_type_names::kFullscreenerror ||
++       type == event_type_names::kWebkitfullscreenerror)) {
++    return true;
++  }
++  if (!base::FeatureList::IsEnabled(features::kAlwaysActiveEvents)) {
++    return false;
++  }
++  if (type == event_type_names::kVisibilitychange ||
++      type == event_type_names::kWebkitvisibilitychange ||
++      type == event_type_names::kPagehide ||
++      type == event_type_names::kLostpointercapture) {
++    return true;
++  }
++  EventTarget* target = event.RawTarget();
++  if (!target) {
++    return false;
++  }
++  const bool document_or_window =
++      target->ToNode() == this || target->ToLocalDOMWindow() == dom_window_.Get();
++  if (document_or_window && type == event_type_names::kFocus) {
++    // The shipped extension permits its first document/window focus event.
++    // Retain that event so capture and target phases make the same decision.
++    if (!always_active_initial_focus_event_) {
++      always_active_initial_focus_event_ = &event;
++    }
++    return always_active_initial_focus_event_ != &event;
++  }
++  if (document_or_window &&
++      (type == event_type_names::kBlur ||
++       type == event_type_names::kMouseleave)) {
++    return true;
++  }
++  return type == event_type_names::kMouseout &&
++         (target->ToNode() == documentElement() || target->ToNode() == body());
++}
++
++void Document::UpdateAlwaysActiveFullscreenElement(Element* element) {
++  if (AlwaysActiveEnabled() &&
++      base::FeatureList::IsEnabled(features::kAlwaysActiveFullscreen) &&
++      (IsPageVisible() || element)) {
++    always_active_fullscreen_element_ = element;
++  }
++}
++
++Element* Document::AlwaysActiveFullscreenElementForBindings() const {
++  if (AlwaysActiveEnabled() &&
++      base::FeatureList::IsEnabled(features::kAlwaysActiveFullscreen) &&
++      !IsPageVisible() && always_active_fullscreen_element_ &&
++      always_active_fullscreen_element_->isConnected()) {
++    return always_active_fullscreen_element_.Get();
++  }
++  return nullptr;
++}
++
+ bool Document::wasDiscarded() const {
+   return was_discarded_;
+ }
+@@ -2386,6 +2485,14 @@
+     // where we would first try to dispatch unload events, and then close the
+     // tab and update the visibility state.
+     return;
++  }
++  // Re-arm native web RAF callbacks at real visibility transitions. Do not
++  // change page lifecycle visibility or the browser's real focus state.
++  scripted_animation_controller_->ScheduleAnimationIfNeeded();
++  if (IsPageVisible()) {
++    // Do not carry an old hidden-exit snapshot into a later background visit.
++    always_active_fullscreen_element_ = nullptr;
++    UpdateAlwaysActiveFullscreenElement(Fullscreen::FullscreenElementFrom(*this));
+   }
+   DispatchEvent(*Event::CreateBubble(event_type_names::kVisibilitychange));
+   // Also send out the deprecated version until it can be removed.
+@@ -9378,6 +9485,10 @@
+ 
+ bool Document::hasFocus() const {
+   return GetPage() && GetPage()->GetFocusController().IsDocumentFocused(*this);
++}
++
++bool Document::hasFocusForBindings() const {
++  return AlwaysActiveEnabled() || hasFocus();
+ }
+ 
+ const AtomicString& Document::BodyAttributeValue(
+@@ -9614,6 +9725,8 @@
+   visitor->Trace(document_timing_);
+   visitor->Trace(media_query_matcher_);
+   visitor->Trace(scripted_animation_controller_);
++  visitor->Trace(always_active_initial_focus_event_);
++  visitor->Trace(always_active_fullscreen_element_);
+   visitor->Trace(element_data_cache_clear_timer_);
+   visitor->Trace(element_data_cache_);
+   visitor->Trace(use_elements_needing_update_);
+diff --git a/third_party/blink/renderer/core/dom/document.h b/third_party/blink/renderer/core/dom/document.h
+--- a/third_party/blink/renderer/core/dom/document.h
++++ b/third_party/blink/renderer/core/dom/document.h
+@@ -434,6 +434,7 @@
+   // Focus Management.
+   Element* ActiveElement() const;
+   bool hasFocus() const;
++  bool hasFocusForBindings() const;
+ 
+   // DOM methods & attributes for Document
+ 
+@@ -604,6 +605,15 @@
+   bool IsPageVisible() const;
+   bool hidden() const;
+   void DidChangeVisibilityState();
++
++  // Keep real lifecycle visibility/focus separate from website-facing bindings.
++  bool AlwaysActiveEnabled() const;
++  bool hiddenForBindings() const;
++  V8VisibilityState visibilityStateForBindings() const;
++  String visibilityStateAsStringForBindings() const;
++  bool ShouldSuppressAlwaysActiveEvent(const Event&);
++  void UpdateAlwaysActiveFullscreenElement(Element*);
++  Element* AlwaysActiveFullscreenElementForBindings() const;
+ 
+   bool prerendering() const;
+ 
+@@ -3121,6 +3131,8 @@
+   unsigned write_recursion_depth_ = 0;
+ 
+   Member<ScriptedAnimationController> scripted_animation_controller_;
++  Member<const Event> always_active_initial_focus_event_;
++  Member<Element> always_active_fullscreen_element_;
+   void ElementDataCacheClearTimerFired(TimerBase*);
+   HeapTaskRunnerTimer<Document> element_data_cache_clear_timer_;
+ 
+diff --git a/third_party/blink/renderer/core/dom/document.idl b/third_party/blink/renderer/core/dom/document.idl
+--- a/third_party/blink/renderer/core/dom/document.idl
++++ b/third_party/blink/renderer/core/dom/document.idl
+@@ -125,7 +125,7 @@
+ 
+     // user interaction
+     readonly attribute Window? defaultView;
+-    [Affects=Nothing] boolean hasFocus();
++    [Affects=Nothing, ImplementedAs=hasFocusForBindings] boolean hasFocus();
+     [CEReactions, MeasureAs=DocumentDesignMode] attribute DOMString designMode;
+     // Only the execCommand("insertHTML",..) sub-command needs to be Trusted
+     // Types checked. Other sub-commands will string-ify its input. This, we
+@@ -173,8 +173,8 @@
+ 
+     // Page Visibility
+     // https://w3c.github.io/page-visibility/#extensions-to-the-document-interface
+-    readonly attribute boolean hidden;
+-    readonly attribute VisibilityState visibilityState;
++    [ImplementedAs=hiddenForBindings] readonly attribute boolean hidden;
++    [ImplementedAs=visibilityStateForBindings] readonly attribute VisibilityState visibilityState;
+     readonly attribute boolean wasDiscarded;
+ 
+     // https://wicg.github.io/nav-speculation/prerendering.html#dom-document-prerendering
+@@ -197,8 +197,8 @@
+     // Deprecated prefixed page visibility API.
+     // TODO(davidben): This is a property so attaching a deprecation warning results in false positives when outputting
+     // document in the console. It's possible https://crbug.com/43394 will resolve this.
+-    [MeasureAs=PrefixedPageVisibility, ImplementedAs=visibilityStateAsString] readonly attribute DOMString webkitVisibilityState;
+-    [MeasureAs=PrefixedPageVisibility, ImplementedAs=hidden] readonly attribute boolean webkitHidden;
++    [MeasureAs=PrefixedPageVisibility, ImplementedAs=visibilityStateAsStringForBindings] readonly attribute DOMString webkitVisibilityState;
++    [MeasureAs=PrefixedPageVisibility, ImplementedAs=hiddenForBindings] readonly attribute boolean webkitHidden;
+ 
+     // Private Token API (https://github.com/wicg/trust-token-api)
+     [CallWith=ScriptState, Measure, RaisesException, NewObject, SecureContext, RuntimeEnabled=PrivateStateTokens] Promise<boolean> hasPrivateToken(USVString issuer);
+diff --git a/third_party/blink/renderer/core/dom/events/event_target.cc b/third_party/blink/renderer/core/dom/events/event_target.cc
+--- a/third_party/blink/renderer/core/dom/events/event_target.cc
++++ b/third_party/blink/renderer/core/dom/events/event_target.cc
+@@ -45,6 +45,7 @@
+ #include "third_party/blink/renderer/bindings/core/v8/v8_union_boolean_eventlisteneroptions.h"
+ #include "third_party/blink/renderer/core/dom/abort_signal.h"
+ #include "third_party/blink/renderer/core/dom/abort_signal_registry.h"
++#include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/dom/events/add_event_listener_options_resolved.h"
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+ #include "third_party/blink/renderer/core/dom/events/event_dispatch_forbidden_scope.h"
+@@ -977,6 +978,11 @@
+ #endif
+   DCHECK(event.WasInitialized());
+ 
++  auto* window = DynamicTo<LocalDOMWindow>(GetExecutionContext());
++  const bool suppress_script_listeners =
++      window && window->document() &&
++      window->document()->ShouldSuppressAlwaysActiveEvent(event);
++
+   EventTargetData* d = GetEventTargetData();
+   if (!d)
+     return DispatchEventResult::kNotCanceled;
+@@ -993,13 +999,15 @@
+   if (listeners_vector) {
+     // Calling `FireEventListener` causes a clone of `listeners_vector`.
+     fired_event_listeners = FireEventListeners(
+-        event, d, EventListenerVectorSnapshot(*listeners_vector));
++        event, d, EventListenerVectorSnapshot(*listeners_vector),
++        suppress_script_listeners);
+   } else if (event.isTrusted() && legacy_listeners_vector) {
+     AtomicString unprefixed_type_name = event.type();
+     event.SetType(legacy_type_name);
+     // Calling `FireEventListener` causes a clone of `legacy_listeners_vector`.
+     fired_event_listeners = FireEventListeners(
+-        event, d, EventListenerVectorSnapshot(*legacy_listeners_vector));
++        event, d, EventListenerVectorSnapshot(*legacy_listeners_vector),
++        suppress_script_listeners);
+     event.SetType(unprefixed_type_name);
+   }
+ 
+@@ -1018,7 +1026,8 @@
+ // Fire event listeners, creates a copy of EventListenerVector on being called.
+ bool EventTarget::FireEventListeners(Event& event,
+                                      EventTargetData* d,
+-                                     EventListenerVectorSnapshot entry) {
++                                     EventListenerVectorSnapshot entry,
++                                     bool suppress_script_listeners) {
+   // Fire all listeners registered for this event. Don't fire listeners removed
+   // during event dispatch. Also, don't fire event listeners added during event
+   // dispatch. Conveniently, all new event listeners will be added after or at
+@@ -1078,6 +1087,11 @@
+     }
+ 
+     EventListener* listener = registered_listener->Callback();
++    // Filter website listeners only. Native lifecycle/default behavior and
++    // real element focus/pointer capture continue to run normally.
++    if (suppress_script_listeners && listener->IsJSBasedEventListener()) {
++      continue;
++    }
+     // The listener will be retained by Member<EventListener> in the
+     // registeredListener, i and size are updated with the firing event iterator
+     // in case the listener is removed from the listener vector below.
+diff --git a/third_party/blink/renderer/core/dom/events/event_target.h b/third_party/blink/renderer/core/dom/events/event_target.h
+--- a/third_party/blink/renderer/core/dom/events/event_target.h
++++ b/third_party/blink/renderer/core/dom/events/event_target.h
+@@ -395,7 +395,8 @@
+       HeapVector<Member<RegisteredEventListener>, 1>;
+   bool FireEventListeners(Event&,
+                           EventTargetData*,
+-                          EventListenerVectorSnapshot);
++                          EventListenerVectorSnapshot,
++                          bool suppress_script_listeners);
+   void CountLegacyEvents(const AtomicString& legacy_type_name,
+                          EventListenerVector*,
+                          EventListenerVector*);
+diff --git a/third_party/blink/renderer/core/dom/frame_request_callback_collection.cc b/third_party/blink/renderer/core/dom/frame_request_callback_collection.cc
+--- a/third_party/blink/renderer/core/dom/frame_request_callback_collection.cc
++++ b/third_party/blink/renderer/core/dom/frame_request_callback_collection.cc
+@@ -92,6 +92,21 @@
+                             high_res_now_ms_legacy);
+ }
+ 
++void FrameRequestCallbackCollection::ExecuteWebFrameCallbacks(
++    double high_res_now_ms,
++    double high_res_now_ms_legacy) {
++  // A nested event loop must not re-enter a frame callback snapshot.
++  if (!callbacks_to_invoke_.empty() || !internal_callbacks_to_invoke_.empty()) {
++    return;
++  }
++  ExecutionContext::ScopedRequestAnimationFrameStatus scoped_raf_status(
++      context_);
++  DCHECK(callbacks_to_invoke_.empty());
++  swap(callbacks_to_invoke_, frame_callbacks_);
++  ExecuteFrameCallbacksImpl(callbacks_to_invoke_, high_res_now_ms,
++                            high_res_now_ms_legacy);
++}
++
+ void FrameRequestCallbackCollection::ExecuteFrameCallbacksImpl(
+     CallbackList& callbacks_to_invoke,
+     double high_res_now_ms,
+diff --git a/third_party/blink/renderer/core/dom/frame_request_callback_collection.h b/third_party/blink/renderer/core/dom/frame_request_callback_collection.h
+--- a/third_party/blink/renderer/core/dom/frame_request_callback_collection.h
++++ b/third_party/blink/renderer/core/dom/frame_request_callback_collection.h
+@@ -83,6 +83,9 @@
+   void CancelFrameCallback(CallbackId, FrameCallbackType type);
+   void ExecuteFrameCallbacks(double high_res_now_ms,
+                              double high_res_now_ms_legacy);
++  void ExecuteWebFrameCallbacks(double high_res_now_ms,
++                                double high_res_now_ms_legacy);
++  bool HasWebFrameCallback() const { return !frame_callbacks_.empty(); }
+ 
+   bool HasFrameCallback() const {
+     return frame_callbacks_.size() || internal_frame_callbacks_.size();
+diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.cc b/third_party/blink/renderer/core/dom/scripted_animation_controller.cc
+--- a/third_party/blink/renderer/core/dom/scripted_animation_controller.cc
++++ b/third_party/blink/renderer/core/dom/scripted_animation_controller.cc
+@@ -25,7 +25,11 @@
+ 
+ #include "third_party/blink/renderer/core/dom/scripted_animation_controller.h"
+ 
++#include "base/feature_list.h"
++#include "base/time/time.h"
++#include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/mojom/frame/lifecycle.mojom-blink.h"
++#include "third_party/blink/public/platform/task_type.h"
+ #include "third_party/blink/renderer/core/css/media_query_list_listener.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/dom/events/event.h"
+@@ -37,6 +41,7 @@
+ #include "third_party/blink/renderer/core/page/page.h"
+ #include "third_party/blink/renderer/core/page/page_animator.h"
+ #include "third_party/blink/renderer/core/probe/core_probes.h"
++#include "third_party/blink/renderer/core/timing/dom_window_performance.h"
+ #include "third_party/blink/renderer/platform/wtf/functional.h"
+ #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
+ 
+@@ -64,13 +69,18 @@
+ 
+ ScriptedAnimationController::ScriptedAnimationController(LocalDOMWindow* window)
+     : ExecutionContextLifecycleStateObserver(window),
+-      callback_collection_(window) {
++      callback_collection_(window),
++      always_active_timer_(
++          window->GetTaskRunner(TaskType::kJavascriptTimerDelayedHighNesting),
++          this,
++          &ScriptedAnimationController::AlwaysActiveTimerFired) {
+   UpdateStateIfNeeded();
+ }
+ 
+ void ScriptedAnimationController::Trace(Visitor* visitor) const {
+   ExecutionContextLifecycleStateObserver::Trace(visitor);
+   visitor->Trace(callback_collection_);
++  visitor->Trace(always_active_timer_);
+   visitor->Trace(event_queue_);
+   visitor->Trace(media_query_list_listeners_);
+   visitor->Trace(media_query_list_listeners_set_);
+@@ -79,8 +89,11 @@
+ 
+ void ScriptedAnimationController::ContextLifecycleStateChanged(
+     mojom::FrameLifecycleState state) {
+-  if (state == mojom::FrameLifecycleState::kRunning)
++  if (state == mojom::FrameLifecycleState::kRunning) {
+     ScheduleAnimationIfNeeded();
++  } else {
++    always_active_timer_.Stop();
++  }
+ }
+ 
+ void ScriptedAnimationController::DispatchMediaQueryListEventsAndCallbacks() {
+@@ -112,6 +125,7 @@
+ void ScriptedAnimationController::CancelFrameCallback(CallbackId id,
+                                                       FrameCallbackType type) {
+   callback_collection_.CancelFrameCallback(id, type);
++  UpdateAlwaysActiveTimer();
+ }
+ 
+ bool ScriptedAnimationController::HasFrameCallback() const {
+@@ -239,6 +253,7 @@
+ 
+ void ScriptedAnimationController::ScheduleAnimationIfNeeded(
+     cc::BeginMainFrameReason reason) {
++  UpdateAlwaysActiveTimer();
+   if (!GetExecutionContext() || GetExecutionContext()->IsContextPaused())
+     return;
+ 
+@@ -252,6 +267,39 @@
+   }
+ }
+ 
++void ScriptedAnimationController::UpdateAlwaysActiveTimer() {
++  auto* window = GetExecutionContext() ? GetWindow() : nullptr;
++  Document* document = window ? window->document() : nullptr;
++  if (!document || GetExecutionContext()->IsContextDestroyed() ||
++      GetExecutionContext()->IsContextPaused() ||
++      !document->AlwaysActiveEnabled() || document->IsPageVisible() ||
++      !base::FeatureList::IsEnabled(features::kAlwaysActiveAnimationFrames) ||
++      !callback_collection_.HasWebFrameCallback()) {
++    always_active_timer_.Stop();
++    return;
++  }
++  if (!always_active_timer_.IsActive()) {
++    // Like the extension's setTimeout fallback, this remains subject to
++    // background timer throttling and lifecycle freezing; it is not a display
++    // refresh or a guarantee of 60fps. Internal animation work is unaffected.
++    always_active_timer_.StartOneShot(base::Milliseconds(16), FROM_HERE);
++  }
++}
++
++void ScriptedAnimationController::AlwaysActiveTimerFired(TimerBase*) {
++  auto* window = GetExecutionContext() ? GetWindow() : nullptr;
++  if (!window || GetExecutionContext()->IsContextDestroyed() ||
++      GetExecutionContext()->IsContextPaused() || !window->document() ||
++      !window->document()->AlwaysActiveEnabled() ||
++      window->document()->IsPageVisible() ||
++      !base::FeatureList::IsEnabled(features::kAlwaysActiveAnimationFrames)) {
++    return;
++  }
++  const double now = DOMWindowPerformance::performance(*window)->now();
++  callback_collection_.ExecuteWebFrameCallbacks(now, now);
++  UpdateAlwaysActiveTimer();
++}
++
+ LocalDOMWindow* ScriptedAnimationController::GetWindow() const {
+   return To<LocalDOMWindow>(GetExecutionContext());
+ }
+diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.h b/third_party/blink/renderer/core/dom/scripted_animation_controller.h
+--- a/third_party/blink/renderer/core/dom/scripted_animation_controller.h
++++ b/third_party/blink/renderer/core/dom/scripted_animation_controller.h
+@@ -36,6 +36,7 @@
+ #include "third_party/blink/renderer/platform/heap/collection_support/heap_hash_set.h"
+ #include "third_party/blink/renderer/platform/heap/collection_support/heap_vector.h"
+ #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
++#include "third_party/blink/renderer/platform/timer.h"
+ #include "third_party/blink/renderer/platform/wtf/casting.h"
+ #include "third_party/blink/renderer/platform/wtf/functional.h"
+ #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
+@@ -92,7 +93,7 @@
+       HeapVector<Member<MediaQueryListListener>>&);
+ 
+   void ContextLifecycleStateChanged(mojom::FrameLifecycleState) final;
+-  void ContextDestroyed() final {}
++  void ContextDestroyed() final { always_active_timer_.Stop(); }
+ 
+   void DispatchMediaQueryListEventsAndCallbacks();
+ 
+@@ -117,10 +118,13 @@
+   bool HasScheduledFrameTasks() const;
+ 
+  private:
++  void AlwaysActiveTimerFired(TimerBase*);
++  void UpdateAlwaysActiveTimer();
+   ALWAYS_INLINE bool InsertToPerFrameEventsMap(const Event* event);
+   ALWAYS_INLINE void EraseFromPerFrameEventsMap(const Event* event);
+ 
+   FrameRequestCallbackCollection callback_collection_;
++  HeapTaskRunnerTimer<ScriptedAnimationController> always_active_timer_;
+   Vector<base::OnceClosure> task_queue_;
+   Vector<ExecuteVfcCallback> vfc_execution_queue_;
+   HeapVector<Member<Event>> event_queue_;
+diff --git a/third_party/blink/renderer/core/fullscreen/fullscreen.cc b/third_party/blink/renderer/core/fullscreen/fullscreen.cc
+--- a/third_party/blink/renderer/core/fullscreen/fullscreen.cc
++++ b/third_party/blink/renderer/core/fullscreen/fullscreen.cc
+@@ -76,6 +76,9 @@
+                               FullscreenRequestType new_request_type,
+                               const FullscreenOptions* new_options) {
+   DCHECK_NE(old_element, new_element);
++  // Website-facing optional snapshot only; do not retain actual fullscreen,
++  // grant activation, change top-layer state, or alter security UI.
++  document.UpdateAlwaysActiveFullscreenElement(new_element);
+ 
+   if (new_element) {
+     document.GetStyleEngine().EnsureUAStyleForFullscreen(*new_element);
+@@ -622,7 +625,11 @@
+ 
+ // https://fullscreen.spec.whatwg.org/#fullscreen-element
+ Element* Fullscreen::FullscreenElementForBindingFrom(TreeScope& scope) {
+-  Element* element = FullscreenElementFrom(scope.GetDocument());
++  Element* element =
++      scope.GetDocument().AlwaysActiveFullscreenElementForBindings();
++  if (!element) {
++    element = FullscreenElementFrom(scope.GetDocument());
++  }
+   if (!element)
+     return nullptr;
+   return scope.AdjustedElement(*element);
+diff --git a/third_party/blink/renderer/core/navigation_api/navigation_api.cc b/third_party/blink/renderer/core/navigation_api/navigation_api.cc
+--- a/third_party/blink/renderer/core/navigation_api/navigation_api.cc
++++ b/third_party/blink/renderer/core/navigation_api/navigation_api.cc
+@@ -10,6 +10,7 @@
+ #include "base/check_op.h"
+ #include "base/feature_list.h"
+ #include "base/time/time.h"
++#include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/mojom/frame/frame.mojom-blink.h"
+ #include "third_party/blink/public/web/web_frame_load_type.h"
+ #include "third_party/blink/renderer/bindings/core/v8/binding_security.h"
+@@ -891,6 +892,18 @@
+   }
+ 
+   has_dropped_navigation_ = false;
++  // Optional, deliberately narrow native improvement over the extension's
++  // beforeunload-based reload attempt. Browser/UI/user navigations, links,
++  // redirects, subframes, and normal foreground reloads remain unchanged.
++  if (base::FeatureList::IsEnabled(
++          features::kAlwaysActiveBlockBackgroundReload) &&
++      window_->document()->AlwaysActiveEnabled() &&
++      !window_->document()->IsPageVisible() && frame->IsMainFrame() &&
++      navigation_type == V8NavigationType::Enum::kReload &&
++      !params->is_browser_initiated &&
++      params->involvement == UserNavigationInvolvement::kNone) {
++    navigate_event->preventDefault();
++  }
+   {
+     // TODO(crbug.com/418007230): This event timing only measures the initial
+     // event dispatch of the navigate event. However, the interesting work is
