@@ -15,8 +15,9 @@ other external/self-hosted compute and no additional spending is authorized.
 - GitHub-hosted runner preflight run `41348658261` completed successfully.
 - macOS runner measured 3 CPUs, 7 GiB RAM and approximately 96 GiB free disk
   before cleanup, with Xcode 26.6 and macOS SDK 26.5. Windows measured 4 CPUs
-  and approximately 16 GiB RAM, with Visual Studio 2026 version 18.11.1 and
-  Windows SDK 26100. Windows disk capacity needs a corrected diagnostic print.
+  and approximately 16 GiB RAM. Corrected preflight run `41349098782` confirmed
+  approximately 220 GiB free on Windows D: and 27.7 GiB on C:, Visual Studio
+  2026 version 18.11.3 and Windows SDK 26100.
 - Official Chromium source archive for the exact version is available and
   measures 4,422,962,028 bytes compressed; a full local Git clone is unnecessary.
 - Full source/build outputs are not being downloaded onto the local Mac.
@@ -29,7 +30,7 @@ other external/self-hosted compute and no additional spending is authorized.
 - Exact-version native patch design and implementation.
 - Source/resource-aware resumable GitHub-hosted build pipeline.
 - Extension runtime oracle, behavioral feature matrix, and regression harness.
-- Inspection of actual runner capacity/toolchains from the preflight logs.
+- Toolchain hydration and resource-aware runner preparation.
 
 ## Not yet established
 
