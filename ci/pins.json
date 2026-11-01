@@ -1,0 +1,34 @@
+{
+  "version": "156.0.8078.80",
+  "revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
+  "hydration_revision": 1,
+  "source_url": "https://commondatastorage.googleapis.com/chromium-browser-official/chromium-156.0.8078.80.tar.xz",
+  "source_size": 4422962028,
+  "source_sha256": "5b1a1f3bfdf4fc559db4eddfb4492b72ffcec7ae1a52b30f8b172230788f5740",
+  "gn_version": "git_revision:510ec7992c30f172205792f190e96111a896ba8f",
+  "ninja_version": "version:3@1.12.1.chromium.4",
+  "cipd_sha256": {
+    "gn/gn/mac-arm64": "a6de52657f3d01a073b00aa91db512f85d3ae9d2b2c0ad46949cda4e8204f62a",
+    "gn/gn/windows-amd64": "174d11dc7bc18bf7cbcb1bc79571905afd2740ae9bc531b63818a9e89c59c9be",
+    "infra/3pp/tools/ninja/mac-arm64": "c5e9b4ffab3b2edefbc41849fc81f116c8d047b258906becc061be9ecaf04afd",
+    "infra/3pp/tools/ninja/windows-amd64": "0cf1cb1b9d2b8d2d14a9fd38b984f17dd853115db682880b21ceee45e91deb50"
+  },
+  "common_gn_args": {
+    "is_debug": false,
+    "is_component_build": false,
+    "is_official_build": false,
+    "is_chrome_branded": false,
+    "symbol_level": 0,
+    "blink_symbol_level": 0,
+    "v8_symbol_level": 0,
+    "chrome_pgo_phase": 0,
+    "use_thin_lto": false,
+    "use_remoteexec": false,
+    "use_siso": false,
+    "concurrent_links": 1
+  },
+  "platform_gn_args": {
+    "mac-arm64": {"target_cpu": "arm64", "enable_dsyms": false, "use_lld": false},
+    "win-x64": {"target_cpu": "x64"}
+  }
+}

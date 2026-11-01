@@ -1,0 +1,124 @@
+name: Build native Chromium
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Standard GitHub-hosted target
+        type: choice
+        options: [both, mac-arm64, win-x64]
+        default: both
+      build_ref:
+        description: Source repository commit to build (blank uses this workflow commit)
+        type: string
+        default: ''
+      bootstrap_only:
+        description: Fetch source, hydrate tools, apply patch, generate GN, checkpoint; do not compile yet
+        type: boolean
+        default: false
+      auto_resume:
+        description: Dispatch the next bounded stage after a successful checkpoint
+        type: boolean
+        default: true
+      stage:
+        description: Continuation counter (leave 0 for a manual start/resume)
+        type: number
+        default: 0
+      max_stages:
+        description: Maximum consecutive stages, including this one (1–100)
+        type: number
+        default: 48
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.platform }} · stage ${{ inputs.stage }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["mac-arm64","win-x64"]' || format('["{0}"]', inputs.platform)) }}
+    runs-on: ${{ matrix.platform == 'mac-arm64' && 'macos-26' || 'windows-2025-vs2026' }}
+    timeout-minutes: 360
+    concurrency:
+      group: native-chromium-${{ matrix.platform }}
+      cancel-in-progress: false
+    permissions:
+      contents: write # Only draft checkpoints and final draft browser packages.
+      actions: write # workflow_dispatch is the GITHUB_TOKEN recursion exception.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AA_BUILD_REF: ${{ inputs.build_ref || github.sha }}
+      AA_PLATFORM: ${{ matrix.platform }}
+      AA_STAGE: ${{ inputs.stage }}
+      AA_MAX_STAGES: ${{ inputs.max_stages }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.build_ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Start the six-hour job budget
+        shell: bash
+        run: python -c 'import os,time; open(os.environ["GITHUB_ENV"],"a").write("AA_JOB_STARTED="+str(time.time())+"\n")'
+      - name: Install the small checkpoint codec
+        run: python -m pip install --disable-pip-version-check -r ci/requirements.txt
+      - name: Check the checkpoint format on this platform
+        run: python -m unittest discover -s ci -p "test_*.py" -v
+      - name: Prepare the ephemeral Mac runner
+        if: matrix.platform == 'mac-arm64'
+        shell: bash
+        run: bash ci/runner-macos.sh
+      - name: Prepare the ephemeral Windows runner and SDK
+        if: matrix.platform == 'win-x64'
+        shell: pwsh
+        run: ./ci/runner-windows.ps1
+      - name: Restore the last complete compiler checkpoint
+        id: restore
+        timeout-minutes: 60
+        run: python ci/checkpoint.py restore --platform ${{ matrix.platform }}
+      - name: Verify source, tools, native patch, and GN configuration
+        id: prepare
+        timeout-minutes: 180
+        run: python ci/build.py prepare --platform ${{ matrix.platform }}
+      - name: Compile until the checkpoint deadline
+        id: compile
+        continue-on-error: true
+        run: python ci/build.py compile --platform ${{ matrix.platform }} ${{ inputs.bootstrap_only && '--bootstrap-only' || '' }}
+      - name: Save a complete resumable checkpoint
+        id: checkpoint
+        if: ${{ always() && steps.prepare.outcome == 'success' }}
+        timeout-minutes: 120
+        run: python ci/checkpoint.py save --platform ${{ matrix.platform }}
+      - name: Package the real browser
+        id: package
+        if: ${{ steps.compile.outputs.status == 'complete' }}
+        run: python ci/build.py package --platform ${{ matrix.platform }}
+      - name: Run native behavior and MV3 extension smoke checks
+        id: tests
+        if: ${{ steps.package.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 20
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.prepare.outputs.browser }}
+        run: node tests/run.mjs --browser "$AA_BROWSER" --mode native --output "reports/${{ matrix.platform }}"
+      - name: Upload packages, checksums, and selected evidence to a draft
+        if: ${{ always() && steps.package.outcome == 'success' }}
+        run: python ci/publish.py --platform ${{ matrix.platform }} --test-outcome ${{ steps.tests.outcome }}
+      - name: Continue with a fresh standard runner
+        if: ${{ inputs.auto_resume && !inputs.bootstrap_only && steps.compile.outputs.status == 'pending' && steps.checkpoint.outcome == 'success' }}
+        run: python ci/continue.py
+      - name: Report unresolved build or browser test failure
+        if: ${{ always() && (steps.compile.outcome == 'failure' || steps.tests.outcome == 'failure') }}
+        shell: bash
+        run: |
+          echo 'The build or browser tests failed; inspect the logs and any retained compiler checkpoint.' >&2
+          exit 1
