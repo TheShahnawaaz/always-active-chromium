@@ -272,3 +272,32 @@ pending.
 - Keep freeze/discard/sleep, indefinite scheduling, every third-party extension,
   and Google-restricted services outside the tested claims unless separately
   verified.
+
+## Detached-document constructor regression
+
+After the hosted 21/28-check runs, review found a native animation-controller
+constructor path that could dereference a missing window for detached documents,
+even with the feature disabled. The browser harness now tests eight detached or
+inert owner documents and fourteen DOM operations before its background tests:
+`createHTMLDocument`, DOMParser HTML/XML, `createDocument`, live/detached document
+clones, cross-document imports, and template-content owner documents, including
+nested templates, fragment/template cloning, and imports. A second evaluation
+checks that the renderer still responds. Every harness mode includes these
+regressions; native/baseline mode asserts ordinary detached focus state too.
+
+The new regression subsets passed in isolated original-CFT local runs:
+
+| Run | Regression checks | Full report SHA-256 |
+| --- | --- | --- |
+| `detached-baseline` | 5/5 | `808bbdcf2abae0434ce5e364c2866d87a07c8b66e72191248c04115bfdcc68ed` |
+| `detached-oracle` | 4/4 | `533e279fa08e938cc6da43f4c491b28cee4e860ff179b9b4302477d677ab1f41` |
+
+All documents had null `defaultView`, hidden visibility, and no own hidden
+getter. The unmodified browser returned focus false for all eight. The
+extension returned focus **true** for all eight because its realm-wide Proxy
+does not check the receiver's eligibility. Native behavior deliberately keeps
+these documents outside focus spoofing. Both full local runs still failed the
+known unrelated background-visibility anomaly; the regression subset is not an
+overall background-suite pass. These additions were not included in the earlier
+hosted 21/28 counts and still require execution against the custom native build,
+including its master-feature-disabled configuration.

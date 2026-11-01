@@ -96,6 +96,60 @@ async function enableTestDeveloperMode(cdp) {
   if(!config?.inDeveloperMode) throw Error('Could not enable developer mode in the owned test profile.');
   observe('testProfileDeveloperMode',config.inDeveloperMode);
 }
+function detachedDocumentProbe() {
+  // These paths construct Documents without a LocalDOMWindow. They must remain
+  // safe even when a native feature is disabled, since animation controllers
+  // are constructed before feature eligibility is considered.
+  const documents=[];
+  const record=(kind,doc)=>documents.push({kind,defaultViewNull:doc.defaultView===null,
+    hidden:doc.hidden,visibilityState:doc.visibilityState,hasFocus:doc.hasFocus(),
+    ownsHidden:Object.hasOwn(doc,'hidden'),root:doc.documentElement?.nodeName??null});
+  const html=document.implementation.createHTMLDocument('detached-title');
+  html.body.innerHTML='<section id="detached-section"><span>detached html</span></section>';
+  record('createHTMLDocument',html);
+  const parsedHtml=new DOMParser().parseFromString('<!doctype html><title>parsed-title</title><p>parsed html</p>','text/html');
+  record('DOMParser HTML',parsedHtml);
+  const parsedXml=new DOMParser().parseFromString('<root><child>parsed xml</child></root>','application/xml');
+  record('DOMParser XML',parsedXml);
+  const xml=document.implementation.createDocument('urn:always-active-test','t:root',null);
+  xml.documentElement.appendChild(xml.createElementNS('urn:always-active-test','t:child'));
+  record('createDocument XML',xml);
+  const clone=html.cloneNode(true);
+  record('Document.cloneNode detached',clone);
+  const liveClone=document.cloneNode(true);
+  record('Document.cloneNode live',liveClone);
+  const imported=xml.importNode(html.querySelector('section'),true);
+  xml.documentElement.appendChild(imported);
+  const template=document.createElement('template');
+  template.innerHTML='<span data-regression="template">inert template</span><template><b>nested</b></template>';
+  record('template.content ownerDocument',template.content.ownerDocument);
+  const fragmentClone=template.content.cloneNode(true);
+  const templateClone=template.cloneNode(true);
+  const importedFragment=html.importNode(template.content,true);
+  const importedTemplate=html.importNode(template,true);
+  record('imported template.content ownerDocument',importedTemplate.content.ownerDocument);
+  html.body.appendChild(importedFragment);
+  const text=parsedHtml.importNode(document.createTextNode(' imported text'),true);
+  parsedHtml.body.appendChild(text);
+  const operations={
+    htmlConstruction:html.title==='detached-title'&&html.querySelector('#detached-section span').textContent==='detached html',
+    parsedHtml:parsedHtml.title==='parsed-title'&&parsedHtml.querySelector('p').textContent==='parsed html',
+    parsedXml:parsedXml.querySelector('parsererror')===null&&parsedXml.querySelector('child').textContent==='parsed xml',
+    xmlConstruction:xml.documentElement.namespaceURI==='urn:always-active-test'&&xml.documentElement.firstChild.localName==='child',
+    documentClone:clone!==html&&clone.defaultView===null&&clone.querySelector('span').textContent==='detached html',
+    liveDocumentClone:liveClone!==document&&liveClone.defaultView===null&&liveClone.documentElement.nodeName===document.documentElement.nodeName,
+    importAcrossDocumentTypes:imported.ownerDocument===xml&&imported.querySelector('span').textContent==='detached html',
+    templateOwnerIsInert:template.content.ownerDocument!==document&&template.content.ownerDocument.defaultView===null,
+    fragmentClone:fragmentClone!==template.content&&fragmentClone.querySelector('span').textContent==='inert template',
+    templateClone:templateClone!==template&&templateClone.content.querySelector('span').textContent==='inert template',
+    fragmentImport:html.querySelector('[data-regression="template"]').ownerDocument===html,
+    templateImport:importedTemplate.ownerDocument===html&&importedTemplate.content.querySelector('span').textContent==='inert template',
+    nestedTemplateImport:importedTemplate.content.querySelector('template').content.querySelector('b').textContent==='nested',
+    textImport:text.ownerDocument===parsedHtml&&parsedHtml.body.textContent.includes('imported text')
+  };
+  document.body.dataset.detachedRegressionComplete='yes';
+  return {documents,operations};
+}
 try {
   site=await serve();
   browser=await start();
@@ -108,6 +162,13 @@ try {
   const foreground=await cdp.evaluate(p.sessionId,'({initial:initialProbe,current:readProbe()})');
   observe('foreground',foreground);
   check('first website script sees visible state',foreground.initial.hidden===false && foreground.initial.visibilityState==='visible',foreground.initial);
+  const detached=await cdp.evaluate(p.sessionId,`(${detachedDocumentProbe.toString()})()`);
+  observe('detachedDocuments',detached);
+  check('detached document creation, cloning, import, and templates complete',Object.values(detached.operations).every(Boolean),detached.operations);
+  check('detached and inert owner documents keep null defaultView',detached.documents.length===8&&detached.documents.every(d=>d.defaultViewNull),detached.documents);
+  check('detached documents retain normal hidden visibility',detached.documents.every(d=>d.hidden===true&&d.visibilityState==='hidden'&&!d.ownsHidden),detached.documents);
+  if(args.mode!=='oracle') check('detached documents remain outside native focus spoofing',detached.documents.every(d=>d.hasFocus===false),detached.documents);
+  check('renderer survives detached document operations',await cdp.evaluate(p.sessionId,"document.body.dataset.detachedRegressionComplete") === 'yes');
   await delay(500);
   await cdp.evaluate(p.sessionId,'probeEvents.length=0;startRaf()');
   await delay(250);

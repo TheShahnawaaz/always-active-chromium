@@ -65,7 +65,18 @@ diff --git a/third_party/blink/renderer/core/dom/document.cc b/third_party/blink
  #include "third_party/blink/renderer/core/geometry/dom_point.h"
  #include "third_party/blink/renderer/core/geometry/dom_quad.h"
  #include "third_party/blink/renderer/core/html/anchor_element_metrics_sender.h"
-@@ -2371,6 +2372,104 @@
+@@ -1026,7 +1027,9 @@
+                             &Document::PluginLoadingTimerFired),
+       document_timing_(*this),
+       scripted_animation_controller_(
+-          MakeGarbageCollected<ScriptedAnimationController>(domWindow())),
++          MakeGarbageCollected<ScriptedAnimationController>(
++              domWindow(),
++              GetTaskRunner(TaskType::kJavascriptTimerDelayedHighNesting))),
+       element_data_cache_clear_timer_(
+           GetTaskRunner(TaskType::kInternalUserInteraction),
+           this,
+@@ -2371,6 +2374,104 @@
    return !IsPageVisible();
  }
  
@@ -170,7 +181,7 @@ diff --git a/third_party/blink/renderer/core/dom/document.cc b/third_party/blink
  bool Document::wasDiscarded() const {
    return was_discarded_;
  }
-@@ -2386,6 +2485,14 @@
+@@ -2386,6 +2487,14 @@
      // where we would first try to dispatch unload events, and then close the
      // tab and update the visibility state.
      return;
@@ -185,7 +196,7 @@ diff --git a/third_party/blink/renderer/core/dom/document.cc b/third_party/blink
    }
    DispatchEvent(*Event::CreateBubble(event_type_names::kVisibilitychange));
    // Also send out the deprecated version until it can be removed.
-@@ -9378,6 +9485,10 @@
+@@ -9378,6 +9487,10 @@
  
  bool Document::hasFocus() const {
    return GetPage() && GetPage()->GetFocusController().IsDocumentFocused(*this);
@@ -196,7 +207,7 @@ diff --git a/third_party/blink/renderer/core/dom/document.cc b/third_party/blink
  }
  
  const AtomicString& Document::BodyAttributeValue(
-@@ -9614,6 +9725,8 @@
+@@ -9614,6 +9727,8 @@
    visitor->Trace(document_timing_);
    visitor->Trace(media_query_matcher_);
    visitor->Trace(scripted_animation_controller_);
@@ -412,14 +423,25 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.c
  #include "third_party/blink/renderer/platform/wtf/functional.h"
  #include "third_party/blink/renderer/platform/wtf/wtf_size_t.h"
  
-@@ -64,13 +69,18 @@
+@@ -62,15 +67,28 @@
+   }
+ }
  
- ScriptedAnimationController::ScriptedAnimationController(LocalDOMWindow* window)
+-ScriptedAnimationController::ScriptedAnimationController(LocalDOMWindow* window)
++ScriptedAnimationController::ScriptedAnimationController(
++    LocalDOMWindow* window,
++    scoped_refptr<base::SingleThreadTaskRunner> task_runner)
      : ExecutionContextLifecycleStateObserver(window),
 -      callback_collection_(window) {
 +      callback_collection_(window),
 +      always_active_timer_(
-+          window->GetTaskRunner(TaskType::kJavascriptTimerDelayedHighNesting),
++          // Documents without a LocalDOMWindow still supply their safe Agent
++          // runner. Preserve one-argument callers too: a null context has an
++          // inert timer and cannot register callbacks or arm this timer.
++          task_runner ? std::move(task_runner)
++                      : (window ? window->GetTaskRunner(
++                                      TaskType::kJavascriptTimerDelayedHighNesting)
++                                : nullptr),
 +          this,
 +          &ScriptedAnimationController::AlwaysActiveTimerFired) {
    UpdateStateIfNeeded();
@@ -432,7 +454,7 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.c
    visitor->Trace(event_queue_);
    visitor->Trace(media_query_list_listeners_);
    visitor->Trace(media_query_list_listeners_set_);
-@@ -79,8 +89,11 @@
+@@ -79,8 +97,11 @@
  
  void ScriptedAnimationController::ContextLifecycleStateChanged(
      mojom::FrameLifecycleState state) {
@@ -445,7 +467,7 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.c
  }
  
  void ScriptedAnimationController::DispatchMediaQueryListEventsAndCallbacks() {
-@@ -112,6 +125,7 @@
+@@ -112,6 +133,7 @@
  void ScriptedAnimationController::CancelFrameCallback(CallbackId id,
                                                        FrameCallbackType type) {
    callback_collection_.CancelFrameCallback(id, type);
@@ -453,7 +475,7 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.c
  }
  
  bool ScriptedAnimationController::HasFrameCallback() const {
-@@ -239,6 +253,7 @@
+@@ -239,6 +261,7 @@
  
  void ScriptedAnimationController::ScheduleAnimationIfNeeded(
      cc::BeginMainFrameReason reason) {
@@ -461,7 +483,7 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.c
    if (!GetExecutionContext() || GetExecutionContext()->IsContextPaused())
      return;
  
-@@ -252,6 +267,39 @@
+@@ -252,6 +275,39 @@
    }
  }
  
@@ -512,7 +534,18 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.h
  #include "third_party/blink/renderer/platform/wtf/casting.h"
  #include "third_party/blink/renderer/platform/wtf/functional.h"
  #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
-@@ -92,7 +93,7 @@
+@@ -55,7 +56,9 @@
+       public ExecutionContextLifecycleStateObserver,
+       public NameClient {
+  public:
+-  explicit ScriptedAnimationController(LocalDOMWindow*);
++  explicit ScriptedAnimationController(
++      LocalDOMWindow*,
++      scoped_refptr<base::SingleThreadTaskRunner> task_runner = nullptr);
+   ~ScriptedAnimationController() override = default;
+ 
+   void Trace(Visitor*) const override;
+@@ -92,7 +95,7 @@
        HeapVector<Member<MediaQueryListListener>>&);
  
    void ContextLifecycleStateChanged(mojom::FrameLifecycleState) final;
@@ -521,7 +554,7 @@ diff --git a/third_party/blink/renderer/core/dom/scripted_animation_controller.h
  
    void DispatchMediaQueryListEventsAndCallbacks();
  
-@@ -117,10 +118,13 @@
+@@ -117,10 +120,13 @@
    bool HasScheduledFrameTasks() const;
  
   private:

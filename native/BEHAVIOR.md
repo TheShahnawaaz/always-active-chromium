@@ -106,6 +106,14 @@ foreground RAF continues through Chromium's frame scheduler. Background timer
 throttling and context pause/freeze/destruction still apply. This is not a 60fps
 guarantee, a way to run through OS sleep, or immunity from tab discard.
 
+Timer setup uses `Document::GetTaskRunner()`, including its existing safe Agent
+runner fallback for documents without a `LocalDOMWindow`. Detached documents
+created by DOMParser, DOMImplementation, cloning, or importing keep a null
+controller execution context, cannot register RAF callbacks, and never arm the
+fallback timer. Construction must stay safe even when `AlwaysActive` is disabled.
+The controller's existing one-argument constructor calls remain source compatible;
+a null-window direct caller gets an inert timer rather than dereferencing null.
+
 The optional fullscreen mode retains the last connected fullscreen element in
 the document's GC-traced state when an actual hidden fullscreen exit occurs.
 Only fullscreen binding getters (including prefixed aliases and the boolean

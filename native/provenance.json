@@ -3,7 +3,7 @@
   "upstream_tag": "156.0.8078.80",
   "upstream_revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
   "patch": "patches/0001-native-always-active.patch",
-  "patch_sha256": "9a5e9acaaabc9a872cb3da105858f76140929f3ddb8d22732a2f8b293fec1906",
+  "patch_sha256": "c9317d4ef124a71993f04b837fc1c0ce5d6ec60b370db6ce8de9fae267a18767",
   "files": [
     {
       "path": "chrome/browser/ui/startup/infobar_utils.cc",
@@ -26,7 +26,7 @@
     {
       "path": "third_party/blink/renderer/core/dom/document.cc",
       "upstream_sha256": "9f6b0a23062180fba604ebe4c73e6f03efdce2767af104605f9ffb0250466552",
-      "patched_sha256": "b0b46edab4ce1bef41f0e752041872620f1d9ee2485fd8450c4909b185d1ed7b",
+      "patched_sha256": "81f49fb72167c0a5cddbefcb6c0bd6935dd496d4fbcdc507610fb4350f176715",
       "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/document.cc"
     },
     {
@@ -68,13 +68,13 @@
     {
       "path": "third_party/blink/renderer/core/dom/scripted_animation_controller.cc",
       "upstream_sha256": "79602f5cc8e7ea3bd84d0a55a730d0f0581db0be8756cd77bec7072a0b696e64",
-      "patched_sha256": "ac3b2a9d253ccadc8fd67ca2158a48f65bcf91be6573c645265f9b9a5caa833a",
+      "patched_sha256": "5a64e67c923f8a860b31b8ba0e6f9e750eed3092faa5469f425459bbb859bfb9",
       "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/scripted_animation_controller.cc"
     },
     {
       "path": "third_party/blink/renderer/core/dom/scripted_animation_controller.h",
       "upstream_sha256": "559a1eca62c776fd24f6819cf0099439ea31937324047c9abf3253fba6b51c2d",
-      "patched_sha256": "d97188825cfdeafe5fc2a4c1316ca7a3ed5dec6adafea2fa8d1fcdd404b1d819",
+      "patched_sha256": "c41940d0eb5e41f7f294d3049d87215eeaa5d685a45d5b1b7dd1930622940cba",
       "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/third_party/blink/renderer/core/dom/scripted_animation_controller.h"
     },
     {

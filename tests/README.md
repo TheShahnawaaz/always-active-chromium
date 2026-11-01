@@ -50,6 +50,17 @@ animation callbacks started in the background, location redirects, and reload
 policy. CDP only controls the tests; no focus emulation or lifecycle overrides
 are part of the harness or the shipped browser.
 
+Every mode also constructs detached HTML/XML documents through
+`createHTMLDocument`, `DOMParser`, `createDocument`, and `Document.cloneNode`,
+then performs cross-document imports. It creates inert template owner
+documents through `HTMLTemplateElement.content`, including nested templates,
+fragment/template clones, and imports. These cases must complete without a
+renderer crash even with the master feature disabled. Detached documents retain
+null `defaultView` and normal hidden visibility; native/baseline mode also
+requires normal false document focus. Oracle focus is observed separately
+because its realm-wide `Document.prototype.hasFocus` Proxy can affect detached
+receivers too. A second CDP evaluation verifies the renderer still responds.
+
 The optional reload test checks that hidden renderer script reloads are
 cancelled when the feature is selected while foreground script reloads,
 browser-initiated reloads, and ordinary redirects still work. Optional fullscreen
