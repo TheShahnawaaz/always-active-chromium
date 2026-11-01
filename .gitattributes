@@ -1,0 +1,2 @@
+# Build input digests must be identical on macOS and Windows checkouts.
+* text=auto eol=lf
