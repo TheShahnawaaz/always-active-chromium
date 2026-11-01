@@ -1,0 +1,81 @@
+name: Inspect normal Store and native UI prerequisites
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  store:
+    name: Store preflight on ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: mac-arm64
+            download: mac-arm64
+            runner: macos-26
+          - platform: win-x64
+            download: win64
+            runner: windows-2025-vs2026
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    permissions:
+      contents: write # Finite JSON evidence in a draft; no Actions storage.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AA_REFERENCE_ROOT: .runtime/store-reference
+      AA_PLATFORM: ${{ matrix.platform }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Prepare read-only Mac accessibility observer
+        if: matrix.platform == 'mac-arm64'
+        shell: bash
+        run: |
+          mkdir -p .runtime
+          xcrun swiftc tests/ui/store-ui.swift -o .runtime/store-ui
+          echo "AA_STORE_UI_HELPER=$GITHUB_WORKSPACE/.runtime/store-ui" >> "$GITHUB_ENV"
+      - name: Select read-only Windows accessibility observer
+        if: matrix.platform == 'win-x64'
+        shell: pwsh
+        run: |
+          $guardJson = & powershell.exe -NoProfile -NonInteractive -File tests/ui/store-ui.ps1 -PidValue 0
+          if ($LASTEXITCODE -ne 0) { throw 'Windows observer failed parsing or its invalid-PID guard' }
+          $guard = $guardJson | ConvertFrom-Json
+          if ($guard.status -ne 'error' -or $guard.identity.verified -ne $false) {
+            throw 'Windows observer did not reject an invalid PID before observing UI'
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "AA_STORE_UI_HELPER=$env:GITHUB_WORKSPACE/tests/ui/store-ui.ps1"
+      - name: Acquire pinned official reference browser
+        id: acquire
+        shell: bash
+        run: python tests/acquire-reference.py --platform "${{ matrix.download }}" --output "$AA_REFERENCE_ROOT"
+      - name: Inspect the real Store page without installing anything
+        id: inspect
+        continue-on-error: true
+        timeout-minutes: 4
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+        run: node tests/store.mjs --browser "$AA_BROWSER" --output reports/store
+      - name: Retain finite preflight evidence
+        if: ${{ always() && steps.acquire.outcome == 'success' }}
+        env:
+          AA_STORE_OUTCOME: ${{ steps.inspect.outcome }}
+        run: python .github/scripts/publish-store-reference.py
+      - name: Report failed inspection
+        if: ${{ always() && steps.inspect.outcome != 'success' }}
+        shell: bash
+        run: |
+          echo 'Store preflight did not finish successfully; inspect its retained evidence.' >&2
+          exit 1

@@ -379,3 +379,51 @@ root and process group were gone. The report SHA-256 is
 Cleanup has an 18-second absolute budget with smaller command timeouts and
 refuses unverifiable ownership. The local cleanup evidence is macOS-only;
 Windows CIM/PID-tree handling still needs its hosted execution.
+
+## Read-only actual Store listing preflight
+
+`tests/store.mjs` uses a separate fresh owned browser profile and minimal CDP
+controller flags. It navigates to the original public extension listing,
+collects document HTTP status and bounded DOM/AX Add-button state, and reads
+only capability **types**. It does not call installation methods, click Add,
+accept a permission dialog, load an extension, or alter security/policies.
+Launch/setup, listing wait, final capture, and cleanup are bounded separately.
+Only finite `results.json` summaries are publishable.
+
+The initial local capture passed **6/6 capture checks** (report SHA-256
+`a85b5ee4fdbe92170f40d1e2e8d6a67f662540c1c7739746eb2e77b46e83bee4`).
+A later settled capture with the compiled read-only native UI helper again
+passed **6/6**, report SHA-256
+`a5a83672db8257242078d2e68035f1d024d9ec2edbf91794143bd7eaf33d26cd`.
+Both are CFT reference observations, not native-browser compatibility results:
+
+- The actual audited listing loaded with HTTP **200** and the expected title.
+- DOM and AX both showed **Add to Chrome disabled**; DOM reported it visible,
+  `disabled=true`, and `pointer-events:none`.
+- The page displayed “Switch to Chrome?” and an AX button named “Switch to
+  Chrome to install extensions and themes Install Chrome”. The reason for this
+  frontend state has not yet been established by these captures.
+- `webstorePrivate` had type `object`, while `beginInstallWithManifest3` and
+  `completeInstall` had type `function`. Neither method was invoked. API
+  exposure alone does not establish normal Store install readiness.
+- The port-zero CDP launch reported `navigator.webdriver=true`. Separately,
+  the normal-launch CFT sample had no Google Chrome UA-CH brand. These are
+  observations, not proof of the disabled button's predicate.
+- The native helper verified the owned PID/profile and reported AX trusted and
+  available. Its bounded/truncated traversal used an `AXApplication` fallback
+  rather than an observed `AXWindow`, so it does not prove that a permission
+  dialog target is available. No native UI action was performed.
+- The owned browser closed cleanly; root and POSIX process group were gone.
+
+The installation and permission-dialog gate remains **not tested**, and the
+disabled Add button is an unresolved readiness blocker. A preflight capture
+pass must not be presented as a successful extension installation or as proof
+that the future native browser supports the normal Store UI. Shipped frontend
+predicate analysis and actual built-browser interaction are separate follow-ups.
+
+The helper was subsequently tightened: application access and observed roots
+are recorded separately from actual native windows. `ready` now requires an
+owned `AXWindow`, known non-hidden application state, and known non-minimized
+window state. An application-only tree or unknown visibility cannot establish
+native-dialog readiness. The older capture above predates this stricter check;
+the next hosted preflight must exercise the updated helper.

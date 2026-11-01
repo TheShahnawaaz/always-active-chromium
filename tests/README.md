@@ -148,3 +148,43 @@ Publish **only** the no-debug `results.json`. Exclude its `profile-control/`,
 `profile-native/`, and `*-browser.log` files. The JSON retains bounded samples,
 precise launch arguments, version expectations, ownership/cleanup evidence,
 and the finite test's limits.
+
+## Read-only Chrome Web Store preflight
+
+```sh
+node tests/store.mjs --browser /path/to/browser --output reports/store
+```
+
+This opens the actual audited extension listing in a fresh owned browser profile
+and captures its document HTTP status, finite DOM/AX button labels and enabled
+states, actual browser revision, and `typeof` results for `webstorePrivate` and
+its installation methods. It does **not** invoke those methods, click Add,
+accept a permission dialog, install/load an extension, or change security and
+policies. Its independent minimal launcher uses only fresh-profile/first-run
+flags and loopback remote debugging for the read-only test controller; it does
+not use the ordinary extension fixture launcher's unsafe-debugging or network
+suppression flags. The listing wait defaults to 60 seconds, bounded by
+`--timeout-ms` (5-120 seconds), and button state must settle before capture.
+Launch/setup, final capture, and cleanup have separate absolute wall-clock
+bounds; an interrupted early launch still requires owned identity verification
+before any fallback signal.
+
+An optional `AA_STORE_UI_HELPER` supplies owned-PID native UI prerequisites:
+the compiled `tests/ui/store-ui.swift` helper on macOS or the exact
+`tests/ui/store-ui.ps1` path on Windows. The controller imposes a 15-second
+deadline and 64 KiB output bound. Its `ready`, `untrusted`, `unsupported`, or
+`error` status is recorded separately; exit zero alone is not readiness. Missing
+helpers are reported as unsupported, and no accessibility permission is granted
+or native UI action performed automatically.
+On macOS, application accessibility is distinct from native-window readiness:
+only an owned `AXWindow` with known non-hidden/non-minimized state can report
+`ready`. Application-only trees and unknown visibility remain unsupported.
+
+A passed **capture preflight** is not a completed Store installation or native
+extension-compatibility test. An Add button can be observed while disabled;
+readiness fields retain its enabled state, capability types, and native UI
+status. Real Add/permission-dialog interactions, restart, genuine Store update,
+and removal remain later explicit verification gates against built browsers.
+Publish only `results.json`, excluding `profile/`, `browser.log`, full DOM, and
+full accessibility trees. Cleanup closes only the verified owned browser, with
+PID/profile/creation-identity-checked fallback signals if needed.
