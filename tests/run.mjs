@@ -100,7 +100,9 @@ try {
   site=await serve();
   browser=await start();
   let cdp=browser.cdp;
-  observe('browserVersion',await cdp.send('Browser.getVersion'));
+  const browserVersion=await cdp.send('Browser.getVersion');
+  observe('browserVersion',browserVersion);
+  check('running browser matches pinned Chromium revision',browserVersion.revision.replace(/^@/,'')==='fb096c0011f9d50f0a264a9376420cdea9c421e3',browserVersion);
   const oracle=args.mode==='oracle'?await oracleSetup(cdp):null;
   const p=await page(cdp,site.url+'/fixture?case=main');
   const foreground=await cdp.evaluate(p.sessionId,'({initial:initialProbe,current:readProbe()})');

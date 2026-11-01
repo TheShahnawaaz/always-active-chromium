@@ -118,7 +118,25 @@ the cover tab was active, the main tab inactive, and an isolated-world native
 getter also returned visible. Explicitly turning off focus emulation in a
 separate diagnostic did not change it. The CFT executable still matched its
 ZIP. No cause is established. This observation remains unresolved rather than
-being used to inflate the extension's capability or callback rate.
+being used to inflate the extension's capability or callback rate. A later
+unmodified **baseline** run also showed the anomaly (native hidden=false in an
+inactive tab and 79 animation callbacks/1.3 s), so it is not specific to the
+extension. That 20-check run intentionally failed its background expectations;
+its report `baseline-final/results.json` SHA-256 is
+`b2465f4dd30c021cc1a92ac55b7f37358cf6f8b1bc5b6966e853296af8b63e42`.
+The genuinely hidden earlier baseline remains the accepted observation.
+
+`tests/acquire-reference.py` enables independent hosted reference runs without
+checking out Chromium. It downloads the version-pinned CFT package and current
+CRX, rejects a changed CRX/derived ZIP, safely extracts both, and emits the
+browser/extension paths plus `reference-provenance.json`. Local end-to-end Mac
+acquisition/extraction reused the verified official ZIP and freshly fetched the
+exact original CRX successfully. Seven finite archive-boundary tests passed.
+Windows CFT acquisition records its hash from the official immutable version
+URL; the running browser's revision is independently checked by the harness.
+The extraction implementation preserves bounded Mac framework symlinks and
+rejects traversal, symlink escape, duplicate paths, and extraction-budget
+overflow. No extension package/source should be uploaded as public evidence.
 
 The runtime REA session was exported to ignored
 `.runtime/oracle/rea-runtime-evidence.json` (6 records, 507199 bytes, SHA-256

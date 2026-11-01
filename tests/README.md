@@ -32,6 +32,18 @@ behavior deliberately differs from native mode: version 0.4.8 leaks visibility
 events to window capture listeners. An independent native implementation can
 close that gap.
 
+`python tests/acquire-reference.py --platform mac-arm64 --output /fresh/reference`
+downloads official pinned CFT 156.0.8078.80 and the current store CRX. On Windows
+use `--platform win64`. It requires the exact audited CRX SHA-256 and the known
+Mac ZIP digest, preserves the Mac framework symlinks during safe extraction,
+records the Windows ZIP digest from its official immutable version URL, and
+writes `reference-provenance.json`. In Actions it emits `browser`, `extension`,
+`provenance`, `cft_sha256`, `extension_sha256`, `version`, and `revision` through
+`GITHUB_OUTPUT`. The browser test independently asserts the actual running
+revision. The acquisition directory must be new; don't upload its packages or
+extension source. A changed extension digest requires a new audit, never an
+automatic acceptance.
+
 Coverage includes document-start reads, tab changes, newly created background
 tabs, same-origin/cross-origin/about:blank frames, minimized windows, getters,
 focus, native and synthetic event paths, ordinary input focus transfers,

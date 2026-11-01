@@ -1,0 +1,76 @@
+name: Measure reference browser behavior
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    name: Reference behavior on ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: mac-arm64
+            download: mac-arm64
+            runner: macos-26
+          - platform: win-x64
+            download: win64
+            runner: windows-2025-vs2026
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AA_REFERENCE_ROOT: .runtime/reference
+      AA_PLATFORM: ${{ matrix.platform }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Check reference archive handling
+        run: python -m unittest discover -s tests -p test_acquire_reference.py
+      - name: Acquire pinned official browser and exact reference extension
+        id: acquire
+        shell: bash
+        run: python tests/acquire-reference.py --platform "${{ matrix.download }}" --output "$AA_REFERENCE_ROOT"
+      - name: Measure unmodified browser and ordinary MV3 extension lifecycle
+        id: baseline
+        continue-on-error: true
+        timeout-minutes: 8
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+        run: node tests/run.mjs --browser "$AA_BROWSER" --mode baseline --output reports/baseline
+      - name: Measure the shipped always-active extension
+        id: oracle
+        if: ${{ always() && steps.acquire.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 8
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+          AA_EXTENSION: ${{ steps.acquire.outputs.extension }}
+        run: node tests/run.mjs --browser "$AA_BROWSER" --mode oracle --extension "$AA_EXTENSION" --output reports/oracle
+      - name: Save finite reference evidence to a draft release
+        if: ${{ always() && steps.acquire.outcome == 'success' }}
+        env:
+          AA_BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
+          AA_ORACLE_OUTCOME: ${{ steps.oracle.outcome }}
+        run: python .github/scripts/publish-reference.py
+      - name: Report incomplete or failed reference checks
+        if: ${{ always() && (steps.baseline.outcome != 'success' || steps.oracle.outcome != 'success') }}
+        shell: bash
+        run: |
+          echo 'Reference checks did not all pass; retained reports distinguish observations from failed assertions.' >&2
+          exit 1
