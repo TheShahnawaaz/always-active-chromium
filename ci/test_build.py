@@ -52,10 +52,12 @@ class HydrationTests(unittest.TestCase):
 
 class SourceRetentionTests(unittest.TestCase):
     def prepare_mocks(self, root, source_error=None, check_error=None, hydration_error=None):
-        def extract(_archive, destination, strip):
+        def extract(_archive, destination, strip, source_archive=False):
             if source_error:
                 raise source_error
+            self.assertTrue(source_archive)
             destination.mkdir(parents=True)
+            return {'tool': 'validated source fixture'}
 
         stack = contextlib.ExitStack()
         self.addCleanup(stack.close)

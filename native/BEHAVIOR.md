@@ -4,8 +4,29 @@ Implementation source: Chromium `156.0.8078.80`, commit
 `fb096c0011f9d50f0a264a9376420cdea9c421e3`. The file URLs and original/patched
 SHA-256 values are recorded in [provenance.json](provenance.json). This is a
 native C++/Web IDL patch, not an extension, injected script, or DevTools helper.
-No browser UI, extension implementation, Web Store permission, security origin,
-site isolation, fullscreen permission, or user-activation code is changed.
+It preserves Chromium's standard interface without adding controls or banners.
+There is one deliberate public-build UI omission: the missing-Google-API-key
+startup informational banner described below. Extension implementation, Web
+Store permission, security origin, site isolation, fullscreen permission, and
+user-activation code are unchanged.
+
+## Startup informational notice
+
+Public unbranded builds have no provided Google API credentials. In
+`chrome/browser/ui/startup/infobar_utils.cc`, only creation of the missing-key
+startup informational banner is guarded by the existing
+`GOOGLE_CHROME_BRANDING` build flag. Both its centralized and legacy infobar
+paths are omitted from this public build, keeping ordinary startup free of
+that development notice. Google-branded builds retain upstream behavior.
+There is no new setting, badge, toolbar item, prompt, or replacement banner.
+
+`google_apis::HasAPIKeyConfigured()` continues to report false without a key.
+No dummy credentials, key-check override, private branding assets, or service
+availability claims are introduced. Google-dependent features can remain
+unavailable exactly as documented for the distribution. Bad-command-line-flag,
+unsupported-OS, encryption-availability, and other security warnings retain
+their existing startup paths. This narrowly scoped UI omission is independent
+of the `AlwaysActive` website-behavior feature controls.
 
 ## Controls and scope
 

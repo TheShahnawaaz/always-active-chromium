@@ -127,8 +127,30 @@ def fetch(url, destination, expected_sha=None, expected_size=None):
     return actual
 
 
-def unpack(archive, destination, strip=0):
+def unpack_windows_source(archive, destination, strip):
+    git = shutil.which('git')
+    if not git:
+        raise RuntimeError('Git for Windows is required for its tested GNU tar extractor')
+    gitbin = Path(git).resolve().parent.parent / 'usr/bin'
+    executable = gitbin / 'tar.exe'
+    if not executable.is_file() or not (gitbin / 'xz.exe').is_file():
+        raise RuntimeError('The tested Git GNU tar/xz tools are unavailable; no silent extractor fallback')
+    env = dict(os.environ, LANG='en_US.UTF-8', LC_ALL='en_US.UTF-8',
+               MSYS='winsymlinks:nativestrict', PATH=str(gitbin) + os.pathsep + os.environ['PATH'])
+    version = run([executable, '--version'], env=env, capture_output=True, text=True).stdout.splitlines()[0]
+    if 'GNU tar' not in version:
+        raise RuntimeError(f'Unexpected source extractor: {version}')
+    print(f'Source extractor: {version}; UTF-8 locale; strict native symlinks', flush=True)
+    run([executable, '--force-local', '-xf', archive.as_posix(), '-C', destination.as_posix(),
+         f'--strip-components={strip}'], env=env)
+    return {'tool': str(executable), 'version': version, 'locale': 'en_US.UTF-8',
+            'symlink_policy': 'winsymlinks:nativestrict'}
+
+
+def unpack(archive, destination, strip=0, source_archive=False):
     destination.mkdir(parents=True, exist_ok=True)
+    if source_archive and os.name == 'nt':
+        return unpack_windows_source(archive, destination, strip)
     if zipfile.is_zipfile(archive):
         with zipfile.ZipFile(archive) as source:
             for info in source.infolist():
@@ -160,6 +182,8 @@ def unpack(archive, destination, strip=0):
                     path.chmod(mode & 0o777)
     else:
         run(['tar', '-xf', archive, '-C', destination, f'--strip-components={strip}'])
+    return {'tool': 'system tar' if not zipfile.is_zipfile(archive) else 'Python zipfile',
+            'strip_components': strip}
 
 
 def load_deps(path, platform):
@@ -313,11 +337,11 @@ def prepare(platform):
             raise RuntimeError('Less than 75 GiB free before source; insufficient build reserve')
         archive = root / 'source.tar.xz'
         fetch(PINS['source_url'], archive, PINS['source_sha256'], PINS['source_size'])
-        unpack(archive, src, strip=1)
+        extraction = unpack(archive, src, strip=1, source_archive=True)
         archive.unlink()
         state = {'schema': 1, 'fingerprint': expected, 'root': str(root), 'platform': platform,
                  'version': PINS['version'], 'revision': PINS['revision'], 'status': 'prepared',
-                 'hydration_revision': PINS['hydration_revision']}
+                 'hydration_revision': PINS['hydration_revision'], 'source_extraction': extraction}
     set_build_env(src)
     # A failed tool download or GN generation must not discard the validated
     # multi-gigabyte source. Publish checkpointability only after complete source

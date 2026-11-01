@@ -67,6 +67,21 @@ directory. Chromium's pinned Windows build requirements call for SDK
 10.0.28000.2270 (include-directory name `10.0.28000.0`). No SDK installer or tool
 payload is downloaded onto the user's Mac.
 
+The official source archive uses Git for Windows' bundled **GNU tar 1.35** with
+a UTF-8 locale, `--force-local`, and strict native symlinks. The source archive's
+SHA is verified before extraction and any extractor failure remains fatal.
+This choice is backed by hosted
+[probe run 41353041394](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353041394):
+Windows system bsdtar 3.8.9 failed valid CJK/emoji PAX filenames with the exact
+"empty or unreadable filename" error seen in the real source extraction. Setting
+its UTF-8 locale did not help. Git GNU tar preserved those Unicode names, a
+403-character path, native relative symlinks and hardlinks. No global tar exit
+code is ignored. Both tools normalize some raw-byte/NTFS-special names; that
+diagnostic limitation is recorded, not presented as exact support for every
+Linux test filename. Host tool archives retain their existing extraction path;
+the change is limited to the Windows source archive. The selected extractor and
+version are recorded in build-state provenance.
+
 Release-optimized, noncomponent Chromium is built without PGO, ThinLTO, or debug
 symbols. This reduces memory, disk and build time; it sacrifices some official
 Chrome performance and crash-debugging detail. Mac uses Apple's supported linker
