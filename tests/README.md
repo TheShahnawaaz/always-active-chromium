@@ -196,7 +196,10 @@ node tests/store-dialog.mjs --browser /path/to/browser --output reports/store-di
 ```
 
 This separate stage uses the same fixed audited listing and a fresh minimal
-browser profile. It requires an enabled, visible, unobscured Add button and
+browser profile. The normal browser window is requested at 1280 by 900 pixels
+so the Store's desktop layout fits; no viewport/device emulation is used.
+Actual viewport dimensions and button rectangles are retained for diagnostics.
+It requires an enabled, visible, unobscured Add button and
 strict owned-PID native UI prerequisites before dispatching normal CDP mouse
 move/press/release input to that button. It never calls `element.click` or an
 installation API. The native helper runs in read-only `dialog` mode afterward;

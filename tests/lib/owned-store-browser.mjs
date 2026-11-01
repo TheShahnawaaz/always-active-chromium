@@ -84,7 +84,7 @@ async function closeOwned(browser) {
 export async function launchOwnedStoreBrowser({executable,output,signal}) {
   executable=await realpath(executable);
   const profile=path.join(output,'profile');await mkdir(profile,{mode:0o700});
-  const args=[`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','about:blank'];
+  const args=[`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check','--window-size=1280,900','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','about:blank'];
   const browser={executable,profile,args,async close(){return closeOwned(browser);}};
   const log=await open(path.join(output,'browser.log'),'wx',0o600);
   let launchError;

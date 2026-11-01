@@ -43,9 +43,11 @@ function readAddButton() {
     return {label:short(element.getAttribute('aria-label')||element.innerText||element.textContent),disabled:element.matches(':disabled')||element.hasAttribute('disabled')||element.getAttribute('aria-disabled')==='true',
       visible:rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)>0,
       pointerEvents:style.pointerEvents,hitTargetMatches:hit===element||element.contains(hit),x,y,
+      rect:{x:rect.x,y:rect.y,top:rect.top,left:rect.left,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height},
       insideViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight};
   }).slice(0,8);
-  return {url:location.href.slice(0,1600),title:short(document.title),readyState:document.readyState,webdriver:navigator.webdriver,candidates};
+  return {url:location.href.slice(0,1600),title:short(document.title),readyState:document.readyState,webdriver:navigator.webdriver,
+    viewport:{innerWidth,innerHeight,devicePixelRatio},candidates};
 }
 
 async function queryTargetInstalled(until) {
