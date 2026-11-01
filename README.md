@@ -4,8 +4,9 @@ Work in progress: a desktop Chromium build with native always-visible/focused
 behavior for macOS Apple Silicon and Windows x64, while retaining Chromium's
 standard interface and extension support.
 
-**There is no custom browser binary yet.** This repository currently records the
-requirements and contains a manually triggered GitHub-hosted runner preflight.
+**There is no custom browser binary yet.** The implementation goal is active.
+The repository currently records the requirements and contains a manually
+triggered GitHub-hosted runner preflight.
 
 ## Requirements
 
@@ -18,10 +19,13 @@ requirements and contains a manually triggered GitHub-hosted runner preflight.
   fullscreen and attempted background-navigation behavior. Record observed
   behavior and limitations separately from marketing claims.
 - Enable the native feature by default for ordinary websites and frames, with
-  compatibility controls as needed. Do not implement the feature using an
+  native command-line compatibility controls as needed. Do not implement the feature using an
   extension, injected JavaScript, or an attached debugging helper.
-- Start from a pinned current stable Chromium release and keep the normal
-  Chromium interface as close as practicable to current Chrome.
+- Start from pinned current stable Chromium 156.0.8078.80
+  (`fb096c0011f9d50f0a264a9376420cdea9c421e3`) and preserve its normal interface.
+  Do not add toolbar buttons, feature settings pages, status badges, debugging
+  banners, or other visual changes. Google's private branding and restricted
+  services remain documented differences from official Chrome.
 - Preserve the normal extensions platform and Chrome Web Store integration.
   Verify installation, execution, restart persistence, update behavior, and
   removal of representative supported Manifest V3 extensions on both platforms.

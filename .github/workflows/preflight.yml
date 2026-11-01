@@ -27,7 +27,15 @@ jobs:
           python3 --version
           for xcode in /Applications/Xcode*.app; do
             if [ -d "$xcode" ]; then
-              printf '%s\n' "$xcode"
+              ls -ld "$xcode"
+              if [ ! -L "$xcode" ]; then
+                du -sh "$xcode"
+              fi
+            fi
+          done
+          for directory in /Library/Developer/CoreSimulator /opt/hostedtoolcache /usr/local/share; do
+            if [ -d "$directory" ]; then
+              du -sh "$directory" 2>/dev/null || true
             fi
           done
 
@@ -40,9 +48,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory, NumberOfLogicalProcessors
-          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture
-          Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, FileSystem, Size, SizeRemaining
+          Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory, NumberOfLogicalProcessors | ConvertTo-Json
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture | ConvertTo-Json
+          Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, FileSystem, Size, SizeRemaining | ConvertTo-Json
           $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
           if (Test-Path $vswhere) {
             & $vswhere -all -products '*' -format json
