@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from build import PROJECT, PINS, fingerprint, sha256
+from build import PROJECT, PINS, final_release_tag, require_tag, sha256, source_commit
 
 
 def main():
@@ -18,7 +18,10 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']
     packages = PROJECT / 'packages'
     stem = f'always-active-chromium-{PINS["version"]}-{args.platform}'
-    tag = f'build-{PINS["version"]}-{args.platform}-{fingerprint(args.platform)[:12]}'
+    tag = final_release_tag(args.platform)
+    # The actual final tag is created by the authorized repository owner before
+    # the build, never inferred from a moving storage anchor or workflow HEAD.
+    require_tag(tag, source_commit())
     # Browser profiles, installed extension fixtures, cookies and local storage
     # are deliberately excluded from release assets.
     report = PROJECT / 'reports' / args.platform
@@ -45,8 +48,7 @@ def main():
             raise RuntimeError('Refusing to replace an already published release')
         subprocess.run(['gh', 'release', 'edit', tag, '--repo', repo, '--notes-file', str(notes)], check=True)
     else:
-        subprocess.run(['gh', 'release', 'create', tag, '--repo', repo, '--draft',
-            '--target', os.environ.get('AA_BUILD_REF', os.environ['GITHUB_SHA']),
+        subprocess.run(['gh', 'release', 'create', tag, '--repo', repo, '--draft', '--verify-tag',
             '--title', stem, '--notes-file', str(notes)], check=True)
     for path in sorted(packages.glob(stem + '*')):
         subprocess.run(['gh', 'release', 'upload', tag, str(path), '--repo', repo, '--clobber'], check=True)

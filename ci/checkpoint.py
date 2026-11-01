@@ -153,15 +153,19 @@ def save(platform):
     if state['fingerprint'] != fingerprint(platform):
         raise RuntimeError('Refusing to checkpoint a different source/patch configuration')
     tag = prefix(platform) + os.environ['GITHUB_RUN_ID'] + '-' + os.environ.get('GITHUB_RUN_ATTEMPT', '1')
+    storage_anchor = gh('api', f'repos/{repository()}')['default_branch']
     # Drafts are intermediate software build checkpoints, never claimed as binaries.
     subprocess.run(['gh', 'release', 'create', tag, '--repo', repository(), '--draft',
-                    '--target', os.environ.get('AA_BUILD_REF', os.environ['GITHUB_SHA']), '--title', f'Compiler checkpoint: {platform}',
+                    '--target', storage_anchor, '--title', f'Compiler checkpoint: {platform}',
                     '--notes', 'Internal resumable Chromium build state. Not an installable browser. '
+                    'The release tag targets the default branch only as a storage anchor; '
+                    'ready.json/state.json record the actual source version, native patch and checkout commit. '
                     'Created only on standard GitHub-hosted runners; replaced after the next complete checkpoint.'], check=True)
     writer = ChunkWriter(root / '.checkpoint-upload', lambda path: upload(tag, path))
     pack(root, writer)
     manifest = {'schema': 1, 'format': 'tar+zstd+pax-nanoseconds', 'state': state,
-                'parts': writer.parts, 'run_id': os.environ['GITHUB_RUN_ID']}
+                'parts': writer.parts, 'run_id': os.environ['GITHUB_RUN_ID'],
+                'checkpoint_storage_anchor': storage_anchor}
     ready = root / '.checkpoint-upload/ready.json'
     ready.write_text(json.dumps(manifest, indent=2) + '\n')
     upload(tag, ready)

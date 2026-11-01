@@ -32,6 +32,12 @@ documentation and authoring caches are excluded from that fingerprint.
 Each resumed prepare checks hydration again: per-dependency plan markers skip
 unchanged packages and preserve their mtimes, while newly selected tools are
 hydrated. `hydration_revision` in the pins versions the hydration semantics.
+After complete archive extraction and the native source/version check, a
+`source-ready` / `bootstrap-incomplete` state can be checkpointed even if a
+later tool download or GN generation fails. That failed run still skips
+compilation and automatic continuation. A corrected retry rehydrates any
+incomplete dependencies, rechecks the patch, and regenerates GN. An interrupted
+or unvalidated source extraction is never declared checkpointable.
 
 ## Measured runners and build choices
 
@@ -80,7 +86,40 @@ Choose **Build native Chromium** in Actions. For the first source/toolchain/GN
 check, set `bootstrap_only=true` and `auto_resume=false`. That saves a reusable
 source checkpoint. Start it again with `bootstrap_only=false` to compile.
 Matching checkpoints are found automatically. `build_ref` optionally fixes the
-small project repository to a commit; a blank field uses the workflow commit.
+small project repository to an immutable source tag; a blank field uses the
+workflow commit. **Before dispatch**, create `ci-source-<first12-of-commit>` at
+the chosen project commit using the already authorized repository credential.
+The workflow checks that exact immutable tag against `git rev-parse HEAD` before
+large downloads. Continue stages retain the source tag, even if `main` advances.
+Package provenance records the resolved checkout SHA, not the moving workflow
+definition's `GITHUB_SHA`.
+
+Source tags record provenance. They are **not sufficient authorization** for
+creating a different release tag at that older commit. GitHub
+[enforces workflow permissions for releases targeting unreferenced workflow-changing commits](https://github.blog/changelog/2023-11-02-github-actions-enforcing-workflow-scope-when-creating-a-release/).
+The repository's observed test publishers still received 403 when a different
+source tag existed. Do not work around that guard with a PAT secret or broader
+permissions. Checkpoints use the default branch solely as a clearly labeled
+storage anchor; the manifest, not that storage tag, identifies the actual code.
+
+Before **compilation** dispatch, also precreate each exact final binary tag at
+the same project commit. Its name is
+`build-<Chromium-version>-<platform>-<native-fingerprint12>-<checkout-commit12>`.
+To print it, run `python ci/build.py source-ref --platform mac-arm64` (and
+`win-x64`) after creating the source tag. The nonbootstrap workflow requires
+that tag before downloading/building; the publisher checks its resolved SHA and
+uses `gh release create --verify-tag` with no `--target`, so a final binary release
+cannot silently point at the checkpoint storage anchor or another project commit.
+
+For example, in the small project repository (never a Chromium checkout):
+
+```sh
+aacc_commit="$(git rev-parse HEAD)"
+aacc_source_tag="ci-source-${aacc_commit:0:12}"
+git tag "$aacc_source_tag" "$aacc_commit"
+git push origin "refs/tags/$aacc_source_tag"
+gh workflow run build.yml --ref main -f build_ref="$aacc_source_tag" -f platform=both -f bootstrap_only=true -f auto_resume=false
+```
 
 Each job has GitHub's six-hour limit. Compilation stops at **220 minutes from
 the initial budget step**, with a graceful interrupt and a forced termination

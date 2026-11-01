@@ -38,6 +38,45 @@ def write_if_changed(path, text):
         path.write_text(text, encoding='utf-8')
 
 
+def source_commit():
+    return subprocess.check_output(['git', '-C', str(PROJECT), 'rev-parse', 'HEAD'], text=True).strip()
+
+
+def require_tag(tag, commit):
+    repo = os.environ['GITHUB_REPOSITORY']
+    try:
+        ref = json.loads(subprocess.check_output(
+            ['gh', 'api', f'repos/{repo}/git/ref/tags/{tag}'], text=True, timeout=120))
+    except subprocess.CalledProcessError as problem:
+        raise RuntimeError(f'Create immutable Git tag {tag} at {commit} before dispatch.') from problem
+    target = ref['object']
+    while target['type'] == 'tag':
+        target = json.loads(subprocess.check_output(['gh', 'api', target['url']],
+                           text=True, timeout=120))['object']
+    if target['type'] != 'commit' or target['sha'] != commit:
+        raise RuntimeError(f'Immutable Git tag {tag} does not point to the checked-out commit')
+
+
+def final_release_tag(platform, commit=None):
+    commit = commit or source_commit()
+    return f'build-{PINS["version"]}-{platform}-{fingerprint(platform)[:12]}-{commit[:12]}'
+
+
+def check_source_ref(platform, require_final=False):
+    commit = source_commit()
+    tag = f'ci-source-{commit[:12]}'
+    require_tag(tag, commit)
+    final_tag = final_release_tag(platform, commit)
+    if require_final:
+        require_tag(final_tag, commit)
+    if os.environ.get('GITHUB_ENV'):
+        with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
+            stream.write(f'AA_SOURCE_TAG={tag}\nAA_SOURCE_COMMIT={commit}\n')
+    output('source_tag', tag)
+    output('repository_commit', commit)
+    output('final_release_tag', final_tag)
+
+
 def fingerprint(platform):
     digest = hashlib.sha256((PROJECT / 'ci/pins.json').read_bytes())
     digest.update(platform.encode())
@@ -280,11 +319,20 @@ def prepare(platform):
                  'version': PINS['version'], 'revision': PINS['revision'], 'status': 'prepared',
                  'hydration_revision': PINS['hydration_revision']}
     set_build_env(src)
+    # A failed tool download or GN generation must not discard the validated
+    # multi-gigabyte source. Publish checkpointability only after complete source
+    # extraction and the exact native source/version checks have succeeded.
+    run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src, '--check'])
+    state['phase'] = 'source-ready'
+    state['status'] = 'bootstrap-incomplete'
+    state['last_prepare_run'] = os.environ.get('GITHUB_RUN_ID', '')
+    state['repository_commit'] = source_commit()
+    state_file.write_text(json.dumps(state, indent=2) + '\n')
+    output('source_checkpointable', 'true')
     # Every resume checks the selected dependency plan. Per-dependency markers
     # avoid touching unchanged tool binaries/mtimes, while newly required tools
     # can be hydrated without silently skipping the bootstrap phase.
     hydrate(src, platform)
-    run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src, '--check'])
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src])
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src, '--verify-applied'])
     args = dict(PINS['common_gn_args'])
@@ -293,6 +341,8 @@ def prepare(platform):
     out.mkdir(parents=True, exist_ok=True)
     write_if_changed(out / 'args.gn', ''.join(f'{key} = {json.dumps(value)}\n' for key, value in args.items()))
     run([gn_path(src, platform), 'gen', 'out/AlwaysActive', '--fail-on-unused-args'], cwd=src)
+    state['phase'] = 'build-ready'
+    state['status'] = 'prepared'
     state_file.write_text(json.dumps(state, indent=2) + '\n')
     output('fingerprint', expected)
     output('browser', src / ('out/AlwaysActive/chrome.exe' if platform == 'win-x64' else 'out/AlwaysActive/Chromium.app/Contents/MacOS/Chromium'))
@@ -376,7 +426,8 @@ def package(platform):
             raise RuntimeError('The real Chromium mini_installer.exe was not built')
         shutil.copy2(installer, packages / f'{stem}-installer.exe')
     manifest = {'source': PINS, 'build': json.loads((root / 'state.json').read_text()),
-                'repository_commit': os.environ.get('AA_BUILD_REF', os.environ.get('GITHUB_SHA')),
+                'repository_commit': source_commit(),
+                'source_tag': os.environ.get('AA_SOURCE_TAG'),
                 'workflow_run': os.environ.get('GITHUB_RUN_ID'),
                 'runner_image': os.environ.get('ImageVersion'),
                 'signing': 'No Developer ID/notarization or Windows Authenticode certificate configured.'}
@@ -388,11 +439,14 @@ def package(platform):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['fingerprint', 'prepare', 'compile', 'package'])
+    parser.add_argument('command', choices=['source-ref', 'fingerprint', 'prepare', 'compile', 'package'])
     parser.add_argument('--platform', required=True, choices=['mac-arm64', 'win-x64'])
     parser.add_argument('--bootstrap-only', action='store_true')
+    parser.add_argument('--require-final-ref', action='store_true')
     args = parser.parse_args()
-    if args.command == 'fingerprint':
+    if args.command == 'source-ref':
+        check_source_ref(args.platform, args.require_final_ref)
+    elif args.command == 'fingerprint':
         output('fingerprint', fingerprint(args.platform))
     elif args.command == 'prepare':
         prepare(args.platform)

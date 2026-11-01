@@ -9,7 +9,7 @@ on:
         options: [both, mac-arm64, win-x64]
         default: both
       build_ref:
-        description: Source repository commit to build (blank uses this workflow commit)
+        description: Immutable ci-source-<commit12> tag to build (blank uses this workflow commit)
         type: string
         default: ''
       bootstrap_only:
@@ -68,6 +68,8 @@ jobs:
       - name: Start the six-hour job budget
         shell: bash
         run: python -c 'import os,time; open(os.environ["GITHUB_ENV"],"a").write("AA_JOB_STARTED="+str(time.time())+"\n")'
+      - name: Require the immutable source reference before large downloads
+        run: python ci/build.py source-ref --platform ${{ matrix.platform }} ${{ !inputs.bootstrap_only && '--require-final-ref' || '' }}
       - name: Install the small checkpoint codec
         run: python -m pip install --disable-pip-version-check -r ci/requirements.txt
       - name: Check the checkpoint format on this platform
@@ -94,7 +96,7 @@ jobs:
         run: python ci/build.py compile --platform ${{ matrix.platform }} ${{ inputs.bootstrap_only && '--bootstrap-only' || '' }}
       - name: Save a complete resumable checkpoint
         id: checkpoint
-        if: ${{ always() && steps.prepare.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.prepare.outputs.source_checkpointable == 'true' }}
         timeout-minutes: 120
         run: python ci/checkpoint.py save --platform ${{ matrix.platform }}
       - name: Package the real browser

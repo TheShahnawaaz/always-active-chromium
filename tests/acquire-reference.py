@@ -3,8 +3,7 @@
 
 Only Python's standard library is required. The CRX must match the audited
 package exactly; a store update fails closed instead of silently changing the
-oracle. CFT URLs are version-pinned. The known Mac ZIP digest is required;
-the Windows ZIP digest is recorded from the official immutable version URL.
+oracle. CFT URLs and the measured Mac/Windows ZIP digests are pinned.
 """
 from __future__ import annotations
 
@@ -28,6 +27,7 @@ EXTENSION_ID = "ehllkhjndgnlokhomdlhgbineffifcbj"
 EXTENSION_SHA256 = "17e792706dcc8d7b1ad236bd090b662ca97786c085594b35da421851a33b655b"
 EXTENSION_ZIP_SHA256 = "8eee6ad2b1fbc04726f77eb6eada38c700b91f13132cb64b8012cd9b7e7b038c"
 MAC_ZIP_SHA256 = "8bc590d1b1acac042a000234c768f31830f25a3983a83ed5e067114c87c4cad1"
+WINDOWS_ZIP_SHA256 = "16edb57d6107bf1c48a7c149b8d78b155fe614410093796dd72441fd6640540f"
 EXTENSION_URL = ("https://clients2.google.com/service/update2/crx?response=redirect"
                  f"&prodversion={VERSION}&acceptformat=crx3&x=id%3D{EXTENSION_ID}%26uc")
 
@@ -151,7 +151,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--platform", choices=["mac-arm64", "win64", "win-x64"])
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--cft-archive", type=Path, help="Reuse a local CFT ZIP (Mac digest is still required)")
+    parser.add_argument("--cft-archive", type=Path, help="Reuse a local CFT ZIP (the pinned digest is still required)")
     args = parser.parse_args()
     selected = args.platform or ("mac-arm64" if sys.platform == "darwin" and platform.machine() == "arm64" else "win64" if sys.platform == "win32" else None)
     if selected == "win-x64":
@@ -168,8 +168,9 @@ def main() -> None:
         archive_path = root / f"chrome-{selected}.zip"
         print(f"Downloading pinned CFT {VERSION} {selected}", flush=True)
         cft_sha = download(cft_url, archive_path, 1024 * 1024 * 1024)
-    if selected == "mac-arm64" and cft_sha != MAC_ZIP_SHA256:
-        raise ValueError(f"CFT Mac ZIP SHA mismatch: {cft_sha}")
+    expected_cft_sha = MAC_ZIP_SHA256 if selected == "mac-arm64" else WINDOWS_ZIP_SHA256
+    if cft_sha != expected_cft_sha:
+        raise ValueError(f"CFT {selected} ZIP SHA mismatch: {cft_sha}")
     extension_crx = root / f"{EXTENSION_ID}.crx"
     print("Downloading current extension and requiring the audited CRX digest", flush=True)
     extension_sha = download(EXTENSION_URL, extension_crx, 20 * 1024 * 1024)
@@ -194,7 +195,7 @@ def main() -> None:
         raise ValueError(f"Expected browser executable missing: {browser}")
     provenance = {
         "schema": 1, "version": VERSION, "expected_revision": REVISION, "platform": selected,
-        "cft": {"url": cft_url, "sha256": cft_sha, "acquisition": "provided-local" if args.cft_archive else "official-version-url", "digest_check": "pinned-known-digest" if selected == "mac-arm64" else "recorded-from-official-version-url"},
+        "cft": {"url": cft_url, "sha256": cft_sha, "acquisition": "provided-local" if args.cft_archive else "official-version-url", "digest_check": "pinned-known-digest"},
         "extension": {"url": EXTENSION_URL, "id": EXTENSION_ID, "version": manifest["version"], "crx_sha256": extension_sha, "zip_sha256": EXTENSION_ZIP_SHA256},
         "note": "Actual running browser revision must be read from tests/results.json Browser.getVersion; this file records the expected pin.",
     }

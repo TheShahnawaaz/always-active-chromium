@@ -13,6 +13,6 @@ else:
     subprocess.run(['gh', 'workflow', 'run', 'build.yml', '--repo', os.environ['GITHUB_REPOSITORY'],
         '--ref', os.environ['GITHUB_REF_NAME'],
         '--field', f'platform={os.environ["AA_PLATFORM"]}',
-        '--field', f'build_ref={os.environ["AA_BUILD_REF"]}',
+        '--field', f'build_ref={os.environ.get("AA_SOURCE_TAG", os.environ["AA_BUILD_REF"])}',
         '--field', f'stage={stage + 1}', '--field', f'max_stages={limit}',
         '--field', 'auto_resume=true', '--field', 'bootstrap_only=false'], check=True)

@@ -35,8 +35,7 @@ close that gap.
 `python tests/acquire-reference.py --platform mac-arm64 --output /fresh/reference`
 downloads official pinned CFT 156.0.8078.80 and the current store CRX. On Windows
 use `--platform win64`. It requires the exact audited CRX SHA-256 and the known
-Mac ZIP digest, preserves the Mac framework symlinks during safe extraction,
-records the Windows ZIP digest from its official immutable version URL, and
+Mac/Windows ZIP digests, preserves Mac framework symlinks during safe extraction, and
 writes `reference-provenance.json`. In Actions it emits `browser`, `extension`,
 `provenance`, `cft_sha256`, `extension_sha256`, `version`, and `revision` through
 `GITHUB_OUTPUT`. The browser test independently asserts the actual running

@@ -49,7 +49,91 @@ selected local executable. The user's normal Chrome/profile was untouched. The
 reference extension was loaded unpacked from the archived source. No debugging
 focus emulation or lifecycle override is used by `tests/run.mjs`.
 
-## Accepted observations
+## Accepted GitHub-hosted macOS and Windows reference runs
+
+[Reference run 41350893756, attempt 1](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41350893756/attempts/1)
+ran source commit `8f9fbabdd29b889ed673fe29e771ba71d7b9fbff` on standard
+GitHub-hosted `macos-26` and `windows-2025-vs2026` runners. On **both** platforms
+the unmodified CFT baseline passed all **21 assertions**, and the exact shipped
+extension passed all **28 oracle assertions**. The oracle explicitly verified
+the inactive page's prototype-native `hidden=true` and `visibilityState=hidden`;
+these are genuine background measurements, unlike the excluded local runs
+below. The actual running revision matched
+`fb096c0011f9d50f0a264a9376420cdea9c421e3` in all four runs.
+
+| Platform | Mode | Passed checks | `results.json` SHA-256 |
+| --- | --- | --- | --- |
+| macOS arm64 | Baseline | 21/21 | `976b908c951118e050dde996c7145485e6a7ac99dc29bc8553d3b2ea75bba5b0` |
+| macOS arm64 | Extension oracle | 28/28 | `ba736779e02ab7f0cef1ecde73d933666ded538877f0d971ceb53eacb9e700ce` |
+| Windows x64 | Baseline | 21/21 | `b7f03193138a7e389d0dcf646ec65c1fe20d0f248df91f185792844b5959524e` |
+| Windows x64 | Extension oracle | 28/28 | `e5cd11dff3863d64e0c84fa6d820f3024a8fe98aa03a048cc91e28db636fd2fa` |
+
+The acquired Mac CFT ZIP matched the known digest above. The official immutable
+Windows CFT ZIP measured
+`16edb57d6107bf1c48a7c149b8d78b155fe614410093796dd72441fd6640540f`;
+this digest is now pinned by the acquisition helper as well. Both downloads of
+the extension matched the original CRX SHA-256 exactly. No compilation or
+custom browser was involved.
+
+The hosted measurements agree across both platforms:
+
+- The native baseline reported hidden/hidden/not focused in the background and
+  delivered normal visibility notifications. Its background rAF count was zero.
+- With the extension enabled for all hosts, website instance getters reported
+  visible/not hidden/focused while original prototype visibility getters still
+  exposed hidden state. Same-origin, cross-origin, inherited about:blank frames,
+  new background documents, and minimized-window checks passed.
+- A new background rAF chain produced **3 callbacks in 1.3 seconds** in each
+  oracle run. Timestamps and cancellation checks passed, but this is timer
+  fallback activity, not a 60 fps guarantee.
+- Ordinary hidden `location.href` redirects succeeded. A background script
+  reload fetched the page again (request count **1 -> 2**) without a beforeunload
+  dialog, despite the default redirect preference. Foreground script reloads
+  and browser-initiated background reloads also succeeded.
+- With fullscreen protection enabled, real fullscreen entry succeeded and
+  initially returned `fixture-root`. Switching tabs left both native and
+  spoofed element getters **null**, and the boolean aliases **false**. All four
+  recorded entry/exit capture callbacks in each matching unmodified baseline
+  occurred while the native document was still **visible and focused**; the page
+  became hidden afterward. Calling
+  `exitFullscreen()` then failed because the document was no longer active.
+  The extension therefore did not preserve the claimed practical state on
+  either platform.
+- Late injection still allowed previously registered window blur and document
+  visibility handlers to observe the real transition on both platforms.
+- The ordinary MV3 fixture installed, executed content-script/worker/storage
+  messaging, adopted version 1.0.1 on unpacked reload, preserved storage across
+  browser restart, and stopped executing after removal in every run. This
+  covers the fixture in CFT, not the future native binary or Web Store services.
+
+The finite oracle pass tests the extension's **observed contract**, including
+its limitations. It does not mean every marketing claim succeeded. Source
+`main.js:78-96` also explains its document-capture visibility interception gap:
+an ancestor window capture callback runs first (confirmed in the accepted local
+trace). Source `main.js:48-76` explains why its reload-only beforeunload attempt
+does not supply a general redirect blocker, and `main.js:215-220` can overwrite
+its fullscreen snapshot with null before suppression. These gaps motivate
+deliberate native improvements, which still need custom-binary verification.
+
+Attempt 1's measurement steps succeeded; its separate draft-release publisher
+failed with HTTP 403. [Attempt 2](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41350893756/attempts/2)
+repeated **21/21 baseline and 28/28 oracle checks on both platforms**, again with
+native-hidden validation and animation counts zero/three, respectively. Its
+four report hashes were:
+
+| Platform | Mode | Attempt-2 `results.json` SHA-256 |
+| --- | --- | --- |
+| macOS arm64 | Baseline | `739837a91d7137b44e8b643c7e4c3bf37debb351860593119f00494801570877` |
+| macOS arm64 | Extension oracle | `422d8b11bb6b7240e2100231baf1acc716022ec2f0642c03561dc4a35f55fd72` |
+| Windows x64 | Baseline | `ef0208d1bfac14d3b1c2419f7247cf090d20a62ecb07bc5a26bffa6812a51784` |
+| Windows x64 | Extension oracle | `2be0c762816d2af32d99392abccdec99ec74010067bb148f94de70ed13d74634` |
+
+The attempt-2 publisher also failed with HTTP 403 on both platforms. Publication
+status is separate from measurement status; all hashes above are read from the
+accepted job logs, not assumed uploaded assets. Neither attempt is a successful
+browser build or a successful evidence-release publication.
+
+## Earlier accepted local observations
 
 `extension-1/results.json` under ignored `.runtime/oracle/` has SHA-256
 `8386fd327ad085338d2a7e8bd4e9543eced8e9c03382899025918a7bdb0b1811`.
@@ -88,7 +172,7 @@ persistence, and removal. Its report `baseline-rea2/results.json` SHA-256 is
 Later harness additions (window identity, cancellation, optional assertions)
 are not included in that historical 17-check pass.
 
-The baseline measured fullscreen exit callbacks while the native document was
+The local baseline measured fullscreen exit callbacks while the native document was
 still **visible and focused**, before the eventual hidden state. Therefore a
 safe hidden-only snapshot cannot guarantee retention after this macOS tab
 switch. Retaining every visible exit would leave stale state after a user's
@@ -132,8 +216,9 @@ CRX, rejects a changed CRX/derived ZIP, safely extracts both, and emits the
 browser/extension paths plus `reference-provenance.json`. Local end-to-end Mac
 acquisition/extraction reused the verified official ZIP and freshly fetched the
 exact original CRX successfully. Seven finite archive-boundary tests passed.
-Windows CFT acquisition records its hash from the official immutable version
-URL; the running browser's revision is independently checked by the harness.
+The initial Windows acquisition recorded its hash from the official immutable
+version URL; that measured digest is now pinned for future acquisitions too.
+The running browser's revision is independently checked by the harness.
 The extraction implementation preserves bounded Mac framework symlinks and
 rejects traversal, symlink escape, duplicate paths, and extraction-budget
 overflow. No extension package/source should be uploaded as public evidence.
@@ -151,9 +236,15 @@ artifact. Public CI should upload only the finite `results.json` and
   packages, plus a master-feature-disabled baseline on the same binaries.
 - Run optional fullscreen/reload tests; report ordering-limited snapshot cases
   separately and obtain a genuine hidden-exit case before claiming snapshot
-  retention.
-- Repeat a validated, truly hidden reference-extension run on both platforms.
-  The current Windows oracle coverage is absent.
+  retention. Both hosted reference platforms exit fullscreen while visible
+  before becoming hidden. A deterministic Blink C++ fixture can set actual page
+  visibility hidden before driving the native fullscreen exit and verify the
+  binding snapshot without changing production lifecycle/security behavior.
+  Keep ordinary visible Escape/exit behavior clearing state. Browser-only
+  synthetic-event tests cover event suppression, not a native fullscreen exit.
+- Re-run the now-validated macOS/Windows reference suite when the pinned browser
+  or extension artifact changes. A changed extension digest requires a new
+  audit, not silently using a new oracle.
 - Verify normal browser UI visually, standard Chrome Web Store installation,
   and supported extension store-update/removal behavior on both platforms.
   The unpacked MV3 fixture is not a store-service test.

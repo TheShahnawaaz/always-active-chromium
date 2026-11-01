@@ -51,12 +51,13 @@ def main():
         f'Reference measurements on {platform}.\n\n'
         f'Baseline: {status["baseline_outcome"]}; extension oracle: {status["oracle_outcome"]}.\n'
         'These reports measure official Chrome for Testing and the shipped extension. '
+        f'The test controller commit is {status["repository_commit"]}. '
+        'The release tag is a storage anchor on the default branch. '
         'They are not custom-browser artifacts or evidence of native implementation success. '
         'Failed or uncovered checks remain visible in the attached JSON. '
         'Profiles and extension/browser packages are excluded.\n')
     tag = f'reference-{platform}-{run_id}-{attempt}'
     subprocess.run(['gh', 'release', 'create', tag, '--repo', repo, '--draft',
-                    '--target', os.environ['GITHUB_SHA'],
                     '--title', f'Reference behavior: {platform}',
                     '--notes-file', str(notes)], check=True)
     for path in selected:
