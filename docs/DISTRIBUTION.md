@@ -13,6 +13,12 @@ name and artwork remain: the private Google Chrome branding assets are not
 available in the public source tree. See upstream's
 [Google Chrome branded builds](https://chromium.googlesource.com/chromium/src/+/156.0.8078.80/docs/google_chrome_branded_builds.md).
 
+The public build omits Chromium's missing-Google-API-key informational startup
+notice to keep ordinary startup close to Chrome. This does not configure a key
+or enable a Google service; security, OS and encryption warnings retain their
+upstream paths. The exact narrow change is documented in the native behavior
+notes.
+
 The app must coexist with stock Google Chrome. Its installation, browser data,
 and test profiles must never reuse or replace the user's Google Chrome files.
 Ordinary extension support and Chrome Web Store integration remain enabled.

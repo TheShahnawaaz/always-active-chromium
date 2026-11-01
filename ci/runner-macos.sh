@@ -7,8 +7,8 @@ set -euo pipefail
 df -h /
 xcodebuild -version
 ulimit -n 10240
-selected="$(xcode-select -p)"
-selected_app="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().parents[1])' "$selected")"
+selected="${DEVELOPER_DIR:-$(xcode-select -p)}"
+selected_app="$(python3 -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]).resolve(); print(next(v for v in (p, *p.parents) if v.name.startswith("Xcode") and v.suffix == ".app"))' "$selected")"
 [[ "$selected_app" == /Applications/Xcode*.app ]] || {
   echo "Unexpected selected Xcode path: $selected_app" >&2; exit 1;
 }

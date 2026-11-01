@@ -53,22 +53,30 @@ other external/self-hosted compute and no additional spending is authorized.
   These are reference results, not custom native-browser results.
 - Full auto-resuming build run
   [41351980824](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41351980824)
-  uses immutable project source `2015fd2a2eeb`. Mac passed runner preparation and
-  is preparing source/tools/GN. Windows stopped before large downloads because
+  used immutable project source `2015fd2a2eeb`. Mac passed source/toolchain/native
+  patch/GN preparation and entered Ninja at 21:42:19 UTC. Windows stopped before large downloads because
   Git checkout CRLF conversion changed fingerprint bytes. Commit `9ffdca6`
-  enforces LF across platforms; Windows needs a new tagged run with this fix.
+  enforces LF across platforms. This diagnostic campaign was superseded before
+  a completed browser existed so both targets could use the final startup fix.
 - Windows extraction probe
   [41353041394](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353041394)
-  compares native and Git GNU tar with small explicit fixtures before choosing
-  a fix for the earlier source extraction failure. No extraction errors are
-  being ignored and no full source is fetched locally.
+  reproduced the source failure on valid CJK/emoji PAX names with Windows
+  bsdtar 3.8.9. Bundled Git GNU tar 1.35 passed Unicode, long-path and native
+  symlink/hardlink cases. Windows source extraction now uses that proven path
+  with strict failure handling and records the selected tool in provenance.
+- Current full auto-resuming run
+  [41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
+  uses immutable source `67dea4dbe7e2` and a 14-file patch. It includes consistent
+  LF inputs, the Windows GNU extractor, and omission of the unbranded-build
+  missing-Google-API-key startup notice. API availability and all security/OS/
+  encryption warnings remain unchanged. Both exact final-release Git tags were
+  created before dispatch. Compilation/package results are pending.
 
 ## Work in progress
 
 - First hosted compilation and native behavior verification of the written patch.
-- Actual Mac source/toolchain/GN results, then resumable compilation.
-- Windows extraction diagnosis and a fresh tagged Windows build after LF/input
-  handling is fixed.
+- Actual source/toolchain/GN and resumable compilation results for the current
+  14-file campaign on both platforms.
 - Toolchain hydration and resource-aware runner preparation.
 
 ## Not yet established
