@@ -172,13 +172,16 @@ persistence, and removal. Its report `baseline-rea2/results.json` SHA-256 is
 Later harness additions (window identity, cancellation, optional assertions)
 are not included in that historical 17-check pass.
 
-The local baseline measured fullscreen exit callbacks while the native document was
-still **visible and focused**, before the eventual hidden state. Therefore a
-safe hidden-only snapshot cannot guarantee retention after this macOS tab
-switch. Retaining every visible exit would leave stale state after a user's
-intentional Escape/exit action. The optional native test records this case as
-uncovered for snapshot retention, and independently asserts hidden event
-filtering and normal foreground exit when a custom binary is available.
+The local baseline measured fullscreen exit callbacks while the native document
+was still **visible and focused**, before the eventual hidden state. A
+renderer-only hidden snapshot could not guarantee retention for that ordering.
+The native design was subsequently expanded to hide an eligible deactivated tab
+before its real fullscreen exit, without retaining OS/CSS fullscreen. The
+current optional harness therefore requires natural tab-switch snapshot
+retention after confirmed real entry; it no longer accepts this main scenario
+as `not-covered`. It also verifies normal foreground clearing, no resurrection
+on later hide, and explicit visible exit. None of this is a custom-binary pass
+until the built browser executes those assertions.
 
 REA process-capture limits apply: sampled process trees can miss short-lived
 children, filesystem observations are before/after snapshots, inherited ambient
@@ -255,14 +258,31 @@ pending.
 
 - Run the default native tests on actual built macOS arm64 and Windows x64
   packages, plus a master-feature-disabled baseline on the same binaries.
-- Run optional fullscreen/reload tests; report ordering-limited snapshot cases
-  separately and obtain a genuine hidden-exit case before claiming snapshot
-  retention. Both hosted reference platforms exit fullscreen while visible
-  before becoming hidden. A deterministic Blink C++ fixture can set actual page
-  visibility hidden before driving the native fullscreen exit and verify the
-  binding snapshot without changing production lifecycle/security behavior.
-  Keep ordinary visible Escape/exit behavior clearing state. Browser-only
-  synthetic-event tests cover event suppression, not a native fullscreen exit.
+- Run strict optional fullscreen/reload tests. Both hosted reference platforms
+  exit fullscreen while visible before becoming hidden; the native improvement
+  must demonstrate its new eligible tab-deactivation ordering. After real
+  entry, the same-window natural switch must retain the binding snapshot while
+  bounded polling confirms CSS `:fullscreen` is false and the OS window exits
+  fullscreen. Clear entry events before checking exit suppression. Returning
+  foreground and a later re-hide must not resurrect stale state; visible
+  Escape/exit must stay normal. A deterministic Blink C++ fixture can supplement
+  this by setting actual page visibility hidden before native exit, but cannot
+  replace the required natural browser scenario. Synthetic-event tests alone
+  do not cover a native fullscreen exit.
+- The strict fullscreen scenario establishes an input before entry and checks
+  real CSS `:focus`, active element, value, and selection before deactivation
+  and after return. It uses `Target.activateTarget` for tab switches, avoiding
+  `Page.bringToFront`'s extra contents-focus call that could conceal broken
+  saved-focus restoration. No `.focus()` is called after initial setup and
+  before the restoration assertion. Background actual focus must be false;
+  the spoofed document-focus binding is not evidence for this check.
+- The optional native case also queues a real cover/original target activation
+  pair after another actual fullscreen entry. It must settle within bounded
+  polling to exited CSS/OS fullscreen, cleared foreground bindings, preserved
+  input focus/value/selection, and no snapshot resurrection on a later hide.
+  This is supported queued activation, not synthetic C++ observer reentrancy.
+  It still requires execution against the compiled custom browser; no local
+  reference result is a pass for this new native behavior.
 - Re-run the now-validated macOS/Windows reference suite when the pinned browser
   or extension artifact changes. A changed extension digest requires a new
   audit, not silently using a new oracle.
@@ -301,3 +321,13 @@ known unrelated background-visibility anomaly; the regression subset is not an
 overall background-suite pass. These additions were not included in the earlier
 hosted 21/28 counts and still require execution against the custom native build,
 including its master-feature-disabled configuration.
+
+The focus-sentinel mechanics were also observed in a later unmodified local CFT
+run: `activeElement='input'`, CSS `:focus=true`, value `fullscreen focus sentinel`,
+and selection `[2,7]` before deactivation; CSS focus became false in the inactive
+tab, then returned true with the same input/value/selection after target
+activation alone. The whole local run remained failed for the known background
+visibility anomaly, and real fullscreen was not held at the pre-switch sample.
+This validates the probe mechanics, not the new native fullscreen scenario.
+Its report `fullscreen-focus-baseline/results.json` SHA-256 is
+`7e7c892d634d00151beb47c9020a72448cb6ee274abc11854cef9209208bdf5c`.

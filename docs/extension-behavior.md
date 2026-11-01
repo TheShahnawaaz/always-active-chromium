@@ -41,6 +41,9 @@ getter bypasses, suppressing events before window capture listeners, covering
 all sites by default, handling pre-existing background rAF requests, and making
 an optional hidden reload blocker effective are **native design improvements**.
 They must be verified against built binaries and must not be presented as
-behavior already demonstrated by the extension. The experimental hidden-only
-fullscreen snapshot does not promise to retain a state already exited while
-the document was still visible.
+behavior already demonstrated by the extension. The optional native fullscreen
+design now also changes eligible tab-deactivation ordering so that the renderer
+is hidden before its real fullscreen exit. This is intended to retain only the
+website binding snapshot while the OS window and CSS fullscreen state exit
+normally; it requires strict natural-tab-switch verification against the custom
+binary. The normal visible Escape/exit path must still clear state.

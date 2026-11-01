@@ -63,11 +63,32 @@ receivers too. A second CDP evaluation verifies the renderer still responds.
 
 The optional reload test checks that hidden renderer script reloads are
 cancelled when the feature is selected while foreground script reloads,
-browser-initiated reloads, and ordinary redirects still work. Optional fullscreen
-tests assert hidden event filtering, boolean aliases, and explicit foreground
-exit. Snapshot retention is asserted when observable; a native exit that happens
-while visible before the hidden transition is recorded as `not-covered`, never
-as a snapshot pass. That ordering occurs on the measured macOS baseline.
+browser-initiated reloads, and ordinary redirects still work. Optional native
+fullscreen tests require successful real API entry and snapshot retention after
+a natural same-window tab switch. Entry notifications are cleared first; the
+controller then polls up to five seconds for native CSS `:fullscreen` to clear
+and the OS window to return to normal before checking getters and exit events.
+Only the website bindings may retain the original element/true booleans. The
+foreground return must clear that snapshot, a later hide must not resurrect it,
+and an explicit foreground exit must work normally. Failure to enter fullscreen
+or retain the snapshot is a failed optional-native assertion, not uncovered
+success. Default and master-disabled configurations must preserve normal exit
+state. Reference/oracle runs record their observed fullscreen defect without
+claiming they satisfy this native improvement.
+
+The fullscreen scenario establishes an input focus sentinel before entry and
+records its value/selection, `activeElement`, and native CSS `:focus`. Tab switches
+use `Target.activateTarget`; `Page.bringToFront` would explicitly focus contents
+and could hide a saved-focus regression. After return, the native optional test
+requires the same input, real `:focus`, value, and selection without calling
+`.focus()` again. A background input must lack real `:focus`. The spoofed
+`document.hasFocus()` binding is not used as evidence of actual input focus.
+After another real fullscreen entry, the native optional case also activates
+the cover tab and immediately the original tab, queuing ordered CDP requests
+before awaiting their acknowledgements. Bounded polling must confirm actual
+fullscreen exit, cleared foreground bindings, and restored input focus/value/selection. A subsequent
+hide must not resurrect a snapshot. This is an ordinary queued A-to-B-to-A
+activation regression, without synthetic C++ reentrancy or refocusing calls.
 
 The representative MV3 fixture uses a content script, asynchronous service worker
 messaging, and `chrome.storage.local`. The harness enables developer mode through

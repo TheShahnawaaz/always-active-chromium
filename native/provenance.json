@@ -3,8 +3,14 @@
   "upstream_tag": "156.0.8078.80",
   "upstream_revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
   "patch": "patches/0001-native-always-active.patch",
-  "patch_sha256": "c9317d4ef124a71993f04b837fc1c0ce5d6ec60b370db6ce8de9fae267a18767",
+  "patch_sha256": "18fdc848200882d845a7c9a7748a389e2e0c33dc8b8abeffed1756b01b5c6e50",
   "files": [
+    {
+      "path": "chrome/browser/ui/browser.cc",
+      "upstream_sha256": "5cbe9caf9acd876d90dba893c73cac921400cf8156fe651d7cd4b33be7e984e5",
+      "patched_sha256": "40f3625bb1ab0c4b11b5cf0cd0526c5537352f7675b285b402487a81041781ae",
+      "source_url": "https://raw.githubusercontent.com/chromium/chromium/fb096c0011f9d50f0a264a9376420cdea9c421e3/chrome/browser/ui/browser.cc"
+    },
     {
       "path": "chrome/browser/ui/startup/infobar_utils.cc",
       "upstream_sha256": "391ad17aa2d53245b5681daa3d7cacd5283e436080bfb7510457c0f7b2d33164",

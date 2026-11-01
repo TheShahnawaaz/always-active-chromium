@@ -38,7 +38,7 @@ feature machinery and add no toolbar/settings/status UI.
 | `AlwaysActive` | Enabled | Master control; website bindings report visible/focused. |
 | `AlwaysActiveEvents` | Enabled | Filter selected events from JavaScript listeners. |
 | `AlwaysActiveAnimationFrames` | Enabled | Native timer fallback for background website RAF callbacks. |
-| `AlwaysActiveFullscreen` | Disabled | Optional hidden-document fullscreen binding snapshot and event filtering. |
+| `AlwaysActiveFullscreen` | Disabled | Optional fullscreen binding snapshot, tab-backgrounding visibility order, and event filtering. |
 | `AlwaysActiveBlockBackgroundReload` | Disabled | Optional cancellation of eligible hidden top-level script reloads. |
 
 Examples (append to this browser's ordinary launch command):
@@ -125,14 +125,48 @@ background visit. It
 does not retain OS fullscreen, alter the top layer, grant permission/activation,
 or suppress browser security UI. A removed element is never returned.
 
-The baseline macOS runtime oracle observed tab-switch fullscreen exit callbacks
-while native visibility was still `visible` and native `hasFocus()` was still
-true, before the later hidden transition. Such visible-before-hidden exits
-clear this optional snapshot and are **not protected**. There is no reliable
-visibility/focus discriminator at that moment; the implementation deliberately
-does not retain stale fullscreen state after a normal foreground exit or use
-timing guesses. Natural tab-switch fullscreen state preservation on macOS is
-therefore an explicit ordering limitation, not a demonstrated capability.
+The baseline macOS and Windows runtime oracles observed tab-switch fullscreen
+exit callbacks while native visibility was still `visible` and native
+`hasFocus()` was still true, before the later hidden transition. The optional
+mode now changes this native browser ordering for a genuine tab switch: in
+`Browser::OnTabStripModelChanged()`, it calls the existing
+`UpdateWebContentsVisibility(HIDDEN)` path before the existing exclusive-access
+fullscreen exit. Chromium's normal widget/page visibility messages are queued
+before the fullscreen-exit visual-properties update. Their associated renderer
+receivers use the same AgentGroupScheduler default task runner. No renderer
+acknowledgement, new IPC, timer heuristic, permission change, or delay to the
+ordinary OS fullscreen-exit path is introduced. This is intended to protect
+normal tab-switch snapshots; **a built custom browser has not yet verified it**.
+
+This ordering change requires both the master and fullscreen features, a live
+active non-error primary web document, and the old tab to own tab-exclusive
+fullscreen. It excludes browser/extension/non-web origins, tab removal or
+replacement, a closing strip, active tab-drag sessions, detached contents, and
+focus switches between panes of the same split (which remain visible). The
+current selection and both tab indices must match the notification. Weak
+browser/contents guards and selection rechecks after visibility observers
+prevent continued processing of a stale notification. An old tab that is still
+attached here and inactive keeps its existing exclusive-access cleanup even if
+an observer replaces the destination; stale active-tab UI updates are skipped.
+Exact upstream `TabStripModel::ActivateTab()` holds its `ReentrancyCheck` across
+`SetSelection()` and synchronous observer delivery; a nested activation fails
+the upstream CHECK before modifying the selection. Legal queued A-to-B-to-A
+reactivation therefore runs after the original deactivation/exit finishes.
+Headful tests must still verify rapid queued reactivation rather than bypassing
+the model's supported activation invariant.
+Ordinary foreground/API
+exits, security-triggered exits, browser fullscreen, and feature-off operation
+retain their existing paths.
+
+The existing visibility calculation is preserved: visible capture or VR can
+keep a page visible, and hidden capture/Picture-in-Picture can keep it painting
+through `kHiddenButPainting`. This patch does not override those exceptions or
+force captured content to stop painting. The upstream fullscreen-within-tab
+capture mode is outside the exclusive-tab ordering guard. Headful Mac/Windows
+checks must verify natural snapshot retention, real OS/CSS fullscreen exit,
+foreground reset, event filtering, input-focus restoration, split panes,
+drag/close behavior, rapid reactivation, and cross-process frames before the
+optional behavior can be considered verified.
 
 The optional background reload mode cancels a Navigation API `reload` event
 only for an eligible actually hidden main-frame document, when the navigation

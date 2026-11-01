@@ -1,3 +1,194 @@
+diff --git a/chrome/browser/ui/browser.cc b/chrome/browser/ui/browser.cc
+--- a/chrome/browser/ui/browser.cc
++++ b/chrome/browser/ui/browser.cc
+@@ -84,6 +84,7 @@
+ #include "chrome/browser/ui/chrome_pages.h"
+ #include "chrome/browser/ui/dialogs/browser_dialogs.h"
+ #include "chrome/browser/ui/exclusive_access/exclusive_access_manager.h"
++#include "chrome/browser/ui/exclusive_access/fullscreen_controller.h"
+ #include "chrome/browser/ui/find_bar/find_bar_controller.h"
+ #include "chrome/browser/ui/focus/browser_focus_controller.h"
+ #include "chrome/browser/ui/global_error/global_error.h"
+@@ -149,14 +150,17 @@
+ #include "components/tab_groups/tab_group_id.h"
+ #include "components/tabs/public/tab_collection.h"
+ #include "components/tabs/public/tab_group.h"
++#include "components/tabs/public/tab_interface.h"
+ #include "components/web_modal/web_contents_modal_dialog_manager.h"
+ #include "content/public/browser/color_chooser.h"
+ #include "content/public/browser/invalidate_type.h"
+ #include "content/public/browser/navigation_controller.h"
+ #include "content/public/browser/navigation_entry.h"
++#include "content/public/browser/render_frame_host.h"
+ #include "content/public/browser/render_process_host.h"
+ #include "content/public/browser/render_view_host.h"
+ #include "content/public/browser/ssl_status.h"
++#include "content/public/browser/visibility.h"
+ #include "content/public/browser/web_exposed_isolation_level.h"
+ #include "content/public/common/child_process_id.h"
+ #include "content/public/common/content_constants.h"
+@@ -166,6 +170,7 @@
+ #include "content/public/common/url_constants.h"
+ #include "content/public/common/webplugininfo.h"
+ #include "net/base/filename_util.h"
++#include "third_party/blink/public/common/features.h"
+ #include "third_party/blink/public/mojom/frame/blocked_navigation_types.mojom.h"
+ #include "third_party/blink/public/mojom/page/draggable_region.mojom.h"
+ #include "ui/base/l10n/l10n_util.h"
+@@ -175,6 +180,7 @@
+ #include "ui/gfx/font_list.h"
+ #include "ui/gfx/text_elider.h"
+ #include "ui/gfx/text_utils.h"
++#include "url/origin.h"
+ #include "url/scheme_host_port.h"
+ 
+ #if BUILDFLAG(IS_WIN)
+@@ -209,6 +215,90 @@
+ using input::NativeWebKeyboardEvent;
+ using ui::WebDialogDelegate;
+ using web_modal::WebContentsModalDialogManager;
++
++namespace {
++
++bool ShouldHideAlwaysActiveFullscreenTabBeforeDeactivation(
++    const TabStripModel& model,
++    const TabStripModelChange& change,
++    const TabStripSelectionChange& selection,
++    BrowserWindowInterface& browser) {
++  if (!base::FeatureList::IsEnabled(blink::features::kAlwaysActive) ||
++      !base::FeatureList::IsEnabled(blink::features::kAlwaysActiveFullscreen) ||
++      model.closing_all() || TabDragController::IsActive() ||
++      change.type() == TabStripModelChange::kRemoved ||
++      change.type() == TabStripModelChange::kReplaced) {
++    return false;
++  }
++  WebContents* old_contents = selection.old_contents;
++  WebContents* new_contents = selection.new_contents;
++  if (!old_contents || !new_contents || old_contents == new_contents ||
++      old_contents->IsBeingDestroyed() || new_contents->IsBeingDestroyed() ||
++      model.GetActiveWebContents() != new_contents ||
++      model.selection_model().GetListSelectionModel() != selection.new_model) {
++    return false;
++  }
++  const int old_index = model.GetIndexOfWebContents(old_contents);
++  const int new_index = model.GetIndexOfWebContents(new_contents);
++  if (old_index == TabStripModel::kNoTab ||
++      new_index == TabStripModel::kNoTab) {
++    return false;
++  }
++  if (model.GetTabAtIndex(old_index)->GetBrowserWindowInterface() != &browser ||
++      model.GetTabAtIndex(new_index)->GetBrowserWindowInterface() != &browser) {
++    return false;
++  }
++  const auto old_split = model.GetSplitForTab(old_index);
++  if (old_split && old_split == model.GetSplitForTab(new_index)) {
++    // Switching focus between split panes does not hide either document.
++    return false;
++  }
++  auto* manager = ExclusiveAccessManager::From(&browser);
++  auto* fullscreen_controller =
++      manager ? manager->fullscreen_controller() : nullptr;
++  if (!fullscreen_controller ||
++      fullscreen_controller->exclusive_access_tab() != old_contents ||
++      !fullscreen_controller->IsWindowFullscreenForTabOrPending()) {
++    return false;
++  }
++  content::RenderFrameHost* frame = old_contents->GetPrimaryMainFrame();
++  if (!frame || !frame->IsActive() || !frame->IsRenderFrameLive() ||
++      frame->IsErrorDocument()) {
++    return false;
++  }
++  const GURL& url = frame->GetLastCommittedURL();
++  if (url.SchemeIsHTTPOrHTTPS()) {
++    return true;
++  }
++  if (!url.SchemeIs("about") && !url.SchemeIs("blob") &&
++      !url.SchemeIs("data") && !url.SchemeIs("filesystem")) {
++    return false;
++  }
++  // Match the renderer's web-document scope. A precursor only selects this
++  // lifecycle ordering; it grants no origin access or fullscreen permission.
++  const std::string& scheme = frame->GetLastCommittedOrigin()
++                                  .GetTupleOrPrecursorTupleIfOpaque()
++                                  .scheme();
++  return scheme == "http" || scheme == "https";
++}
++
++void FinishExclusiveAccessForInactiveTab(BrowserWindowInterface& browser,
++                                        TabStripModel& model,
++                                        WebContents& contents) {
++  const int index = model.GetIndexOfWebContents(&contents);
++  if (index == TabStripModel::kNoTab ||
++      model.GetActiveWebContents() == &contents ||
++      model.GetTabAtIndex(index)->GetBrowserWindowInterface() != &browser) {
++    return;
++  }
++  if (auto* manager = ExclusiveAccessManager::From(&browser)) {
++    // A visibility observer may replace the destination. Keep the old tab's
++    // existing security cleanup without replaying stale active-tab UI updates.
++    manager->OnTabDeactivated(&contents);
++  }
++}
++
++}  // namespace
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ // Browser, CreateParams:
+@@ -607,6 +697,54 @@
+     return;
+   }
+ 
++  if (tab_strip_model == tab_strip_model_.get() &&
++      ShouldHideAlwaysActiveFullscreenTabBeforeDeactivation(
++          *tab_strip_model_, change, selection, *this)) {
++    const auto weak_browser = GetWeakPtr();
++    const auto weak_old_contents = selection.old_contents->GetWeakPtr();
++    const auto weak_new_contents = selection.new_contents->GetWeakPtr();
++    const auto expected_selection =
++        tab_strip_model_->selection_model().GetListSelectionModel();
++    const int expected_old_index =
++        tab_strip_model_->GetIndexOfWebContents(selection.old_contents);
++    const int expected_new_index =
++        tab_strip_model_->GetIndexOfWebContents(selection.new_contents);
++
++    // The tab is genuinely leaving the contents area. Send the existing
++    // widget/page visibility update before the fullscreen-exit resize, so the
++    // optional renderer snapshot sees the real hidden transition first. Do
++    // not wait for a renderer acknowledgement or delay the ordinary OS exit.
++    selection.old_contents->UpdateWebContentsVisibility(
++        content::Visibility::HIDDEN);
++
++    // Visibility observers can destroy contents or change the selection. Do
++    // not continue processing an obsolete tab-strip notification afterward.
++    if (!weak_browser || !weak_old_contents) {
++      return;
++    }
++    if (!weak_new_contents || tab_strip_model_->closing_all() ||
++        TabDragController::IsActive() ||
++        tab_strip_model_->GetActiveWebContents() != weak_new_contents.get() ||
++        tab_strip_model_->GetIndexOfWebContents(weak_old_contents.get()) !=
++            expected_old_index ||
++        tab_strip_model_->GetIndexOfWebContents(weak_new_contents.get()) !=
++            expected_new_index ||
++        tab_strip_model_->selection_model().GetListSelectionModel() !=
++            expected_selection) {
++      FinishExclusiveAccessForInactiveTab(*this, *tab_strip_model_,
++                                         *weak_old_contents);
++      return;
++    }
++    if (tab_strip_model_->GetTabAtIndex(expected_old_index)
++                ->GetBrowserWindowInterface() != this ||
++        tab_strip_model_->GetTabAtIndex(expected_new_index)
++                ->GetBrowserWindowInterface() != this) {
++      FinishExclusiveAccessForInactiveTab(*this, *tab_strip_model_,
++                                         *weak_old_contents);
++      return;
++    }
++  }
++
+   if (selection.old_contents) {
+     OnTabDeactivated(selection.old_contents);
+   }
 diff --git a/chrome/browser/ui/startup/infobar_utils.cc b/chrome/browser/ui/startup/infobar_utils.cc
 --- a/chrome/browser/ui/startup/infobar_utils.cc
 +++ b/chrome/browser/ui/startup/infobar_utils.cc
