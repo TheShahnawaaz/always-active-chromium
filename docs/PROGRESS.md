@@ -32,22 +32,43 @@ other external/self-hosted compute and no additional spending is authorized.
 - Resumable GitHub-hosted pipeline committed as `8917a4a`. Five checkpoint
   tests passed locally, including exact timestamp preservation, actual Ninja
   no-rebuild restoration and safe exclusion of generated absolute SDK links.
-- First real hosted bootstrap run
+- First hosted bootstrap run
   [41350730760](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41350730760)
-  started for both targets. It fetches source/tools, applies the native patch,
-  generates GN files and saves a source checkpoint; compilation is deliberately
-  deferred until this succeeds. Its result is pending.
-- Hosted reference run
+  verified the official source archive download on both targets. Windows'
+  native tar later failed with an empty/unreadable filename diagnostic. This
+  obsolete bootstrap was cancelled after storage/provenance fixes; no compiled
+  browser objects or reusable checkpoint were produced by it.
+- Initial hosted reference run
   [41350893756](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41350893756)
-  measures official CFT and the exact shipped extension on both target OSes.
-  It uploads finite results only. Local baseline/oracle findings and the later
-  environment-wide visibility anomaly are separated in the evidence ledger.
+  passed measurements on both OSes but failed report publication because of
+  GitHub's workflow-commit release permission guard. Source tags alone did not
+  resolve that guard. Checkpoint/reference release tags now act only as storage
+  anchors; metadata records the actual checkout and source pins. Final binary
+  releases require pre-created exact source tags and omit target overrides.
+- Hosted reference run
+  [41351983527](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41351983527)
+  fully succeeded on both OSes: 21 baseline and 28 shipped-extension assertions
+  per platform, plus draft report publication. All six checksummed report/log/
+  provenance/status assets on each platform were downloaded and verified.
+  These are reference results, not custom native-browser results.
+- Full auto-resuming build run
+  [41351980824](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41351980824)
+  uses immutable project source `2015fd2a2eeb`. Mac passed runner preparation and
+  is preparing source/tools/GN. Windows stopped before large downloads because
+  Git checkout CRLF conversion changed fingerprint bytes. Commit `9ffdca6`
+  enforces LF across platforms; Windows needs a new tagged run with this fix.
+- Windows extraction probe
+  [41353041394](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353041394)
+  compares native and Git GNU tar with small explicit fixtures before choosing
+  a fix for the earlier source extraction failure. No extraction errors are
+  being ignored and no full source is fetched locally.
 
 ## Work in progress
 
 - First hosted compilation and native behavior verification of the written patch.
-- Runtime reference checks on clean hosted Mac and Windows environments.
-- Actual source/toolchain/bootstrap results, then resumable compilation.
+- Actual Mac source/toolchain/GN results, then resumable compilation.
+- Windows extraction diagnosis and a fresh tagged Windows build after LF/input
+  handling is fixed.
 - Toolchain hydration and resource-aware runner preparation.
 
 ## Not yet established

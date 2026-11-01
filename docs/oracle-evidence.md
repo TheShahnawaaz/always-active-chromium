@@ -232,6 +232,27 @@ artifact. Public CI should upload only the finite `results.json` and
 
 ## Required before a completed-browser claim
 
+The subsequent hosted run
+[41351983527](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41351983527)
+completed measurement and draft publication successfully on both platforms.
+Root downloaded all finite assets and verified all six SHA-256 entries per
+platform (two reports, two browser logs, acquisition provenance and status).
+The accepted report digests are:
+
+| Platform/mode | Assertions passed | Report SHA-256 |
+| --- | --- | --- |
+| macOS baseline | 21 | `7b4ae049a9e05c34122641a7abaab265f05f336d55b23fcc7ed842e44226e5d1` |
+| macOS shipped extension | 28 | `32312aac593c1642ae9ce076ee401c1cd81dc7667aaa08b6618914ab0ac75729` |
+| Windows baseline | 21 | `d722a64dac3a0e770d258fc6b476020c69e1880849f9f67eb6d0e5bf6661b44e` |
+| Windows shipped extension | 28 | `4df5910f97ccd9537159480bef27ced5184082513f7487bd1c8f906ec8cb1a46` |
+
+Both baselines reported true native hidden state in the background; both oracle
+runs reported spoofed instance getters alongside true native hidden prototype
+getters. The local visibility anomaly does not contaminate these clean-host
+results. This establishes the reference behavior and unpacked MV3 fixture
+coverage; the custom native browser and Chrome Web Store service checks remain
+pending.
+
 - Run the default native tests on actual built macOS arm64 and Windows x64
   packages, plus a master-feature-disabled baseline on the same binaries.
 - Run optional fullscreen/reload tests; report ordering-limited snapshot cases
