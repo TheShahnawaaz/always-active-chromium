@@ -29,12 +29,25 @@ other external/self-hosted compute and no additional spending is authorized.
   validates the complete source set before writing. Independent patch dry-run,
   apply/verify/idempotence/reverse, partial recovery and wrong-input rejection
   checks passed. C++ compilation and native runtime behavior are not verified.
+- Resumable GitHub-hosted pipeline committed as `8917a4a`. Five checkpoint
+  tests passed locally, including exact timestamp preservation, actual Ninja
+  no-rebuild restoration and safe exclusion of generated absolute SDK links.
+- First real hosted bootstrap run
+  [41350730760](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41350730760)
+  started for both targets. It fetches source/tools, applies the native patch,
+  generates GN files and saves a source checkpoint; compilation is deliberately
+  deferred until this succeeds. Its result is pending.
+- Hosted reference run
+  [41350893756](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41350893756)
+  measures official CFT and the exact shipped extension on both target OSes.
+  It uploads finite results only. Local baseline/oracle findings and the later
+  environment-wide visibility anomaly are separated in the evidence ledger.
 
 ## Work in progress
 
 - First hosted compilation and native behavior verification of the written patch.
-- Source/resource-aware resumable GitHub-hosted build pipeline.
-- Extension runtime oracle, behavioral feature matrix, and regression harness.
+- Runtime reference checks on clean hosted Mac and Windows environments.
+- Actual source/toolchain/bootstrap results, then resumable compilation.
 - Toolchain hydration and resource-aware runner preparation.
 
 ## Not yet established

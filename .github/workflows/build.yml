@@ -101,7 +101,7 @@ jobs:
         id: package
         if: ${{ steps.compile.outputs.status == 'complete' }}
         run: python ci/build.py package --platform ${{ matrix.platform }}
-      - name: Run native behavior and MV3 extension smoke checks
+      - name: Verify baseline, native defaults, optional flags, and MV3 extensions
         id: tests
         if: ${{ steps.package.outcome == 'success' }}
         continue-on-error: true
@@ -109,7 +109,7 @@ jobs:
         shell: bash
         env:
           AA_BROWSER: ${{ steps.prepare.outputs.browser }}
-        run: node tests/run.mjs --browser "$AA_BROWSER" --mode native --output "reports/${{ matrix.platform }}"
+        run: python ci/verify.py --browser "$AA_BROWSER" --output "reports/${{ matrix.platform }}"
       - name: Upload packages, checksums, and selected evidence to a draft
         if: ${{ always() && steps.package.outcome == 'success' }}
         run: python ci/publish.py --platform ${{ matrix.platform }} --test-outcome ${{ steps.tests.outcome }}

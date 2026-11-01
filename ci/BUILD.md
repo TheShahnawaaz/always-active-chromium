@@ -134,7 +134,12 @@ is configured. They keep Chromium's own identity/profile, separate from Google
 Chrome. See `docs/DISTRIBUTION.md` for installation and product differences.
 
 After compilation the workflow runs the repository's native behavior and MV3
-extension harness against the real executable. It uploads only the package,
+extension harness against the real executable in three modes: master feature
+disabled for the built-browser baseline, native defaults, and optional native
+fullscreen/background-navigation flags. Each mode has its own fixture profile
+and a five-minute limit, inside one 20-minute step. Results are aggregated with
+their mode/flags and individual checks; uncovered behaviors stay explicit.
+It uploads only the package,
 checksums, provenance, `results.json`, `browser.log`, and a test-status record to
 a **draft** build release. Browser profiles, cookies, storage and extension
 fixtures are excluded. A failed test fails the workflow and remains visible in

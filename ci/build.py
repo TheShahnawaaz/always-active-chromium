@@ -110,6 +110,12 @@ def unpack(archive, destination, strip=0):
                         path.unlink()
                     path.symlink_to(link)
                     continue
+                # CIPD executable entries can be mode 0500. Unlink an existing
+                # file first so replacing a different host's archive payload
+                # does not depend on that file having a write bit.
+                if path.exists() and not path.is_dir():
+                    path.chmod(path.stat().st_mode | stat.S_IWUSR)
+                    path.unlink()
                 path = Path(source.extract(info, destination))
                 if mode and os.name != 'nt':
                     path.chmod(mode & 0o777)

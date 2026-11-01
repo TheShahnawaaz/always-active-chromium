@@ -5,13 +5,14 @@ behavior for macOS Apple Silicon and Windows x64, while retaining Chromium's
 standard interface and extension support.
 
 **There is no custom browser binary yet.** The implementation goal is active.
-The repository contains the native patch and its exact-source applicator, along
-with a GitHub-hosted runner preflight. Build and runtime results are tracked in
+The repository contains the native patch and its exact-source applicator,
+a resumable GitHub-hosted build workflow and behavior tests. Build and runtime results are tracked in
 [the progress ledger](docs/PROGRESS.md).
 
 The [native behavior notes](native/BEHAVIOR.md) describe defaults, command-line
 compatibility controls, and deliberate differences from the extension's bugs.
 [Distribution notes](docs/DISTRIBUTION.md) explain branding, signing, and updates.
+The [build guide](ci/BUILD.md) describes the hosted runners and checkpoints.
 
 ## Requirements
 
