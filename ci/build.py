@@ -133,14 +133,15 @@ def unpack_windows_source(archive, destination, strip):
         raise RuntimeError('Git for Windows is required for its tested GNU tar extractor')
     gitbin = Path(git).resolve().parent.parent / 'usr/bin'
     executable = gitbin / 'tar.exe'
-    if not executable.is_file() or not (gitbin / 'xz.exe').is_file():
-        raise RuntimeError('The tested Git GNU tar/xz tools are unavailable; no silent extractor fallback')
+    if not executable.is_file():
+        raise RuntimeError(f'The tested Git GNU tar is unavailable at {executable} (git={git}); no silent extractor fallback')
     env = dict(os.environ, LANG='en_US.UTF-8', LC_ALL='en_US.UTF-8',
                MSYS='winsymlinks:nativestrict', PATH=str(gitbin) + os.pathsep + os.environ['PATH'])
     version = run([executable, '--version'], env=env, capture_output=True, text=True).stdout.splitlines()[0]
     if 'GNU tar' not in version:
         raise RuntimeError(f'Unexpected source extractor: {version}')
-    print(f'Source extractor: {version}; UTF-8 locale; strict native symlinks', flush=True)
+    print(f'Source extractor: {executable}; {version}; UTF-8 locale; strict native symlinks; '
+          f'xz on process PATH={shutil.which("xz", path=env["PATH"])}', flush=True)
     run([executable, '--force-local', '-xf', archive.as_posix(), '-C', destination.as_posix(),
          f'--strip-components={strip}'], env=env)
     return {'tool': str(executable), 'version': version, 'locale': 'en_US.UTF-8',

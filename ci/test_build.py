@@ -1,11 +1,13 @@
 """Small archive-hydration regressions; no Chromium checkout or compilation."""
 import contextlib
+import io
 from pathlib import Path
 import json
 import os
 import shutil
 import stat
 import tempfile
+import tarfile
 import unittest
 from unittest import mock
 import zipfile
@@ -48,6 +50,22 @@ class HydrationTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'Unsafe package symlink'):
                 unpack(archive, root / 'payload')
             self.assertFalse((root / 'outside').exists())
+
+    @unittest.skipUnless(os.name == 'nt', 'The exact Windows GNU tar integration requires its hosted image')
+    def test_windows_source_helper_extracts_unicode_xz(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / 'source.tar.xz'
+            relative = 'resources/caf\u00e9-\u65e5\u672c-\U0001f680.txt'
+            content = b'UTF-8 source archive fixture\n'
+            member = tarfile.TarInfo('chromium-fixture/' + relative)
+            member.size = len(content)
+            with tarfile.open(archive, 'w:xz', format=tarfile.PAX_FORMAT, preset=1) as package:
+                package.addfile(member, io.BytesIO(content))
+            destination = root / 'src'
+            metadata = unpack(archive, destination, strip=1, source_archive=True)
+            self.assertIn('GNU tar', metadata['version'])
+            self.assertEqual((destination / relative).read_bytes(), content)
 
 
 class SourceRetentionTests(unittest.TestCase):

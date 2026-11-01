@@ -81,6 +81,9 @@ diagnostic limitation is recorded, not presented as exact support for every
 Linux test filename. Host tool archives retain their existing extraction path;
 the change is limited to the Windows source archive. The selected extractor and
 version are recorded in build-state provenance.
+The hosted CI checks invoke this exact source-unpack helper on a tiny Unicode
+`.tar.xz` before the large download. GNU tar manages its compression provider;
+no unverified assumption about the location of a separate `xz.exe` is imposed.
 
 Release-optimized, noncomponent Chromium is built without PGO, ThinLTO, or debug
 symbols. This reduces memory, disk and build time; it sacrifices some official
