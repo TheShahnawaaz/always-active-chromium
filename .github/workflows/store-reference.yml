@@ -1,14 +1,20 @@
-name: Inspect normal Store and native UI prerequisites
+name: Inspect normal Store and native permission UI
 
 on:
   workflow_dispatch:
+    inputs:
+      phase:
+        description: Observe prerequisites or open and inspect the unaccepted permission dialog
+        type: choice
+        options: [preflight, permission-dialog]
+        default: preflight
 
 permissions:
   contents: read
 
 jobs:
   store:
-    name: Store preflight on ${{ matrix.platform }}
+    name: Store ${{ inputs.phase }} on ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
@@ -27,6 +33,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       AA_REFERENCE_ROOT: .runtime/store-reference
       AA_PLATFORM: ${{ matrix.platform }}
+      AA_STORE_PHASE: ${{ inputs.phase }}
       PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -60,14 +67,20 @@ jobs:
         id: acquire
         shell: bash
         run: python tests/acquire-reference.py --platform "${{ matrix.download }}" --output "$AA_REFERENCE_ROOT"
-      - name: Inspect the real Store page without installing anything
+      - name: Inspect the Store page or unaccepted native permission dialog
         id: inspect
         continue-on-error: true
         timeout-minutes: 4
         shell: bash
         env:
           AA_BROWSER: ${{ steps.acquire.outputs.browser }}
-        run: node tests/store.mjs --browser "$AA_BROWSER" --output reports/store
+        run: |
+          case "$AA_STORE_PHASE" in
+            preflight) entrypoint=tests/store.mjs ;;
+            permission-dialog) entrypoint=tests/store-dialog.mjs ;;
+            *) echo 'Unsupported Store inspection phase' >&2; exit 2 ;;
+          esac
+          node "$entrypoint" --browser "$AA_BROWSER" --output reports/store
       - name: Retain finite preflight evidence
         if: ${{ always() && steps.acquire.outcome == 'success' }}
         env:

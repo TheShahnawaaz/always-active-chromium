@@ -1,4 +1,4 @@
-"""Publish a fixed allowlist of bounded, non-profile Store preflight evidence."""
+"""Publish a fixed allowlist of bounded, non-profile Store inspection evidence."""
 import hashlib
 import json
 import os
@@ -15,6 +15,9 @@ def main():
     repository = os.environ['GITHUB_REPOSITORY']
     run_id = os.environ['GITHUB_RUN_ID']
     attempt = os.environ.get('GITHUB_RUN_ATTEMPT', '1')
+    phase = os.environ.get('AA_STORE_PHASE', 'preflight')
+    if phase not in ('preflight', 'permission-dialog'):
+        raise RuntimeError('Unexpected Store inspection phase')
     destination = project / 'packages/store-reference'
     destination.mkdir(parents=True, exist_ok=True)
     selected = []
@@ -38,9 +41,12 @@ def main():
         'run_url': f'https://github.com/{repository}/actions/runs/{run_id}',
         'platform': platform,
         'inspection_outcome': os.environ['AA_STORE_OUTCOME'],
-        'scope': 'Read-only official CFT Store page and owned native UI prerequisites. '
-                 'No extension installation, permission acceptance, update, removal, '
-                 'or custom native-browser verification is established.',
+        'phase': phase,
+        'scope': ('Read-only official CFT Store page and owned native UI prerequisites. '
+                  if phase == 'preflight' else
+                  'Official CFT Store Add click and inspection of the unaccepted native permission dialog. ')
+                 + 'No permission acceptance, completed extension installation, update, removal, '
+                   'or custom native-browser verification is established.',
     }
     metadata = destination / f'{platform}-store-status.json'
     metadata.write_text(json.dumps(status, indent=2) + '\n', encoding='utf-8')
@@ -54,9 +60,10 @@ def main():
         'Actual controller commit and exact reference package hashes are attached. '
         'Only finite JSON and checksums are uploaded; profiles, logs, binaries, '
         'browser packages and extension source are excluded.\n', encoding='utf-8')
-    tag = f'store-reference-{platform}-{run_id}-{attempt}'
+    kind = 'store-reference' if phase == 'preflight' else 'store-dialog'
+    tag = f'{kind}-{platform}-{run_id}-{attempt}'
     subprocess.run(['gh', 'release', 'create', tag, '--repo', repository, '--draft',
-        '--title', f'Store prerequisites: {platform}', '--notes-file', str(notes)], check=True)
+        '--title', f'Store {phase}: {platform}', '--notes-file', str(notes)], check=True)
     for item in selected:
         subprocess.run(['gh', 'release', 'upload', tag, str(item), '--repo', repository], check=True)
     subprocess.run(['gh', 'release', 'view', tag, '--repo', repository, '--json', 'url'], check=True)

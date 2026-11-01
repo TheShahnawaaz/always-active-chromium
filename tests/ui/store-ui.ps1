@@ -1,10 +1,12 @@
 # Read-only native UI prerequisite probe. Never invokes controls or changes permissions.
 # powershell.exe -NoProfile -NonInteractive -File tests/ui/store-ui.ps1 `
 #   -PidValue PID -Profile ABSOLUTE_PATH -Executable ABSOLUTE_PATH
+# Optional: -Mode dialog observes owned focused UI without accepting a dialog.
 param(
     [string]$PidValue = $env:AA_STORE_PID,
     [string]$Profile = $env:AA_STORE_PROFILE,
-    [string]$Executable = $env:AA_STORE_EXECUTABLE
+    [string]$Executable = $env:AA_STORE_EXECUTABLE,
+    [string]$Mode = 'preflight'
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -14,6 +16,7 @@ $script:MaxDepth = 8
 $script:MaxWindows = 8
 $script:MaxStringBytes = 240
 $script:MaxOutputBytes = 65536
+$script:MaxAncestorDepth = 16
 $script:Truncated = $false
 $script:Visited = 0
 $script:OwnedPid = 0
@@ -109,17 +112,148 @@ function Get-OwnedIdentity([switch]$Final) {
               created = $process.CreationDate.ToUniversalTime().ToString('o'); verified = $true }
 }
 
-function Get-ControlSnapshot($Element, [int]$Depth) {
+function Get-ControlSnapshot($Element, [int]$Depth, [switch]$Detailed) {
     Assert-Budget
     if ($script:Visited -ge $script:MaxNodes) { $script:Truncated = $true; return $null }
     $script:Visited++
     $current = $Element.Current
     # Foreign process nodes below a browser window are never inspected further.
     if ($current.ProcessId -ne $script:OwnedPid) { return $null }
-    return @{ role = Get-BoundedString $current.ControlType.ProgrammaticName
-              title = Get-BoundedString $current.Name
-              enabled = [bool]$current.IsEnabled; offscreen = [bool]$current.IsOffscreen
-              depth = $Depth }
+    $record = @{ role = Get-BoundedString $current.ControlType.ProgrammaticName
+                 title = Get-BoundedString $current.Name
+                 enabled = [bool]$current.IsEnabled; offscreen = [bool]$current.IsOffscreen
+                 depth = $Depth }
+    if ($Detailed) {
+        $record.subrole = Get-BoundedString $current.LocalizedControlType
+        $record.description = Get-BoundedString $current.HelpText
+        $record.value = $null
+        if ($current.IsPassword) { $record.valueRedacted = $true }
+        else {
+            # Read-only patterns: never invoke, focus, set a value, or select text.
+            try {
+                $pattern = $null
+                Assert-Budget
+                if ($Element.TryGetCurrentPattern([Windows.Automation.ValuePattern]::Pattern, [ref]$pattern)) {
+                    $record.value = Get-BoundedString (([Windows.Automation.ValuePattern]$pattern).Current.Value)
+                } else {
+                    $pattern = $null
+                    Assert-Budget
+                    if ($Element.TryGetCurrentPattern([Windows.Automation.TextPattern]::Pattern, [ref]$pattern)) {
+                        $record.value = Get-BoundedString (([Windows.Automation.TextPattern]$pattern).DocumentRange.GetText($script:MaxStringBytes))
+                    }
+                }
+            } catch { $record.valueReadUnavailable = $true }
+        }
+    }
+    return $record
+}
+
+function Get-DialogInspection {
+    $result = @{ status = 'not-found'; focused = $null; ancestors = @(); containers = @()
+                 promptIdentityVerified = $false; notes = @(); truncated = $false
+                 maxAncestorDepth = $script:MaxAncestorDepth }
+    try {
+        Assert-Budget
+        $focused = [Windows.Automation.AutomationElement]::FocusedElement
+        # Reading the PID is the only operation on an unverified focus object.
+        if ($null -eq $focused -or $focused.Current.ProcessId -ne $script:OwnedPid) {
+            $result.notes = @('no_owned_focused_element')
+            return $result
+        }
+        $walker = [Windows.Automation.TreeWalker]::RawViewWalker
+        $chain = New-Object 'System.Collections.Generic.List[object]'
+        $cursor = $focused
+        $windowVerified = $false
+        while ($null -ne $cursor -and $chain.Count -lt $script:MaxAncestorDepth -and $script:Visited -lt $script:MaxNodes) {
+            Assert-Budget
+            $script:Visited++
+            $current = $cursor.Current
+            if ($current.ProcessId -ne $script:OwnedPid) { break }
+            $duplicate = $false
+            foreach ($prior in $chain) {
+                if ([Windows.Automation.Automation]::Compare($prior, $cursor)) { $duplicate = $true; break }
+            }
+            if ($duplicate) { break }
+            $chain.Add($cursor)
+            if ($current.ControlType -eq [Windows.Automation.ControlType]::Window -and
+                [StoreUIReadOnly.NativeArguments]::IsOwnedWindow($current.NativeWindowHandle, $script:OwnedPid)) {
+                $windowVerified = $true
+                break
+            }
+            $cursor = $walker.GetParent($cursor)
+        }
+        if (-not $windowVerified) {
+            $result.notes = @('focused_element_has_no_verified_owned_window_ancestry')
+            if ($chain.Count -ge $script:MaxAncestorDepth -or $script:Visited -ge $script:MaxNodes) { $script:Truncated = $true }
+            $result.truncated = $script:Truncated
+            return $result
+        }
+        # Only now inspect text/value beneath a verified, same-PID native window.
+        $records = New-Object 'System.Collections.Generic.List[object]'
+        for ($index = 0; $index -lt $chain.Count; $index++) {
+            $record = Get-ControlSnapshot ($chain[$index]) $index -Detailed
+            if ($null -eq $record) { throw 'focused_chain_snapshot_incomplete' }
+            $record.windowOwnershipVerified = $true
+            $records.Add($record)
+        }
+        $windowRecord = $records[$records.Count - 1].Clone()
+        $windowRecord.windowRoleVerified = $true
+        $windowRecord.nativeWindowOwnershipVerified = $true
+        $windowRecord.nativeWindowHandle = $chain[$chain.Count - 1].Current.NativeWindowHandle
+        $result.focused = $records[0]
+        $result.ancestors = @($records | Select-Object -Skip 1)
+        $result.window = $windowRecord
+        $result.status = 'observed'
+        $result.notes = @('owned_focused_ui_only_not_a_verified_install_prompt')
+
+        # Observe a few nearby ancestors plus the window; do not assume a role
+        # or title identifies the extension prompt before actual capture.
+        $selected = New-Object 'System.Collections.Generic.List[int]'
+        if ($chain.Count -gt 1) { $selected.Add(1) }
+        if ($chain.Count -gt 2) { $selected.Add(2) }
+        if ($chain.Count -gt 3) { $selected.Add(3) }
+        if (-not $selected.Contains($chain.Count - 1)) { $selected.Add($chain.Count - 1) }
+        $containers = New-Object 'System.Collections.Generic.List[object]'
+        foreach ($index in $selected) {
+            $record = $records[$index].Clone()
+            $record.selectionReason = $(if ($index -eq $chain.Count - 1) { 'verified_focused_window' } else { 'near_focused_ancestor' })
+            $controls = New-Object 'System.Collections.Generic.List[object]'
+            $queue = New-Object 'System.Collections.Generic.Queue[object]'
+            $queue.Enqueue(@{ element = $chain[$index]; depth = 0 })
+            try {
+                while ($queue.Count -gt 0 -and $script:Visited -lt $script:MaxNodes) {
+                    Assert-Budget
+                    $node = $queue.Dequeue()
+                    if ($node.depth -ge $script:MaxDepth) { $script:Truncated = $true; continue }
+                    $child = $walker.GetFirstChild($node.element)
+                    while ($null -ne $child -and $script:Visited -lt $script:MaxNodes) {
+                        $childRecord = Get-ControlSnapshot $child ($node.depth + 1) -Detailed
+                        if ($null -ne $childRecord) {
+                            $childRecord.windowOwnershipVerified = $true
+                            $controls.Add($childRecord)
+                            $queue.Enqueue(@{ element = $child; depth = $node.depth + 1 })
+                        }
+                        Assert-Budget
+                        $child = $walker.GetNextSibling($child)
+                    }
+                    if ($null -ne $child) { $script:Truncated = $true }
+                }
+                if ($queue.Count -gt 0) { $script:Truncated = $true }
+            } catch {
+                $script:Truncated = $true
+                $result.notes = @((Get-BoundedString $_.Exception.Message))
+            }
+            $record.controls = $controls.ToArray()
+            $containers.Add($record)
+            $result.containers = $containers.ToArray()
+            if ($script:Visited -ge $script:MaxNodes -or $script:Clock.ElapsedMilliseconds -ge 8000) { break }
+        }
+    } catch {
+        $result.status = 'error'
+        $result.notes = @((Get-BoundedString $_.Exception.Message))
+    }
+    $result.truncated = $script:Truncated
+    return $result
 }
 
 try {
@@ -128,6 +262,8 @@ try {
         throw 'windows_required'
     }
     if ($args.Count -ne 0) { throw 'invalid_arguments' }
+    if ($Mode -cnotin @('preflight', 'dialog')) { throw 'invalid_mode' }
+    if ($Mode -ceq 'dialog') { $script:Report.mode = $Mode }
     if (-not [int]::TryParse($PidValue, [ref]$script:OwnedPid) -or $script:OwnedPid -le 1) {
         throw 'invalid_pid'
     }
@@ -143,6 +279,16 @@ namespace StoreUIReadOnly {
         private static extern IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)] string commandLine, out int count);
         [DllImport("kernel32.dll")]
         private static extern IntPtr LocalFree(IntPtr memory);
+        [DllImport("user32.dll")]
+        private static extern bool IsWindow(IntPtr window);
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+        public static bool IsOwnedWindow(int window, int expectedPid) {
+            if (window == 0) return false;
+            uint actualPid;
+            var handle = new IntPtr(window);
+            return IsWindow(handle) && GetWindowThreadProcessId(handle, out actualPid) != 0 && actualPid == (uint)expectedPid;
+        }
         public static string[] Parse(string commandLine) {
             int count;
             IntPtr memory = CommandLineToArgvW(commandLine, out count);
@@ -175,15 +321,26 @@ namespace StoreUIReadOnly {
     $walker = [Windows.Automation.TreeWalker]::RawViewWalker
     $windows = New-Object 'System.Collections.Generic.List[object]'
     if ($ownedWindows.Count -gt $script:MaxWindows) { $script:Truncated = $true }
+    $dialogWindowRecords = @{}
+    if ($Mode -ceq 'dialog') {
+        # Preserve real window observations before detailed inspection uses the
+        # shared node budget. The default preflight traversal is unchanged.
+        for ($index = 0; $index -lt [Math]::Min($ownedWindows.Count, $script:MaxWindows); $index++) {
+            $record = Get-ControlSnapshot ($ownedWindows.Item($index)) 0
+            if ($null -ne $record) { $dialogWindowRecords[$index] = $record }
+        }
+        $script:Report.dialogInspection = Get-DialogInspection
+    }
     for ($windowIndex = 0; $windowIndex -lt [Math]::Min($ownedWindows.Count, $script:MaxWindows); $windowIndex++) {
         $window = $ownedWindows.Item($windowIndex)
-        $record = Get-ControlSnapshot $window 0
+        if ($Mode -ceq 'dialog') { $record = $dialogWindowRecords[$windowIndex] }
+        else { $record = Get-ControlSnapshot $window 0 }
         if ($null -eq $record) { continue }
         $controls = New-Object 'System.Collections.Generic.List[object]'
         $queue = New-Object 'System.Collections.Generic.Queue[object]'
         $queue.Enqueue(@{ element = $window; depth = 0 })
         try {
-            while ($queue.Count -gt 0 -and $script:Visited -lt $script:MaxNodes) {
+            while ($Mode -ceq 'preflight' -and $queue.Count -gt 0 -and $script:Visited -lt $script:MaxNodes) {
                 Assert-Budget
                 $node = $queue.Dequeue()
                 if ($node.depth -ge $script:MaxDepth) { $script:Truncated = $true; continue }
@@ -199,7 +356,7 @@ namespace StoreUIReadOnly {
                 }
                 if ($null -ne $child) { $script:Truncated = $true }
             }
-            if ($queue.Count -gt 0) { $script:Truncated = $true }
+            if ($Mode -ceq 'preflight' -and $queue.Count -gt 0) { $script:Truncated = $true }
         } catch {
             $script:Truncated = $true
             $script:Report.errors = @((Get-BoundedString $_.Exception.Message))
@@ -216,6 +373,7 @@ namespace StoreUIReadOnly {
     } catch {
         $script:Report.identity = @{ pid = $script:OwnedPid; verified = $false }
         $script:Report.windows = @()
+        $script:Report.Remove('dialogInspection')
         throw 'process_identity_unavailable_or_changed_during_probe'
     }
     $script:Report.visitedNodes = $script:Visited
@@ -251,6 +409,28 @@ while ($true) {
         $reduced = $true
     }
     $script:Report.windows = $windows
+    if (-not $reduced -and $null -ne $script:Report.dialogInspection) {
+        $inspection = $script:Report.dialogInspection
+        $containers = @($inspection.containers)
+        for ($index = $containers.Count - 1; $index -ge 0; $index--) {
+            $controls = @($containers[$index].controls)
+            if ($controls.Count -gt 0) {
+                $containers[$index].controls = @($controls | Select-Object -First ($controls.Count - 1))
+                $reduced = $true
+                break
+            }
+        }
+        if (-not $reduced -and $containers.Count -gt 0) {
+            $containers = @($containers | Select-Object -First ($containers.Count - 1))
+            $reduced = $true
+        } elseif (-not $reduced -and @($inspection.ancestors).Count -gt 0) {
+            $inspection.ancestors = @($inspection.ancestors | Select-Object -First (@($inspection.ancestors).Count - 1))
+            $reduced = $true
+        }
+        $inspection.containers = $containers
+        $inspection.truncated = $true
+        $script:Report.dialogInspection = $inspection
+    }
     if (-not $reduced) {
         $json = '{"schema":1,"platform":"win32","status":"error","errors":["serialization_failed"]}'
         break

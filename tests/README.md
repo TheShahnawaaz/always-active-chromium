@@ -188,3 +188,34 @@ and removal remain later explicit verification gates against built browsers.
 Publish only `results.json`, excluding `profile/`, `browser.log`, full DOM, and
 full accessibility trees. Cleanup closes only the verified owned browser, with
 PID/profile/creation-identity-checked fallback signals if needed.
+
+## Normal Store permission-dialog inspection
+
+```sh
+node tests/store-dialog.mjs --browser /path/to/browser --output reports/store-dialog
+```
+
+This separate stage uses the same fixed audited listing and a fresh minimal
+browser profile. It requires an enabled, visible, unobscured Add button and
+strict owned-PID native UI prerequisites before dispatching normal CDP mouse
+move/press/release input to that button. It never calls `element.click` or an
+installation API. The native helper runs in read-only `dialog` mode afterward;
+there is **no acceptance action**.
+
+The captured prompt must have verified same-PID native-window ancestry, the
+exact target extension name, Add extension/Cancel button roles and labels, and
+substantive permission text. Actual role/subrole/title/value fields are retained
+as finite observations; helper exit zero or a generic browser window alone does
+not establish prompt identity. The controller then closes the owned browser
+normally, cancelling the unaccepted prompt. Read-only target-registry queries
+are attempted, and persisted extension preferences must contain no target entry
+after closure. Forced fallback cleanup is recorded and cannot pass the normal
+close/cancel check.
+
+Set `AA_STORE_UI_HELPER` to the compiled macOS helper or exact Windows script as
+for preflight. Main actions have a three-minute budget and cleanup has an
+additional 18-second budget, with smaller listing/dialog/probe deadlines. Publish only `results.json`; exclude the
+profile and browser log. This is a dialog-inspection gate, not a successful
+installation, restart/update/removal test, or native-binary compatibility claim.
+Local CFT's disabled Add state is not used to attempt an Add click; initial real
+modal capture is intended for the hosted environments where readiness passed.
