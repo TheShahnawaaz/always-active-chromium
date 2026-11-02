@@ -31,6 +31,14 @@ same checks hydrate the pinned `README.chromium` and its referenced GPL-2.0
 the executable must report GNU gperf 3.0.1. Resumes verify and reuse the same
 binary without changing its mtime. This preserves the actual Windows pin;
 the separate Linux CIPD gperf dependency is not substituted.
+The Windows-only DirectX-Headers and multimedia-redirection source roots are
+materialized from their exact DEPS commits. `windows-source-deps.json` lists
+their complete 96-file closure, including headers and licenses. Its file modes,
+Git blob IDs and sizes reconstruct each pinned Git tree ID. Bounded official
+commit archives are verified against every file before installation; existing
+matching files retain their mtimes, while foreign edits/extra files are rejected.
+The archive SHA-256 and complete tree/commit provenance enter `dependencies.json`.
+No upstream checkout hook or hydration script runs.
 Dawn's source generator uses its own nested
 [DEPS-pinned Go 1.26.6](https://dawn.googlesource.com/dawn/+/8114a24a35eed1db88d1d897e8bd193a8c334712/DEPS):
 the host Mac arm64 or Windows amd64 CIPD package is SHA-256 checked against

@@ -407,6 +407,8 @@ def hydrate(src, platform):
     hydrate_crubit_formatter(src, platform, scope, enabled, hydrate_entries)
     if platform == 'win-x64':
         records.extend(hydrate_windows_gperf(src, scope, enabled))
+        from hydrate_sources import hydrate_windows_sources
+        records.extend(hydrate_windows_sources(src, scope, enabled))
     devtools = src / 'third_party/devtools-frontend/src'
     nested, _, nested_enabled = load_deps(devtools / 'DEPS', platform)
     hydrate_entries(nested['deps'], devtools, {'third_party/esbuild', 'node_modules'}, nested_enabled)

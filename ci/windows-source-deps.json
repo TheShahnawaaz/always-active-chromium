@@ -1,0 +1,601 @@
+{
+  "schema": 1,
+  "dependencies": [
+    {
+      "relative": "src/third_party/microsoft_dxheaders/src",
+      "repository": "https://chromium.googlesource.com/external/github.com/microsoft/DirectX-Headers.git",
+      "revision": "07b94cba474be6cdfd934febdbd0b21ca0524187",
+      "tree": "e0d4be126d9eba9eefec6ac2016aeb2407126232",
+      "archive_url": "https://codeload.github.com/microsoft/DirectX-Headers/tar.gz/07b94cba474be6cdfd934febdbd0b21ca0524187",
+      "archive_prefix": "DirectX-Headers-07b94cba474be6cdfd934febdbd0b21ca0524187",
+      "files": [
+        {
+          "path": ".github/dependabot.yml",
+          "mode": "100644",
+          "blob": "ca79ca5b4d5245d3dbcf49889b73d7fd0f076132",
+          "size": 112
+        },
+        {
+          "path": ".github/workflows/codeql.yml",
+          "mode": "100644",
+          "blob": "f622da12f98d1e4935ab73b1f91eacb8b400bff0",
+          "size": 1506
+        },
+        {
+          "path": ".github/workflows/main.yml",
+          "mode": "100644",
+          "blob": "c027042f8223a0a9d96763004a6163dc2f08b922",
+          "size": 2554
+        },
+        {
+          "path": ".github/workflows/msvc.yml",
+          "mode": "100644",
+          "blob": "12570d991c7acb6606b8a07c98a060987490ff24",
+          "size": 1390
+        },
+        {
+          "path": ".github/workflows/uwp.yml",
+          "mode": "100644",
+          "blob": "362f550c926adbf1304054784f2104c9180d03fd",
+          "size": 1619
+        },
+        {
+          "path": ".github/workflows/wsl.yml",
+          "mode": "100644",
+          "blob": "63a483e98d4560a3881bb535f16566fc0ae5965a",
+          "size": 935
+        },
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "blob": "9ef152f46788d689af65b42d3b39a5f185cd6382",
+          "size": 207
+        },
+        {
+          "path": "Android.bp",
+          "mode": "100644",
+          "blob": "afba86403c25e324c4317508842327932256320c",
+          "size": 393
+        },
+        {
+          "path": "CMakeLists.txt",
+          "mode": "100644",
+          "blob": "c12547344c757c5e554808da02d6cf69f81b7c3a",
+          "size": 5144
+        },
+        {
+          "path": "CMakePresets.json",
+          "mode": "100644",
+          "blob": "12ca91f6652fda332013edb70839fb247506d3c4",
+          "size": 10849
+        },
+        {
+          "path": "CODE_OF_CONDUCT.md",
+          "mode": "100644",
+          "blob": "686e5e7a090b52f0db9acbe001915d0b9b06b06c",
+          "size": 558
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "blob": "44378268be1b87777827ab64b1ea2d98e808850e",
+          "size": 1093
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "blob": "a62b0fdc4217c5012cf35a7cd8bc7c3b350a697e",
+          "size": 6099
+        },
+        {
+          "path": "SECURITY.md",
+          "mode": "100644",
+          "blob": "b3c89efc852e22f71eabf5dfbc6ac62493425eb6",
+          "size": 2656
+        },
+        {
+          "path": "cmake/DirectX-Headers.pc.in",
+          "mode": "100644",
+          "blob": "f33d3ffd433e4922c93da82393aa9cf02f4e1c86",
+          "size": 316
+        },
+        {
+          "path": "cmake/JoinPaths.cmake",
+          "mode": "100644",
+          "blob": "c68d91b84dbc7238d8202cd55c6022e8c94fac3d",
+          "size": 817
+        },
+        {
+          "path": "cmake/directx-headers-config.cmake.in",
+          "mode": "100644",
+          "blob": "8bb052bdf25ed2bf03eaadaae15b099217847e6f",
+          "size": 129
+        },
+        {
+          "path": "googletest/CMakeLists.txt",
+          "mode": "100644",
+          "blob": "ff979d9c7a782e5b6578b0c7d8cb752407bf6d69",
+          "size": 1408
+        },
+        {
+          "path": "googletest/MockDevice.hpp",
+          "mode": "100644",
+          "blob": "748d5ba7d88ba07be06878feac55fc39d08e823c",
+          "size": 51009
+        },
+        {
+          "path": "googletest/feature_support_test.cpp",
+          "mode": "100644",
+          "blob": "0394384c10ea84967fc8e7e2ead7ff574545cc31",
+          "size": 52429
+        },
+        {
+          "path": "googletest/meson.build",
+          "mode": "100644",
+          "blob": "a839782e06abe368a1b0b33fc1b3d50453327e39",
+          "size": 518
+        },
+        {
+          "path": "include/composition/dcomp-preview.h",
+          "mode": "100644",
+          "blob": "303567a209eef10efa7c7d7b5815c07767ca1b2d",
+          "size": 3983
+        },
+        {
+          "path": "include/directx/D3D12MarkerApiEnums.idl",
+          "mode": "100644",
+          "blob": "1384b73835ff66e6e4c099f9b22b2aaa33c21bb4",
+          "size": 7499
+        },
+        {
+          "path": "include/directx/D3D12TokenizedProgramFormat.hpp",
+          "mode": "100644",
+          "blob": "b95145430ffca8aed30fe57fc9d27ae70908ee05",
+          "size": 130378
+        },
+        {
+          "path": "include/directx/DirectML.h",
+          "mode": "100644",
+          "blob": "b8b6603644f4cf85da5fa90cd11e388f48bd06a0",
+          "size": 79871
+        },
+        {
+          "path": "include/directx/d3d12.h",
+          "mode": "100644",
+          "blob": "2aecdc7e1008cc3fd6a7f9561f8401029182e4f7",
+          "size": 1692046
+        },
+        {
+          "path": "include/directx/d3d12.idl",
+          "mode": "100644",
+          "blob": "c0468b09be928767e0ba7c04bf9fe1373c42bc41",
+          "size": 302229
+        },
+        {
+          "path": "include/directx/d3d12compatibility.h",
+          "mode": "100644",
+          "blob": "13bdada33274e988104af3687cfb433e6e9608bb",
+          "size": 25465
+        },
+        {
+          "path": "include/directx/d3d12compatibility.idl",
+          "mode": "100644",
+          "blob": "bf661b80ed0cd9f52120c084f9c2fc01d6b1c2b2",
+          "size": 4926
+        },
+        {
+          "path": "include/directx/d3d12compiler.h",
+          "mode": "100644",
+          "blob": "1d8fe3be6d1a6000fc855e9b600b7b29ee3de3d6",
+          "size": 34475
+        },
+        {
+          "path": "include/directx/d3d12compiler.idl",
+          "mode": "100644",
+          "blob": "0bdc5ae726bff76e277867859e93201d2bd55a2c",
+          "size": 11382
+        },
+        {
+          "path": "include/directx/d3d12sdklayers.h",
+          "mode": "100644",
+          "blob": "1622b73dbe6116a806739f0a2ce01c770a31dacd",
+          "size": 182912
+        },
+        {
+          "path": "include/directx/d3d12sdklayers.idl",
+          "mode": "100644",
+          "blob": "251120361b274abd3193bbdd1c0804d5ef4357a8",
+          "size": 97942
+        },
+        {
+          "path": "include/directx/d3d12shader.h",
+          "mode": "100644",
+          "blob": "6593cd5b8912039211249805720bf8e3cdd1c057",
+          "size": 28043
+        },
+        {
+          "path": "include/directx/d3d12video.h",
+          "mode": "100644",
+          "blob": "bfbbd7a4604588c08f6afbc729a1e6f8e79fa724",
+          "size": 459032
+        },
+        {
+          "path": "include/directx/d3d12video.idl",
+          "mode": "100644",
+          "blob": "d2680e9dce876d4639b0866d0bac04816d0c1e6a",
+          "size": 188848
+        },
+        {
+          "path": "include/directx/d3dcommon.h",
+          "mode": "100644",
+          "blob": "ac512539c1353db156c40b4d8f983d09be737d6d",
+          "size": 51955
+        },
+        {
+          "path": "include/directx/d3dcommon.idl",
+          "mode": "100644",
+          "blob": "6ad5de763724748fa130c75bdc250c746fa00b76",
+          "size": 47674
+        },
+        {
+          "path": "include/directx/d3dshadercacheregistration.h",
+          "mode": "100644",
+          "blob": "671866a18c2c030a190b62338a6e33dd568fe3db",
+          "size": 33812
+        },
+        {
+          "path": "include/directx/d3dshadercacheregistration.idl",
+          "mode": "100644",
+          "blob": "bc5441e6786582e2c4fa3aac6b9e849943547e11",
+          "size": 7441
+        },
+        {
+          "path": "include/directx/d3dx12.h",
+          "mode": "100644",
+          "blob": "e86860210a6e698d778e93aa0941eb83f9656117",
+          "size": 913
+        },
+        {
+          "path": "include/directx/d3dx12_barriers.h",
+          "mode": "100644",
+          "blob": "2c2b135a62c35091e0a606302744db30044404bb",
+          "size": 6443
+        },
+        {
+          "path": "include/directx/d3dx12_check_feature_support.h",
+          "mode": "100644",
+          "blob": "4df6f8ead309d86a0c6690098a7fb9ee0fe1f7b3",
+          "size": 46273
+        },
+        {
+          "path": "include/directx/d3dx12_core.h",
+          "mode": "100644",
+          "blob": "fc74582f78d6fd9ccf537b106f8275fd5a4298c0",
+          "size": 78192
+        },
+        {
+          "path": "include/directx/d3dx12_default.h",
+          "mode": "100644",
+          "blob": "2b74d70f77e4f52f111dea6821c42f68eabc7f66",
+          "size": 313
+        },
+        {
+          "path": "include/directx/d3dx12_pipeline_state_stream.h",
+          "mode": "100644",
+          "blob": "cc584c2c508c7d0ededf9d4eb925ede123dfbff9",
+          "size": 96018
+        },
+        {
+          "path": "include/directx/d3dx12_property_format_table.h",
+          "mode": "100644",
+          "blob": "66c7600f55d0e75d991e5eaf54274e8b37b7b5e0",
+          "size": 11437
+        },
+        {
+          "path": "include/directx/d3dx12_render_pass.h",
+          "mode": "100644",
+          "blob": "c88fbdf1bc9075658b44353da19d2e610d98341b",
+          "size": 4204
+        },
+        {
+          "path": "include/directx/d3dx12_resource_helpers.h",
+          "mode": "100644",
+          "blob": "a6a27aaa2a4ffdf587e767cddac78c3a15cc4bd8",
+          "size": 25743
+        },
+        {
+          "path": "include/directx/d3dx12_root_signature.h",
+          "mode": "100644",
+          "blob": "e194d30a3f475d287f556f842f6b1ec6e4fde260",
+          "size": 52198
+        },
+        {
+          "path": "include/directx/d3dx12_state_object.h",
+          "mode": "100644",
+          "blob": "21715da300fa7d53d8568a99cc4b6878a52b89a2",
+          "size": 93614
+        },
+        {
+          "path": "include/directx/dxcore.h",
+          "mode": "100644",
+          "blob": "26b2d21296ca7a1f4182faf27042f287b10ef23e",
+          "size": 1133
+        },
+        {
+          "path": "include/directx/dxcore_interface.h",
+          "mode": "100644",
+          "blob": "aca8518e99b3909e7a1455a9deb3b2ec83275c8b",
+          "size": 14941
+        },
+        {
+          "path": "include/directx/dxgicommon.h",
+          "mode": "100644",
+          "blob": "51ad4915cccef9c67f04c2f9fc62a4331ee68d88",
+          "size": 2262
+        },
+        {
+          "path": "include/directx/dxgicommon.idl",
+          "mode": "100644",
+          "blob": "4980058fd8eaf1d46254c906e21446c20dc14adf",
+          "size": 2199
+        },
+        {
+          "path": "include/directx/dxgiformat.h",
+          "mode": "100644",
+          "blob": "28f087f6594d204f66d1d3174b033933e7877eda",
+          "size": 8022
+        },
+        {
+          "path": "include/directx/dxgiformat.idl",
+          "mode": "100644",
+          "blob": "d3eb0a7ebd0f4e7e9edbe094db468e7163739479",
+          "size": 7909
+        },
+        {
+          "path": "include/dxguids/dxguids.h",
+          "mode": "100644",
+          "blob": "acb18186d376055102d58a83257ff8993e2e1195",
+          "size": 19594
+        },
+        {
+          "path": "include/experimental-composition/experimental-dcomp.h",
+          "mode": "100644",
+          "blob": "62f7d65f98f40f622b6495ddae4ad2dd0fc12556",
+          "size": 8136
+        },
+        {
+          "path": "include/experimental-composition/experimental-presentation.h",
+          "mode": "100644",
+          "blob": "beb72a38d05244e1da0b6afdba5d98506fe2b611",
+          "size": 2786
+        },
+        {
+          "path": "include/wsl/stubs/basetsd.h",
+          "mode": "100644",
+          "blob": "b1e57f4b1e706064493712cb0c289788db86bd42",
+          "size": 12750
+        },
+        {
+          "path": "include/wsl/stubs/oaidl.h",
+          "mode": "100644",
+          "blob": "76f5b5f95119301867800b48700aa2c994404529",
+          "size": 130
+        },
+        {
+          "path": "include/wsl/stubs/ocidl.h",
+          "mode": "100644",
+          "blob": "76f5b5f95119301867800b48700aa2c994404529",
+          "size": 130
+        },
+        {
+          "path": "include/wsl/stubs/rpc.h",
+          "mode": "100644",
+          "blob": "76f5b5f95119301867800b48700aa2c994404529",
+          "size": 130
+        },
+        {
+          "path": "include/wsl/stubs/rpcndr.h",
+          "mode": "100644",
+          "blob": "68aa3909d30faa2f92185568b59f412652f9464a",
+          "size": 3700
+        },
+        {
+          "path": "include/wsl/stubs/unknwn.h",
+          "mode": "100644",
+          "blob": "4807028d47b15fed9065bffaf853df6df50b5dae",
+          "size": 41
+        },
+        {
+          "path": "include/wsl/stubs/unknwnbase.h",
+          "mode": "100644",
+          "blob": "5c546f29f6610225d4d626466758d6e02666ecd2",
+          "size": 3259
+        },
+        {
+          "path": "include/wsl/stubs/winapifamily.h",
+          "mode": "100644",
+          "blob": "064c4c2d0143ad311edb8dc2d5c644f8cfd5a021",
+          "size": 212
+        },
+        {
+          "path": "include/wsl/stubs/wrl/client.h",
+          "mode": "100644",
+          "blob": "64293a70b2f7aca9c60b99a34b0a644e7417efa1",
+          "size": 152
+        },
+        {
+          "path": "include/wsl/stubs/wrl/implements.h",
+          "mode": "100644",
+          "blob": "5a3979e1a4c6f62fcfd0e37c5b59ca68eda1c9bf",
+          "size": 159
+        },
+        {
+          "path": "include/wsl/winadapter.h",
+          "mode": "100644",
+          "blob": "ccb2b3c12f3b9be6e9a7ebaaede69f9ff9761f58",
+          "size": 110
+        },
+        {
+          "path": "include/wsl/wrladapter.h",
+          "mode": "100644",
+          "blob": "fcfd894ff9c4a319657fc189de9913335c1674bb",
+          "size": 25653
+        },
+        {
+          "path": "meson.build",
+          "mode": "100644",
+          "blob": "68fa54fbc7790af1677fef74f9e0b475ed179673",
+          "size": 2544
+        },
+        {
+          "path": "meson_options.txt",
+          "mode": "100644",
+          "blob": "a6ed5d3ba743c4b1533b23610438a1be4a790033",
+          "size": 187
+        },
+        {
+          "path": "src/d3dx12_property_format_table.cpp",
+          "mode": "100644",
+          "blob": "bd01abc5b489bc5d896caf511a8bd35b1c6ab5ff",
+          "size": 166906
+        },
+        {
+          "path": "src/dxguids.cpp",
+          "mode": "100644",
+          "blob": "cff98f4fa0d9b7fe0ba60e91220ca1c53ecb210e",
+          "size": 303
+        },
+        {
+          "path": "test.txt",
+          "mode": "100644",
+          "blob": "5ab2f8a4323abafb10abb68657d9d39f1a775057",
+          "size": 5
+        },
+        {
+          "path": "test/CMakeLists.txt",
+          "mode": "100644",
+          "blob": "ba3bc8e6bd89aa05a527ea09270d8683cc22db7b",
+          "size": 2014
+        },
+        {
+          "path": "test/feature_check_test.cpp",
+          "mode": "100644",
+          "blob": "3df377421f83ddf0ebc0dce9599e76ffd6775679",
+          "size": 30982
+        },
+        {
+          "path": "test/meson.build",
+          "mode": "100644",
+          "blob": "8bb30034a0a9aff04891d7dfc40ec048d669ed96",
+          "size": 627
+        },
+        {
+          "path": "test/test.cpp",
+          "mode": "100644",
+          "blob": "c18382fa466836b2a4376ec3796d6e20fa5aa72b",
+          "size": 1134
+        }
+      ]
+    },
+    {
+      "relative": "src/third_party/microsoft_multimedia_redirection/src",
+      "repository": "https://chromium.googlesource.com/external/github.com/microsoft/multimedia-redirection.git",
+      "revision": "8b1d8893d126547309f1bab8d8232418aa7c7109",
+      "tree": "b5f607aef6da553c78d68dbc4aa50657e4d6608d",
+      "archive_url": "https://codeload.github.com/microsoft/multimedia-redirection/tar.gz/8b1d8893d126547309f1bab8d8232418aa7c7109",
+      "archive_prefix": "multimedia-redirection-8b1d8893d126547309f1bab8d8232418aa7c7109",
+      "files": [
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "blob": "d5a18deed8813c6c817c9090bf0443d7fad48a9d",
+          "size": 7454
+        },
+        {
+          "path": "CODE_OF_CONDUCT.md",
+          "mode": "100644",
+          "blob": "686e5e7a090b52f0db9acbe001915d0b9b06b06c",
+          "size": 558
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "blob": "9e841e7a26e4eb057b24511e7b92d42b257a80e5",
+          "size": 1141
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "blob": "bb5cc93bdd286ddeb939139f644b360f21183e47",
+          "size": 4100
+        },
+        {
+          "path": "SECURITY.md",
+          "mode": "100644",
+          "blob": "e751608fcd55622cc1f88f30833bffe3e0aed236",
+          "size": 542
+        },
+        {
+          "path": "api/Mmr.idl",
+          "mode": "100644",
+          "blob": "2cb1870fd3eb944c79a1c94ee57fe658ed364b64",
+          "size": 20553
+        },
+        {
+          "path": "api/Mmr_h.h",
+          "mode": "100644",
+          "blob": "81696a06afb83ef4c1dddca8d850a5d81c125d81",
+          "size": 44206
+        },
+        {
+          "path": "api/Mmr_i.c",
+          "mode": "100644",
+          "blob": "20a6059b8635e065ec082fc3b67d7de2b13814fd",
+          "size": 2522
+        },
+        {
+          "path": "samples/SimpleStreamer/FrameProvider.cpp",
+          "mode": "100644",
+          "blob": "f991a1c6a87558655837e484f03810855fe62e7c",
+          "size": 18224
+        },
+        {
+          "path": "samples/SimpleStreamer/FrameProvider.h",
+          "mode": "100644",
+          "blob": "6b7610bb22e8d34fc8712e202470fd06114e2833",
+          "size": 2411
+        },
+        {
+          "path": "samples/SimpleStreamer/Player.cpp",
+          "mode": "100644",
+          "blob": "47b5cdfcd7274a0cbb721c58b37ac99eadeaa6f7",
+          "size": 12960
+        },
+        {
+          "path": "samples/SimpleStreamer/Player.h",
+          "mode": "100644",
+          "blob": "f1aa57e8bd4a89242664e6c4a0438c16f746908f",
+          "size": 7921
+        },
+        {
+          "path": "samples/SimpleStreamer/SimpleStreamer.cpp",
+          "mode": "100644",
+          "blob": "0fc3e1c69f94ccd692de1e249ca7da0e0cead601",
+          "size": 17363
+        },
+        {
+          "path": "samples/SimpleStreamer/SimpleStreamer.vcxproj",
+          "mode": "100644",
+          "blob": "435a2fd180c23c191df500485cbefa052992d04a",
+          "size": 4810
+        },
+        {
+          "path": "samples/SimpleStreamer/app.manifest",
+          "mode": "100644",
+          "blob": "5ba93a422f652aff87e753c14e81e1efd8c5aa92",
+          "size": 896
+        }
+      ]
+    }
+  ]
+}
