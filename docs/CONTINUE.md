@@ -22,10 +22,10 @@ Do not declare success from patches, fixtures, reference Chrome, a compile or
 an unverified package. Investigate and fix failures; report a measured blocker
 if the authorized route cannot proceed.
 
-The user will hand this goal to Dot. No independent continuation coding task
-has been launched from the prepared cloud environment. The existing GitHub
-builds are already remote and continue with the laptop off. Before doing any
-work, inspect current runs and avoid another coordinator or duplicate build.
+The hosted continuation is now active in the published project environment.
+Its coordinator has read this handover and checked actual GitHub runs and draft
+assets. The existing GitHub builds continue with the laptop off. Before any
+dispatch, inspect current runs and avoid another coordinator or duplicate build.
 
 Read `AGENTS.md`, `README.md`, `docs/PROGRESS.md`, `ci/BUILD.md` and
 `native/BEHAVIOR.md` first. Finish the existing goal: installable macOS arm64
@@ -141,3 +141,28 @@ to Dot. Verify the selected environment and GitHub API access in Dot's actual
 runtime; the onboarding's earlier Forbidden responses predate the API-domain
 configuration. Main also contains documentation-only commit `0fc07ef` after
 the immutable e146 build source; preserve later work.
+
+## Hosted takeover observations
+
+At 02:46 IST on November 3 (21:16 UTC on November 2), actual job APIs showed
+Mac 41524595935 restoring its checkpoint and Windows 41503529408 compiling.
+Neither job was cancelled or duplicated. This runtime can read Actions and
+download authenticated draft assets through the existing GitHub integration;
+no credentials were copied. The administrative Actions-permissions endpoint
+returns 403, which does not establish a workflow-dispatch failure. Dispatch
+write access still needs to be exercised when a real package is eligible.
+
+The Mac ready-manifest bytes independently match
+`00c430daf2ecfbda592033547b82fa3f395a36755f1628e014a891ecdd890463`.
+Its build-ready/complete state and native16 identity match the handover. Six
+Windows preparation/input-diagnostic assets independently match their server
+sizes/digests and all four published checksum entries: preparation complete,
+no diagnostic events, 75,790 declared leaves checked, zero missing, no audit
+errors. These are checkpoint/preparation observations, not finished binaries.
+
+Local continuation checks: 140 Python tests ran with 15 skips (platform,
+Ninja and selected-source fixtures unavailable); Node reported 67 passes and
+one Windows-only skip. No browser runtime result is inferred. Installation
+procedures are drafted in DISTRIBUTION.md and remain explicitly gated on actual
+fresh-delivery evidence. Continue monitoring the existing jobs, then inspect
+real compiler/package/test output before the next dependent action.

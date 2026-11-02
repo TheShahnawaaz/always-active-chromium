@@ -127,6 +127,73 @@ for DirectComposition windows. It still makes one window-only API attempt;
 there is no desktop fallback or relaxation of the blank-image/ownership checks.
 Actual image quality and completeness require observed pixels and manual review.
 
+## Installation procedure
+
+These instructions describe the intended packages. **Neither platform has yet
+passed fresh-delivery verification.** Use only a package explicitly accompanied
+by passing delivery evidence and its matching SHA-256 manifest. Compiler
+checkpoints and diagnostic drafts are not browser downloads.
+
+Download the package and `always-active-chromium-156.0.8078.80-<platform>-SHA256SUMS.txt`
+from the same build release. Verify the package against the matching filename
+in that manifest before opening it. Release notes must also state the exact
+source tag and link the fresh-delivery verification run.
+
+### macOS Apple Silicon
+
+The package is `always-active-chromium-156.0.8078.80-mac-arm64.zip`. In Terminal,
+from its download directory, calculate:
+
+```sh
+shasum -a 256 always-active-chromium-156.0.8078.80-mac-arm64.zip
+```
+
+Compare the entire 64-character result with the ZIP entry in the manifest.
+Extract the ZIP with Archive Utility, then move `Chromium.app` into Applications.
+If an existing Chromium app is present, keep it and choose a separate folder;
+do not replace it or Google Chrome. Open the extracted application normally.
+This is an arm64 app for Apple Silicon, not an Intel Mac package.
+
+The app is ad-hoc signed, without Developer ID or notarization. A browser-downloaded
+ZIP may therefore receive Gatekeeper treatment that a hosted extraction test
+does not exercise. Follow the release's observed first-launch notes and normal
+macOS approval UI when available. Do not disable Gatekeeper or remove quarantine
+as part of installation. No accessibility or screen-recording permission is
+needed for the browser's native always-active behavior.
+
+### Windows x64
+
+The package is `always-active-chromium-156.0.8078.80-win-x64-installer.exe`.
+In PowerShell, from its download directory, calculate:
+
+```powershell
+Get-FileHash .\always-active-chromium-156.0.8078.80-win-x64-installer.exe -Algorithm SHA256
+```
+
+Compare the complete hash with the installer entry in the manifest. Run the
+installer as the current user. The normal per-user destination is
+`%LOCALAPPDATA%\Chromium\Application\chrome.exe`; it is separate from Google
+Chrome. If another Chromium installation already exists, stop before installing
+to avoid replacing it. The installer has no Authenticode certificate; a hash
+match establishes agreement with the release manifest, not a trusted publisher
+signature. Use normal Windows approval UI without changing system protections.
+
+### First launch and extensions
+
+Use this app's Chromium profile. Never pass Google Chrome's profile directory
+to it, copy a Chrome profile into it, or select this app as the default browser
+unless that is desired. An existing standalone Chromium profile also belongs
+to that installation; an explicit `--user-data-dir` pointing to a new dedicated
+directory can keep it separate. The always-active feature is enabled by default
+for supported web documents, with no extension or debugging helper required.
+
+Open the Chrome Web Store through the ordinary browser interface and use its
+normal Add and permission prompts for supported desktop Manifest V3 extensions.
+The release evidence must identify the extension and exact operations actually
+verified. An update check returning `no_update` does not prove a future version
+upgrade. See the native behavior notes for optional CLI controls and finite
+behavior limits.
+
 ## Updates
 
 This project does not distribute official Google Chrome or enroll its builds

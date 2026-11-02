@@ -1,5 +1,19 @@
 # Progress ledger
 
+## Hosted continuation — 2026-11-03 IST
+
+The continuation is running in the published cloud project environment.
+Actual API checks at 02:46 IST (21:16 UTC November 2) show Mac
+[41524595935](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935)
+restoring and Windows
+[41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408)
+compiling. Both jobs were preserved, with no duplicate dispatch. Authenticated
+draft-asset reads work in this runtime. The newest Mac ready-manifest bytes
+and all six Windows preparation/input assets were independently hash checked.
+Windows preparation is complete, and the audit records 75,790 checked leaves,
+zero missing and no errors. Final package/runtime/Store/UI evidence remains
+pending. See CONTINUE.md for exact observations and the next dependent actions.
+
 ## Current state — 2026-11-02
 
 There is no finished custom browser package yet. The exact-source **15-file**
