@@ -2,152 +2,99 @@
 
 ## Current state — 2026-11-02
 
-There is no finished custom browser package yet. The current implementation is
-the exact-source **15-file** patch at `6cea97a`, on Chromium `156.0.8078.80`.
-It includes detached-document safety and the optional fullscreen tab-switch
-ordering fix. Application/reversal/digest checks pass; actual native C++ and
-runtime verification remain pending. Ordinary extensions and Web Store support
-are retained in the design and source; normal Store installation/update checks
-have not yet passed on a custom binary.
+There is no finished custom browser package yet. The exact-source **15-file**
+native patch at `6cea97a` targets Chromium `156.0.8078.80`. It includes
+visibility/focus/event/animation behavior, detached-document safety and optional
+fullscreen/background-navigation controls. Application/reversal/digest checks
+pass; actual native C++ and runtime verification remain pending. The standard
+interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: restored the prior compiler checkpoint, migrated native14 to native15, validated Dawn's exact Go toolchain and generated GN successfully. Ninja compilation began at 23:57:56 UTC on November 1 and remains in progress. | Preserve the live build and its retained objects; inspect its actual terminal result. |
-| Windows x64 | [Run 41374312612](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41374312612), immutable source and workflow `9e31a68f748c`: completed the streamed audit of 75,790 scoped declared leaves and found exactly two missing inputs. Compilation was skipped and the complete source checkpoint retained. | Hydrate both complete exact-pinned dependency roots, including headers and licenses, then retry the audit/build. |
+| macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: preparation and GN passed after approved native15 migration. Its compilation step ended at 03:21:09 UTC on November 2; saving its compiler checkpoint is in progress. The final action count and build status are not yet verified. | Preserve the live save; inspect its ready manifest/logs and any automatic continuation. |
+| Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984), immutable source and workflow `697512488fc8`: fresh retry using the complete native15 checkpoint from run 41377808648, with clean exact-pinned Windows Rust hydration and early finite diagnostics. | Verify actual Windows Rust execution and the declared-input audit, then compilation. |
 
-The earlier Mac run
-[41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
-completed **10,753 of 57,570 Ninja actions** before a missing nested Dawn Go
-executable stopped its source generator. Its five-chunk checkpoint totals
-**7,566,257,986 bytes**. The current Mac campaign restored that checkpoint,
-applied the approved native15 migration, hydrated Dawn's exact
-`version:3@1.26.6` host package, and passed its absolute executable version/host
-check. This proves resumed preparation, not a completed browser.
+The previous Windows retry
+[41377808648](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41377808648)
+verified all 96 files in the two exact-pinned Microsoft source dependency roots,
+passed preparation/GN, and completed the scoped declared-input audit: **75,790
+leaves checked, zero missing**, complete result, no audit errors, 24.735 seconds.
+The graph and leaf-list sizes were 144,611,224 and 85,739,961 bytes. Audit/status
+asset hashes and their checksum manifest were independently verified. This
+scope excludes compiler-discovered headers.
 
-The earlier Windows native15 run
-[41360825174](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41360825174)
-passed preparation but Ninja rejected a missing `third_party/gperf/bin/gperf.exe`
-before executing C++ build actions. Its complete five-chunk checkpoint totals
-**7,705,525,026 bytes**. The current campaign restores it and hydrates the exact
-upstream gperf Git revision, executable, README and license with fixed hashes.
-Those checks passed on the hosted Windows runner at 00:37:15 UTC. The latest
-run then rejected the missing `buildtools/win-format/clang-format.exe`, needed by
-Crubit's generated Rust/C++ support header. Its complete five-chunk native15
-checkpoint totals **7,773,142,945 bytes**. The next retry will include an exact
-formatter repair and the read-only declared-input audit, which reports missing
-leaves together before any compile attempt. Run
-[41371149418](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41371149418)
-validated the formatter and GN but its audit exceeded the original 128 MiB
-in-memory graph bound in 9.937 seconds. Its result was explicitly incomplete:
-zero leaves checked, not zero missing dependencies. Compilation and redundant
-checkpoint saving were correctly skipped. The streamed retry now uses a
-512 MiB temporary graph file, bounded incremental parsing, separate raw-leaf
-memory limits and actual output-byte counts; every limit still fails incomplete.
-That streamed audit completed in **23.875 seconds**: 144,611,224 graph bytes,
-85,739,961 leaf-list bytes, 247,053 file nodes and 90,338 rule nodes. It checked
-**75,790** scoped declared leaves and reported a complete two-path missing list:
-`third_party/microsoft_dxheaders/src/src/dxguids.cpp` and
-`third_party/microsoft_multimedia_redirection/src/api/Mmr_i.c`. Both audit/status
-asset hashes were verified. The source checkpoint remains intact; no C++ work
-or redundant checkpoint upload occurred. Compiler-discovered headers remain
-outside this audit, so each repair must hydrate the required dependency closure.
+Ninja then stopped in `build/rust/std/find_std_rlibs.py` at its extensionless
+`bin/rustc` subprocess with **WinError 193**. Two other actions completed, so the
+resulting five-part **7,774,697,184-byte** checkpoint was saved and verified
+complete. Its tag is
+`checkpoint-win-x64-bc48a05d11339f14ef8f-41377808648-1`.
+A stale foreign-host extensionless compiler is a hypothesis until the new
+preflight records the actual previous binary headers. The repair follows
+upstream replacement semantics: stage a clean hash/size-verified Windows Rust
+package, verify AMD64 PE and exact release/commit/host, execute both rustc.exe and
+the exact extensionless standard-library query through pinned CPython, then
+atomically swap with rollback. Revalidated clean packages preserve file mtimes.
+It does not patch Chromium's upstream Rust build scripts or native behavior.
 
-Both original seed campaigns predate the detached-document fix. Their undelivered
-final release tags were removed after verifying that no corresponding release
-existed, so they cannot publish an obsolete browser. Source refs and draft
-compiler checkpoints remain available. Migration is opt-in, allows only the two
-exact approved seed commits with identical build pins, validates original and
-patched source hashes, preserves unchanged outputs/timestamps, and requires a
-fresh real build. CI-only tool repairs leave the native fingerprints unchanged.
+The Mac campaign restored the previous complete **7,566,257,986-byte** checkpoint,
+which had completed **10,753 of 57,570** actions before discovering Dawn's
+missing nested Go tool. The current source hydrates the exact Dawn Go package
+and verifies its absolute executable version/host before GN. Those hosted
+checks passed. The obsolete native14 final tags were removed; approved old
+checkpoints remain cache inputs only. Migration is opt-in and validates exact
+source hashes and unchanged build pins. No obsolete browser was delivered.
 
-Local CI tests currently pass: **47 tests**, including exact nested-Go, gperf and formatter
-selection/rejection, bounded no-debugger cleanup, real Ninja incremental reuse,
-the selected-file native14-to-native15 transition, and the read-only declared
-input audit against the pinned Ninja. The Windows-only GNU tar
-integration is skipped locally and has passed on the hosted Windows image.
-These tests establish CI mechanics, not native browser behavior. The passive
-no-debugger control passed 7/7 on original CFT, and its native expectation
-correctly rejected that unmodified browser. Actual native paired checks remain
-required on both packages. Hosted final-release authorization probe
-[41355439888](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355439888)
-also passed draft creation, upload, download, hash verification and deletion
-using the workflow token and an exact pre-created source tag; it published no
-browser.
+Commit `6975124` shortens the retry/delivery cycle without changing either native
+fingerprint. Future-source runs publish fixed bounded tool-preflight and compiler
+JSON before large checkpoint uploads. On an exact restore without migration,
+a normal failed compile can skip a duplicate upload only with a conservative
+pinned-Ninja proof that no command actions completed; uncertain cases still save.
+Real Ninja fixtures prove successful actions invalidate that shortcut. Completed
+packages and existing core/optional/MV3/no-debug evidence are now published to a
+truthfully labeled draft before the potentially long checkpoint save. The live
+older Mac job retains its already-frozen ordering.
 
-Hosted normal Store prerequisite inspection
-[41362212167](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41362212167)
-passed both platforms: six finite capture checks per OS, actual HTTP 200 listing,
-**enabled** Add-to-Chrome DOM/AX buttons, and owned visible native window access.
-All report/provenance/status/checksum asset hashes were independently verified.
-A later normal Add click and unaccepted permission-dialog inspection
-[41365872867](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41365872867)
-passed **11/11 on Windows**: the real owned native dialog named the audited
-extension, showed enabled Add extension/Cancel controls and its all-websites
-permission text. Normal browser close cancelled the prompt; the extension
-remained absent from the persisted registry.
+The combined CI suite passes **72 local tests** (one Windows-only extractor
+integration skipped locally, previously passed hosted). Root independently
+rechecked the new **13 Rust** and **6 diagnostic** tests, including actual pinned
+Ninja fixtures, plus workflow syntax and unchanged native fingerprints. These
+checks establish CI mechanics, not native browser behavior. Original CFT passed
+7/7 passive no-debug control checks and correctly failed native expectations;
+the actual native paired checks remain required on both built packages.
 
-The Mac-only dialog inspection
-[41370550957](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41370550957)
-subsequently passed **11/11**. The earlier capture stopped at depth eight before
-reaching the native sheet's permission text. The observer now applies a deeper
-bound only inside a verified owned native sheet, retaining its node, time,
-output and ownership limits. The actual AXSheet contains the exact target
-heading, enabled Add extension/Cancel controls, and its all-websites permission
-text. All four release assets and their checksum manifest were verified; normal
-browser close cancelled the unaccepted prompt and persisted target absence
-passed. No permission was accepted or extension installed in any of these
-Store trials. Actual Store installation, execution, restart, update and removal
-checks still remain on both custom packages. The separate
-[Store compatibility plan](../tests/STORE-COMPATIBILITY-PLAN.md) covers a second
-supported MV3 extension, uBlock Origin Lite, with update-check and genuine
-version-transition evidence kept distinct.
+The full normal Store controller uses a distinct owned profile, normal Store Add,
+a separately verified native permission action, audited installed uBOL source,
+actual worker responses, normal restarts, an ordinary update request, normal UI
+removal, another restart and normal final close. The reference runs establish
+mechanics on official CFT only, never native-browser compatibility.
 
-The second extension's read-only prompt run
-[41371223903](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41371223903)
-passed **11/11 on both OSes**. Each actual native prompt named uBlock Origin
-Lite, included enabled Add extension/Cancel controls and the all-websites
-permission text. All eight assets and their manifests were verified. Again,
-no installation was accepted. The separate Windows action helper also passed
-[41372103012](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41372103012):
-Windows PowerShell 5 parsing and five refusal cases (PID, target, operation,
-creation identity and profile), each before any native UI access. These are
-negative guards, not proof of a successful native action.
+[Run 41381085404](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41381085404)
+passed 19/20 checks on each platform, including every functional operation above.
+Its final old ID-entry predicate rejected a remaining **exactly empty dictionary**
+in Secure Preferences. Bounded complete shape evidence and the pinned Chromium
+registration readers establish that this empty value is neither an installed
+startup registration nor a pending installation; its writer remains unknown.
+The corrected check separately records physical identifier-entry presence and
+persisted registration absence, allowing only missing or completely empty
+entries. Nonempty, malformed, pending and unknown records still fail; native
+removal, live/restarted absence and normal close remain mandatory. All 41 offline
+controller policy tests passed. Historical reports retain their original status.
 
-The first full normal Store reference trial
-[41374571900](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41374571900)
-then established real Mac installation of uBOL `2026.1026.1812`, the matching
-installer-inserted public key/semantic manifest and four selected source hashes,
-actual worker ruleset reads before/after normal restarts, and one ordinary
-`no_update` result with unchanged installed version. The worker returned the six
-expected default rulesets in both generations. This is reference-browser
-mechanics, not custom-browser verification, a complete extension audit or a
-verified newer Store release transition.
+The final corrected reference
+[run 41384092270](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384092270)
+at `43c9cd2` passed **20/20 phases on both platforms**. All eight bounded assets,
+GitHub digests/sizes, checksum manifests and exact controller identity were
+independently verified. These are CFT reference results only. See
+[the evidence ledger](oracle-evidence.md) and
+[Store compatibility plan](../tests/STORE-COMPATIBILITY-PLAN.md) for exact coverage.
+A `no_update` response does not establish server transport or an actual newer
+Store version transition. Actual native-package Store verification and a genuine
+version transition remain unverified.
 
-That Mac trial stopped before removal acceptance because the real native
-uninstall prompt is a separate AXWindow and the action helper accepted only
-AXSheet. Normal cleanup passed; uBOL remained installed in that owned temporary
-profile. Windows safely refused before installation at
-`native_focus_ancestry_refused`; a separate PowerShell JSON-array nesting error
-also left its shutdown verification incomplete. All eight result assets and
-checksum manifests were verified. The next trial requires the exact native Mac
-removal-window path, corrected Windows array handling and bounded focus/HWND
-diagnostics; no generic window acceptance or uncertain action retry is used.
-Full normal Store removal on Mac and the Windows installation/restart/update/
-removal sequence still remain, followed by both actual custom packages.
-Windows guard run
-[41376006086](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41376006086)
-subsequently passed the exact production shutdown script's nine PS5 JSON/
-creation/disappearance cases with a finite stub CIM provider, plus all five
-native refusal guards. It queried no real browser/process inventory or UI.
-The Mac helper now permits only the exact-title native uninstall AXWindow,
-retaining complete non-web subtree, heading, visible controls and unchecked
-abuse-report requirements. Both fixes still require the next real Store trial.
-
-An earlier local disabled Store button did not establish a general compatibility
-failure: a local brand-only counterfactual did not enable it, hosted reference
-browsers showed an enabled button on both OSes, and a later fresh local reference
-also showed it enabled. No production user-agent/branding patch is justified by
-those observations.
+Both real launchable packages, native behavior/no-debug evidence, installation
+checks and actual-package Store compatibility are still required for completion.
+Stock Chrome and its profiles remain untouched. All build compute remains on
+standard GitHub-hosted runners, with no AWS, external builders or paid upgrades.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.

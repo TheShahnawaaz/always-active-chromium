@@ -570,7 +570,50 @@ actually empty dictionary with complete parse/shape evidence. All nonempty,
 pending, malformed, oversized and unknown entries still fail. Empty identifier
 metadata remains visible as `targetAbsent=false`; no preference-byte erasure is
 claimed. Native removal receipt, live absence, post-removal restart absence and
-normal final close remain independently mandatory. Historical fourth-run
-reports retain their original failed status; execution of the reviewed corrected
-check remains pending. A genuine newer Store version transition and actual
-native-browser packages remain unverified by these CFT reference results.
+normal final close remain independently mandatory. Historical fourth-run reports
+retain their original failed status. The fresh corrected execution is recorded
+below. A genuine newer Store version transition and actual native-browser
+packages remain unverified by these CFT reference results.
+
+## Completed normal Store reference sequence
+
+Fresh [run 41384092270](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384092270)
+at exact controller commit `43c9cd213002cec6fa201b886d73d0464243533c`
+completed successfully on standard GitHub-hosted macOS arm64 and Windows x64.
+Each report passed **20/20 phases** using official CFT `156.0.8078.80`, not a
+custom native-browser package. All eight finite release assets were downloaded
+and verified against their GitHub asset digests/sizes, both SHA manifests and
+the controller identity. Evidence is retained under
+`.runtime/oracle/hosted-store-compat-41384092270`; the consolidated
+`verified-summary.json` explicitly records `nativeBrowserVerified=false`.
+
+- macOS report SHA-256:
+  `c23e6d4214061baa6f76e86645faef3a3e3ef684eed237074f5084209d8954d8`.
+- Windows report SHA-256:
+  `cc54f8abbc1fe2472496d34a1dc208cb41dfb336251cd1a34d7963bb6a196bd4`.
+
+Both runs verified normal Store installation of uBlock Origin Lite
+`2026.1026.1812` through actual native permission acceptance, exact audited
+installed-source checks, a real own-extension worker response, normal browser
+restart and repeated execution, one ordinary update check, normal visible
+extensions-UI removal with native confirmation, live absence after removal,
+another restart with continued absence, normal final shutdown, and persisted
+registration absence. Native receipts recorded single completed AXPress actions
+on macOS and UIA Invoke actions on Windows; neither action outcome was uncertain.
+
+Both final preference observations preserved the precise distinction:
+`targetAbsent=false` and `targetIdentifierEntryAbsent=false`, because an exactly
+empty ID dictionary remains, while `targetRegistrationAbsent=true`. Both
+entries had zero keys, complete untruncated evidence, no parse/container
+uncertainty and no registration or delayed-install fields. The combined
+`normalRemovalWithPersistedRegistrationAbsence` coverage result passed without
+claiming every identifier or preference byte was erased. The empty dictionary's
+creator is still unknown.
+
+The update result on each platform was exactly
+`{status:"no_update",version:""}` with installed version unchanged. Ordinary
+update-check coverage passed; `genuineVersionTransition=false` remains an
+explicit limitation. These successful reference mechanics do not verify a
+custom native package, native always-active behavior, or debugger-free everyday
+operation. Run those checks on actual built packages when available. Further
+reference trials are unnecessary unless a new issue changes the test scope.

@@ -252,11 +252,13 @@ node tests/store-compat.mjs --browser /path/to/browser --output reports/store-co
 ```
 
 The controller has a fixed uBlock Origin Lite target and is separate from the
-read-only inspection entrypoints. It requires reviewed `AA_STORE_UI_HELPER` and
-`AA_STORE_ACTION_HELPER` paths. A missing action helper fails before any browser
-or profile is created. Do not run installation until the native helpers and
-controller have been reviewed together. Current offline tests do not constitute
-an installed-extension or native-browser result.
+read-only inspection entrypoints. It requires jointly reviewed
+`AA_STORE_UI_HELPER` and `AA_STORE_ACTION_HELPER` paths. A missing action helper
+fails before any browser or profile is created. The reviewed reference sequence
+passed **20/20 phases on both platforms** in run `41384092270`, controller
+commit `43c9cd2`; see the [verified evidence](../docs/oracle-evidence.md#completed-normal-store-reference-sequence).
+Offline tests remain boundary checks, and CFT reference success is not a
+custom native-browser result. Further reference runs require a new issue.
 
 The controller uses the real Store Add button, verifies the captured native
 target heading and actual permission text, and delegates acceptance to the

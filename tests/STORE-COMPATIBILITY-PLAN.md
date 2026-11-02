@@ -1,9 +1,9 @@
 # Normal Store compatibility test preparation
 
-Status: reviewed CFT reference runs on both platforms have observed normal uBOL
-installation, source verification, execution, restart persistence, one update
-check, native removal and post-removal restart absence. The final reference run
-of the corrected persisted-registration check remains pending. Actual native
+Status: final fresh CFT reference run **41384092270** passed **20/20 phases** on
+both platforms at controller commit `43c9cd2`: normal uBOL installation, source
+verification, execution, restart persistence, one update check, native removal,
+post-removal restart absence and persisted registration absence. Actual native
 browser packages and a genuine newer Store version transition remain unverified.
 The separate
 `store-dialog.mjs` inspection contract remains read-only after clicking Store
@@ -212,12 +212,10 @@ proof. The ordinary toolbar Update path is separately source-backed at
 
 ## Remaining implementation/evidence gaps
 
-- Reference run 41381085404 verified the full normal sequence through post-removal
-  restart absence and final normal close on both platforms. Its original reports
-  remain 19/20 because the old final predicate rejected any ID entry; the new
-  bounded shape evidence proves that both remaining dictionaries are exactly
-  empty. Execute the reviewed narrow registration-semantics correction once;
-  do not retroactively relabel the historical reports as passed.
+- Final fresh reference run 41384092270 passed the reviewed complete 20-phase
+  sequence on both platforms. It preserved physical empty ID metadata separately
+  from verified registration absence. Earlier 19/20 reports retain their
+  historical failed status. Do not repeat reference trials without a new issue.
 - Native helpers and full controller retain separate action/read-only contracts;
   see STORE-ACTION-CONTRACT.md. Reference success is not native-package success.
 - Obtain genuine older-Store/newer-release conditions for version-transition
