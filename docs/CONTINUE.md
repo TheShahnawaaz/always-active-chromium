@@ -1,5 +1,32 @@
 # Continue the browser delivery
 
+## Goal for Dot
+
+Complete and deliver a Chromium browser for macOS Apple Silicon and Windows x64
+that looks as close as legally and technically possible to the pinned current
+Chrome interface and implements the investigated Always Active Window 0.4.8
+behavior natively, enabled by default for ordinary websites and frames. It must
+work in everyday use without an extension, injected script, debugging connection
+or local helper, while retaining ordinary modern extensions and Web Store use.
+Finish the existing implementation rather than starting over. Use standard
+GitHub-hosted builds only; never AWS/AWS Mac, external/self-hosted builders,
+paid runners, plan upgrades or paid storage. Keep the user's stock Chrome and
+profiles untouched.
+
+Success requires actual installable packages for both targets, passing native
+behavior checks on fresh extracted/installed deliveries, verified ordinary
+extension installation/execution/restart/update-check/removal, reviewed native
+UI evidence, checksums and clear installation/limitations documentation. Keep
+branding, Google-service restrictions, signing and update differences explicit.
+Do not declare success from patches, fixtures, reference Chrome, a compile or
+an unverified package. Investigate and fix failures; report a measured blocker
+if the authorized route cannot proceed.
+
+The user will hand this goal to Dot. No independent continuation coding task
+has been launched from the prepared cloud environment. The existing GitHub
+builds are already remote and continue with the laptop off. Before doing any
+work, inspect current runs and avoid another coordinator or duplicate build.
+
 Read `AGENTS.md`, `README.md`, `docs/PROGRESS.md`, `ci/BUILD.md` and
 `native/BEHAVIOR.md` first. Finish the existing goal: installable macOS arm64
 and Windows x64 Chromium with native always-active behavior and ordinary modern
@@ -108,3 +135,9 @@ avoid racing an existing automatic continuation with a second queued job.
 The cloud handoff itself is complete only when a published environment and a
 real independent hosted coding task are visibly running. GitHub build jobs
 already survive laptop shutdown; a local Codex conversation does not.
+
+The user reported the environment published and then chose to hand the goal
+to Dot. Verify the selected environment and GitHub API access in Dot's actual
+runtime; the onboarding's earlier Forbidden responses predate the API-domain
+configuration. Main also contains documentation-only commit `0fc07ef` after
+the immutable e146 build source; preserve later work.
