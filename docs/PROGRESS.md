@@ -18,6 +18,15 @@ controller is `0728fb141cee`. Manual UI appearance review is still pending.
 A guarded Mac owned-window capture is being added to the existing verifier.
 Windows **41503529408** is still compiling; no healthy build was interrupted.
 
+Capture-enabled [41531565373](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41531565373)
+again passed all automated delivery/Store checks. Its assets and checksums were
+verified. Permission preflights passed, but the window capture refused before
+any image with `unique_owned_window_id_unavailable`. Visual review remains
+pending. [41532536741](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41532536741)
+now collects bounded metadata for that owned fixture window; helper compilation
+and the invalid-PID refusal guard passed. This is a UI-evidence diagnostic on
+the same real package, not another compiler build or a reference-Chrome trial.
+
 The continuation is running in the published cloud project environment.
 Actual API checks at 02:46 IST (21:16 UTC November 2) show Mac
 [41524595935](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935)

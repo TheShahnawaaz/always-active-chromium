@@ -76,6 +76,19 @@ request a Mac image. The continuation adds a guarded, permission-preflighted
 Mac window capture to the existing verifier for that remaining evidence.
 Windows 41503529408 remains in its existing compilation; preserve it.
 
+The capture-enabled fresh delivery **41531565373**, controller `308e8c6fe592`,
+also passed acquisition, all behavior modes and Store compatibility. Its five
+assets and four checksum entries were independently verified. Both existing
+screen-capture and accessibility preflights passed, but the helper refused
+before capture with `unique_owned_window_id_unavailable`: the focused AX fixture
+window did not uniquely match the stricter window-server filter. No image or
+visual success was claimed. **41532536741**, controller `8f6f44b40a29`, is the
+active diagnostic verification of that same e146 package. The Swift helper and
+invalid-PID refusal guard passed; its bounded owned-PID-only metadata receipt
+will identify which title/bounds/layer comparison failed. Inspect that actual
+receipt before changing the match; no permission, desktop capture or security
+setting workaround is needed or authorized.
+
 Chromium is pinned to `156.0.8078.80`, upstream
 `fb096c0011f9d50f0a264a9376420cdea9c421e3`. The native16 patch has not changed.
 Native fingerprints remain:

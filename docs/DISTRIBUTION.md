@@ -116,9 +116,12 @@ focused standard AX window, window-server PID/title/bounds and unchanged state
 are checked before and after capture. Only the matching fixture window ID is
 passed to the capture tool. A private temporary directory and exclusive final
 PNG creation limit output to the owned test directory. The existing finite PNG,
-hash and native-run/extracted-executable binding checks apply. The first hosted
-compile/capture of this helper remains pending; synthetic schema tests alone
-are not native UI evidence.
+hash and native-run/extracted-executable binding checks apply. Hosted compilation
+and invalid-PID refusal passed. Its first real attempt passed the existing
+permission preflights but refused a nonunique AX/window-server match before
+capture; bounded owned-window diagnostics are in progress. There is no Mac image
+or visual-equivalence claim yet. Synthetic schema tests alone are not native UI
+evidence.
 
 For a separately reviewed reference-only capture trial, the existing passive
 controller accepts `AA_WINDOW_CAPTURE_HELPER` and `AA_WINDOW_CAPTURE_MODE=control`
