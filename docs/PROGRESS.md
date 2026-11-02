@@ -45,7 +45,7 @@ exact approved seed commits with identical build pins, validates original and
 patched source hashes, preserves unchanged outputs/timestamps, and requires a
 fresh real build. CI-only tool repairs leave the native fingerprints unchanged.
 
-Local CI tests currently pass: **42 tests**, including exact nested-Go and gperf
+Local CI tests currently pass: **45 tests**, including exact nested-Go, gperf and formatter
 selection/rejection, bounded no-debugger cleanup, real Ninja incremental reuse,
 the selected-file native14-to-native15 transition, and the read-only declared
 input audit against the pinned Ninja. The Windows-only GNU tar

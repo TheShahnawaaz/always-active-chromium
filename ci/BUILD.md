@@ -17,7 +17,12 @@ The archive contains the source dependencies. `build.py` hydrates the selected
 host Clang, Rust/libclang, GN's CPython interpreter, Ninja, Node, TypeScript and DevTools build
 dependencies using the **archive's own pinned DEPS**, not moving upstream main.
 It also hydrates Windows WTL/WebView2/7z, Mac ANGLE Metal libraries, and the
-subresource-filter ruleset data. Windows gperf is the single 103,424-byte
+subresource-filter ruleset data. Windows Crubit binding generation requires
+`buildtools/win-format/clang-format.exe`; its exact GCS object generation,
+size and SHA-256 come from the archive DEPS, followed by an executable version
+probe. The pinned Crubit action defines this formatter input for Linux and
+Windows, so the separate unused Mac formatter is not selected here.
+Windows gperf is the single 103,424-byte
 `bin/gperf.exe` from the archive DEPS's exact
 [gperf commit](https://chromium.googlesource.com/chromium/deps/gperf/+/e9eeea862a18e77b945d98eff7e1bf065d3daf8e/):
 its Git blob ID, size and SHA-256 are checked before atomic installation. The
@@ -121,6 +126,11 @@ checkpoint, with no native migration or compile attempt, the workflow keeps that
 complete checkpoint and skips an identical large upload. A corrected retry can
 repeat hydration and GN generation from it. Fresh source, native migration and
 actual compile attempts still save their checkpoint normally.
+Older immutable campaigns that predate the audit can still resume through a
+newer workflow: the audit is skipped only when its script is absent from that
+checkout, and the original compile path remains available. New continuations
+dispatch both the workflow and checkout at the same verified source tag, so
+later default-branch changes cannot introduce steps missing from their scripts.
 
 Release-optimized, noncomponent Chromium is built without PGO, ThinLTO, or debug
 symbols. This reduces memory, disk and build time; it sacrifices some official

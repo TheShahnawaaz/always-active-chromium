@@ -318,6 +318,22 @@ def hydrate_dawn_go(src, platform, hydrate_entries):
     print(result.stdout.strip(), flush=True)
 
 
+def hydrate_crubit_formatter(src, platform, scope, enabled, hydrate_entries):
+    # Exact .80 cpp_api_from_rust.gni sets this input on Linux/Windows only;
+    # the separately available Mac formatter is not used by this build action.
+    if platform != 'win-x64':
+        return
+    relative = 'src/buildtools/win-format'
+    dependency = scope['deps'].get(relative)
+    if (not isinstance(dependency, dict) or dependency.get('dep_type') != 'gcs' or
+            not enabled(dependency.get('condition', True)) or
+            not any(item.get('output_file') == 'clang-format.exe'
+                    for item in dependency.get('objects', []))):
+        raise RuntimeError('Windows Crubit formatter is absent from the pinned DEPS')
+    hydrate_entries(scope['deps'], src.parent, {relative}, enabled)
+    run([src / 'buildtools/win-format/clang-format.exe', '--version'], cwd=src)
+
+
 def hydrate(src, platform):
     scope, variables, enabled = load_deps(src / 'DEPS', platform)
     host = 'windows-amd64' if platform == 'win-x64' else 'mac-arm64'
@@ -388,6 +404,7 @@ def hydrate(src, platform):
             marker.write_text(json.dumps({'plan_sha256': plan, 'records': records[start:]}, indent=2) + '\n')
 
     hydrate_entries(scope['deps'], src.parent, selected, enabled)
+    hydrate_crubit_formatter(src, platform, scope, enabled, hydrate_entries)
     if platform == 'win-x64':
         records.extend(hydrate_windows_gperf(src, scope, enabled))
     devtools = src / 'third_party/devtools-frontend/src'

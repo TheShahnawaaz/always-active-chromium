@@ -203,6 +203,38 @@ class WindowsGperfTests(unittest.TestCase):
             self.assertEqual(executable.read_bytes(), b'foreign')
 
 
+class CrubitFormatterTests(unittest.TestCase):
+    def test_windows_uses_exact_gcs_entry_and_checks_pinned_executable(self):
+        source = Path('/fixture/src')
+        dependency = {'dep_type': 'gcs', 'condition': 'checkout_win and non_git_source',
+                      'bucket': 'chromium-clang-format', 'objects': [{
+                          'object_name': 'fb0bcaf406ad6f0bd6b4a6347d2abe78a94fb13e',
+                          'generation': 1779297371701340, 'size_bytes': 3799552,
+                          'sha256sum': 'ee7a1f89733de23daf8ee035f8aebafa52410c9f4dd1f05ee12a95ce517a0953',
+                          'output_file': 'clang-format.exe'}]}
+        scope = {'deps': {'src/buildtools/win-format': dependency}}
+        enabled = mock.Mock(return_value=True)
+        hydrate = mock.Mock()
+        with mock.patch.object(build, 'run') as run:
+            build.hydrate_crubit_formatter(source, 'win-x64', scope, enabled, hydrate)
+        hydrate.assert_called_once_with(scope['deps'], source.parent, {'src/buildtools/win-format'}, enabled)
+        run.assert_called_once_with([source / 'buildtools/win-format/clang-format.exe', '--version'], cwd=source)
+
+    def test_mac_does_not_hydrate_formatter_unused_by_this_crubit_action(self):
+        hydrate = mock.Mock()
+        with mock.patch.object(build, 'run') as run:
+            build.hydrate_crubit_formatter(Path('/fixture/src'), 'mac-arm64', {}, mock.Mock(), hydrate)
+        hydrate.assert_not_called()
+        run.assert_not_called()
+
+    def test_missing_pinned_windows_formatter_fails_before_hydration(self):
+        hydrate = mock.Mock()
+        with self.assertRaisesRegex(RuntimeError, 'pinned DEPS'):
+            build.hydrate_crubit_formatter(Path('/fixture/src'), 'win-x64', {'deps': {}},
+                                           mock.Mock(return_value=True), hydrate)
+        hydrate.assert_not_called()
+
+
 class SourceRetentionTests(unittest.TestCase):
     def prepare_mocks(self, root, source_error=None, check_error=None, hydration_error=None):
         def extract(_archive, destination, strip, source_archive=False):

@@ -97,12 +97,14 @@ jobs:
         run: python ci/build.py prepare --platform ${{ matrix.platform }}
       - name: Audit declared leaf inputs without executing build commands
         id: audit
+        # Older immutable campaigns may resume through this workflow definition.
+        if: ${{ hashFiles('ci/audit_inputs.py') != '' }}
         continue-on-error: true
         timeout-minutes: 3
         shell: bash
         run: python ci/audit_inputs.py --source "$AA_BUILD_ROOT/src" --platform "${{ matrix.platform }}" --output "reports/${{ matrix.platform }}/input-audit.json"
       - name: Retain finite input diagnostics before the large checkpoint
-        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' && hashFiles('.github/scripts/publish-build-diagnostics.py') != '' }}
         continue-on-error: true
         timeout-minutes: 10
         run: python .github/scripts/publish-build-diagnostics.py
@@ -110,7 +112,7 @@ jobs:
           AA_AUDIT_OUTCOME: ${{ steps.audit.outcome }}
       - name: Compile until the checkpoint deadline
         id: compile
-        if: ${{ steps.audit.outcome == 'success' }}
+        if: ${{ steps.prepare.outcome == 'success' && (steps.audit.outcome == 'success' || (steps.audit.outcome == 'skipped' && hashFiles('ci/audit_inputs.py') == '')) }}
         continue-on-error: true
         run: python ci/build.py compile --platform ${{ matrix.platform }} ${{ inputs.bootstrap_only && '--bootstrap-only' || '' }}
       - name: Save a complete resumable checkpoint

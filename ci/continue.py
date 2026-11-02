@@ -10,10 +10,15 @@ if not 1 <= limit <= 100 or not 0 <= stage < 100:
 if stage + 1 >= limit:
     print(f'Stopped automatically at {limit} stages; the complete checkpoint remains resumable.')
 else:
+    # Freeze the workflow definition together with its checked-out scripts.
+    # A moving main workflow can introduce steps absent from an older build_ref.
+    source_ref = os.environ['AA_SOURCE_TAG']
+    if not source_ref.startswith('ci-source-'):
+        raise RuntimeError('Continuation requires the verified immutable source tag')
     subprocess.run(['gh', 'workflow', 'run', 'build.yml', '--repo', os.environ['GITHUB_REPOSITORY'],
-        '--ref', os.environ['GITHUB_REF_NAME'],
+        '--ref', source_ref,
         '--field', f'platform={os.environ["AA_PLATFORM"]}',
-        '--field', f'build_ref={os.environ.get("AA_SOURCE_TAG", os.environ["AA_BUILD_REF"])}',
+        '--field', f'build_ref={source_ref}',
         '--field', f'stage={stage + 1}', '--field', f'max_stages={limit}',
         '--field', 'auto_resume=true', '--field', 'bootstrap_only=false',
         '--field', f'migrate_native={os.environ.get("AA_MIGRATE_NATIVE", "false")}'], check=True)
