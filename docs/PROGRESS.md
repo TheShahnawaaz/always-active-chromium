@@ -139,8 +139,20 @@ results. Every retained image remains pending manual visual review, with no
 UI-equivalence or complete-pixel claim. Root passed four Node guards (one
 Windows-only guard skipped locally), six Python image guards, two reference
 publication guards and the 20 delivery guards, plus syntax/diff checks.
-The new reference-only workflow will measure Windows capture reliability on
-pinned CFT; actual custom-package appearance remains unverified.
+The first reference-only [run 41390391923](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41390391923)
+at `c0a0da4` failed **before capture**: both Windows CFT control pages sent zero
+accepted or rejected posts over 45 seconds. Only the normal CLI, absent debugging
+port and owned cleanup checks passed (3/7). All four retained assets and the
+three-entry checksum manifest were verified. No PNG/receipt exists, and the
+capture helper was never called; this does not establish a PrintWindow failure.
+The underlying startup/reporting cause is unknown. The reviewed follow-up now
+records finite navigation counters and a failed-run-only read-only owned-window
+startup diagnostic. It starts state reports independently of the UA version
+promise and explicitly records pending/resolved/error version state. Four
+fixture tests pass, including an unresolved version promise; the full-version
+assertion and resolved matching-version requirement remain mandatory. The next
+trial will establish whether pages navigate and execute before any capture.
+Capture reliability and actual custom-package appearance remain unverified.
 
 Both real launchable packages, native behavior/no-debug evidence, installation
 checks and actual-package Store compatibility are still required for completion.

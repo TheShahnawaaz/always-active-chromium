@@ -8,6 +8,7 @@ const configuration = __NO_DEBUG_CONFIGURATION__;
 let sequence = 0;
 let fullVersionList = [];
 let versionError = null;
+let versionStatus = 'pending';
 async function report() {
   const observation = {
     run: configuration.run, page: configuration.page, sequence: ++sequence,
@@ -15,20 +16,22 @@ async function report() {
     visibilityState: document.visibilityState, hasFocus: document.hasFocus(),
     webkitHidden: document.webkitHidden, webkitVisibilityState: document.webkitVisibilityState,
     webdriver: navigator.webdriver, userAgent: navigator.userAgent,
-    fullVersionList, versionError
+    fullVersionList, versionError, versionStatus
   };
   try {
     await fetch('/report', {method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify(observation),keepalive:true});
   } catch {}
 }
+report();
+setInterval(report, 250);
 (async () => {
   try {
-    if (navigator.userAgentData) {
-      fullVersionList = (await navigator.userAgentData.getHighEntropyValues(['fullVersionList'])).fullVersionList ?? [];
-    }
-  } catch (error) { versionError = error.message; }
+    if (!navigator.userAgentData) throw Error('userAgentData_unavailable');
+    const values = await navigator.userAgentData.getHighEntropyValues(['fullVersionList']);
+    fullVersionList = Array.isArray(values.fullVersionList) ? values.fullVersionList.slice(0,16).map(value => ({brand:String(value.brand).slice(0,80),version:String(value.version).slice(0,80)})) : [];
+    versionStatus = 'resolved';
+  } catch (error) { versionStatus = 'error'; versionError = String(error.message).slice(0,160); }
   report();
-  setInterval(report, 250);
 })();
 </script>

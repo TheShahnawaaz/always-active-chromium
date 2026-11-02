@@ -41,7 +41,7 @@ const report={schema:1,started:new Date().toISOString(),platform:process.platfor
   startupSelection:'Not assumed; control accepts whichever page supplies stable genuinely-hidden observations.',
   expectedVersion:options['expected-version'],expectedSourceRevision:'fb096c0011f9d50f0a264a9376420cdea9c421e3',
   versionObservation:'Website UA-CH fullVersionList; source revision is not observable without debugging and is not claimed by this test.',
-  limits:{timeoutMs:options['timeout-ms'],settleMs:options['settle-ms'],stableMs:options['stable-ms'],maxSamplesPerPage:256,maxPostBytes:16384},
+  limits:{timeoutMs:options['timeout-ms'],settleMs:options['settle-ms'],stableMs:options['stable-ms'],maxSamplesPerPage:256,maxPostBytes:16384,maxRequestCounter:1000000,failedWindowsWindowDiagnosticMs:6000},
   runs:[],limitations:[
     'This verifies the test-owned normal launch and passive webpage observations, not a host-wide audit of unrelated processes.',
     'No remote-debugging, automation, load-extension, focus emulation, lifecycle override, or browser-control API is used.',
@@ -98,6 +98,35 @@ async function processIdentity(child,profile,{timeoutMs=5000}={}) {
   return {...identity,owned:identity.pid===child.pid&&identity.processGroup===child.pid&&identity.command.includes(options.browser)&&identity.command.includes(`--user-data-dir=${profile}`)};
 }
 
+async function failedWindowsWindowDiagnostic(child,profile,initial) {
+  if(process.platform!=='win32')return {status:'unsupported'};
+  try{
+    const fresh=await processIdentity(child,profile,{timeoutMs:2000});
+    const escape=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const argument='--user-data-dir='+profile;
+    const exactProfile=new RegExp(`(?:^|\\s)(?:"${escape(argument)}"|${escape(argument)})(?=\\s|$)`);
+    if(!fresh?.owned||!initial?.owned||fresh.started!==initial.started||typeof fresh.command!=='string'||fresh.command.length>32768||!exactProfile.test(fresh.command))return {status:'unverified',reason:'fresh_owned_identity_unavailable'};
+    const script=String.raw`
+$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
+function Verify-Owned {
+ $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$env:AA_NO_DEBUG_PID) -OperationTimeoutSec 2
+ if($null -eq $p -or $p.CreationDate.ToUniversalTime().ToString('o') -cne $env:AA_NO_DEBUG_STARTED -or -not [string]::Equals($p.ExecutablePath,$env:AA_NO_DEBUG_EXECUTABLE,[StringComparison]::OrdinalIgnoreCase) -or $p.CommandLine -cne $env:AA_NO_DEBUG_COMMAND){throw 'owned_identity_changed'}
+}
+Verify-Owned
+$p=Get-Process -Id ([int]$env:AA_NO_DEBUG_PID) -ErrorAction Stop
+$title=[regex]::Replace([string]$p.MainWindowTitle,'\p{Cc}',' ')
+if($title.Length -gt 240){$title=$title.Substring(0,240)}
+$handle=$p.MainWindowHandle.ToInt64().ToString('x')
+Verify-Owned
+[pscustomobject]@{status='observed';pid=[int]$env:AA_NO_DEBUG_PID;started=$env:AA_NO_DEBUG_STARTED;identityReverified=$true;mainWindowTitle=$title;mainWindowHandle=$handle}|ConvertTo-Json -Compress
+`;
+    const {stdout}=await execute('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{timeout:4000,maxBuffer:4096,windowsHide:true,env:{...process.env,AA_NO_DEBUG_PID:String(child.pid),AA_NO_DEBUG_STARTED:fresh.started,AA_NO_DEBUG_EXECUTABLE:options.browser,AA_NO_DEBUG_COMMAND:fresh.command}});
+    const value=JSON.parse(stdout.replace(/^\uFEFF/,''));
+    if(value.status!=='observed'||value.pid!==child.pid||value.started!==initial.started||value.identityReverified!==true||typeof value.mainWindowTitle!=='string'||value.mainWindowTitle.length>240||Buffer.byteLength(value.mainWindowTitle)>1024||typeof value.mainWindowHandle!=='string'||!/^[0-9a-f]{1,16}$/.test(value.mainWindowHandle))throw Error('invalid_owned_window_diagnostic');
+    return value;
+  }catch{return {status:'unavailable',reason:'bounded_owned_window_probe_failed'};}
+}
+
 async function cleanup(child,profile,initial) {
   const cleanupDeadline=Date.now()+18000;
   const remainingBudget=()=>{
@@ -150,7 +179,10 @@ async function cleanup(child,profile,initial) {
 
 async function runMode(mode) {
   const startedAt=Date.now();
-  const run={mode,started:new Date(startedAt).toISOString(),tests:[],pages:{alpha:[],beta:[]},received:{alpha:0,beta:0},rejectedPosts:0};
+  const run={mode,started:new Date(startedAt).toISOString(),tests:[],pages:{alpha:[],beta:[]},received:{alpha:0,beta:0},rejectedPosts:0,
+    requestCounts:{total:0,gets:0,posts:0,servedPageGets:{alpha:0,beta:0},reportPosts:0,invalidRequests:0,otherRequests:0,clientErrors:0,saturated:false}};
+  const increment=(object,key)=>{if(object[key]<1000000)object[key]++;else run.requestCounts.saturated=true;};
+  const count=key=>increment(run.requestCounts,key);
   report.runs.push(run);
   const token=randomUUID();
   const profile=path.join(options.output,`profile-${mode}`);
@@ -158,14 +190,19 @@ async function runMode(mode) {
   let child,identity,server;
   try {
     server=http.createServer(async(req,res)=>{
-      const url=new URL(req.url,'http://127.0.0.1');
+      count('total');if(req.method==='GET')count('gets');if(req.method==='POST')count('posts');
+      let url;
+      try{if(typeof req.url!=='string'||req.url.length>2048)throw Error('invalid_request_url');url=new URL(req.url,'http://127.0.0.1');}
+      catch{count('invalidRequests');res.writeHead(400).end();return;}
       if(req.method==='GET'&&url.pathname.startsWith('/page/')) {
         const pageName=url.pathname.slice('/page/'.length);
-        if(!Object.hasOwn(run.pages,pageName)||url.searchParams.get('run')!==token){res.writeHead(404).end();return;}
+        if(!Object.hasOwn(run.pages,pageName)||url.searchParams.get('run')!==token){count('invalidRequests');res.writeHead(404).end();return;}
+        increment(run.requestCounts.servedPageGets,pageName);
         res.setHeader('Content-Type','text/html; charset=utf-8'); res.setHeader('Cache-Control','no-store');
         res.end(fixture.replace('__NO_DEBUG_CONFIGURATION__',JSON.stringify({run:token,page:pageName})));return;
       }
       if(req.method==='POST'&&url.pathname==='/report') {
+        count('reportPosts');
         let body='';
         try {
           for await(const chunk of req) {body+=chunk;if(Buffer.byteLength(body)>16384)throw Error('Report exceeds budget');}
@@ -173,15 +210,16 @@ async function runMode(mode) {
           if(sample.run!==token||!Object.hasOwn(run.pages,sample.page)||!Number.isInteger(sample.sequence)||!Number.isFinite(sample.elapsedMs)||typeof sample.hidden!=='boolean'||typeof sample.hasFocus!=='boolean')throw Error('Invalid report');
           delete sample.run;
           sample.receivedAtMs=Date.now();
-          run.received[sample.page]++;
+          increment(run.received,sample.page);
           run.pages[sample.page].push(sample);
           if(run.pages[sample.page].length>256)run.pages[sample.page].shift();
           res.writeHead(204).end();
-        } catch {run.rejectedPosts++;res.writeHead(400).end();}
+        } catch {if(run.rejectedPosts<1000000)run.rejectedPosts++;count('invalidRequests');res.writeHead(400).end();}
         return;
       }
-      res.writeHead(404).end();
+      count('otherRequests');res.writeHead(404).end();
     });
+    server.on('clientError',(_error,socket)=>{count('clientErrors');count('invalidRequests');socket.destroy();});
     server.keepAliveTimeout=500;
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
     const origin=`http://127.0.0.1:${server.address().port}`;
@@ -216,8 +254,11 @@ async function runMode(mode) {
       const genuinelyHidden=Object.keys(hiddenPages).filter(pageName=>hiddenPages[pageName].passed);
       const reportsStable=Object.values(stable).every(v=>v.passed);
       const behaviorPassed=mode==='control'?genuinelyHidden.length>0:Object.values(protectedPages).every(v=>v.passed);
-      evaluation={stable,protectedPages,hiddenPages,genuinelyHidden,reportsStable,behaviorPassed};
-      if(reportsStable&&behaviorPassed)break;
+      const latest=Object.values(run.pages).map(samples=>samples.at(-1));
+      const versionStatuses=latest.map(sample=>sample?.versionStatus??'no-report');
+      const versionsReady=latest.every(sample=>sample?.versionStatus==='resolved'&&(sample.fullVersionList??[]).some(value=>(value.brand==='Chromium'||value.brand==='Google Chrome')&&value.version===options['expected-version']));
+      evaluation={stable,protectedPages,hiddenPages,genuinelyHidden,reportsStable,behaviorPassed,versionStatuses,versionsReady};
+      if(reportsStable&&behaviorPassed&&versionsReady)break;
       await delay(100);
     }
     run.evaluation=evaluation;
@@ -227,7 +268,7 @@ async function runMode(mode) {
     const latest=Object.values(run.pages).map(samples=>samples.at(-1));
     addCheck(run,'websites report no WebDriver automation',latest.every(s=>s?.webdriver===false),latest.map(s=>s?.webdriver??null));
     const observedVersions=latest.map(s=>(s?.fullVersionList??[]).filter(v=>v.brand==='Chromium'||v.brand==='Google Chrome').map(v=>v.version));
-    addCheck(run,'website full versions match expected browser pin',observedVersions.every(v=>v.includes(options['expected-version'])),observedVersions);
+    addCheck(run,'website full versions match expected browser pin',latest.every(sample=>sample?.versionStatus==='resolved')&&observedVersions.every(v=>v.includes(options['expected-version'])),{observedVersions,versionStatuses:latest.map(sample=>sample?.versionStatus??'no-report')});
     let portFileExists=true;
     try {await access(path.join(profile,'DevToolsActivePort'));} catch(error) {if(error.code==='ENOENT')portFileExists=false;else throw error;}
     addCheck(run,'owned profile exposes no remote debugging port file',!portFileExists);
@@ -244,6 +285,7 @@ async function runMode(mode) {
   } catch(error) {
     addCheck(run,'normal-launch observation completes',false,error.stack);
   } finally {
+    if(process.platform==='win32'&&child?.pid&&run.tests.some(test=>test.status==='failed'))run.failedObservationWindow=await failedWindowsWindowDiagnostic(child,profile,identity);
     if(child?.pid) {
       try {
         run.cleanup=await cleanup(child,profile,identity);

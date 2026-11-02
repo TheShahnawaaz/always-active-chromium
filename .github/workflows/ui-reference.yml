@@ -36,6 +36,7 @@ jobs:
           python -m unittest discover -s ci -p test_window_capture.py
           python -m unittest discover -s ci -p test_ui_reference.py
           node --test tests/test-window-capture.mjs
+          node --test tests/test-no-debug-fixture.mjs
       - name: Validate capture helper syntax and invalid PID refusal
         shell: powershell
         run: |
