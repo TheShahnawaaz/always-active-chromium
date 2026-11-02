@@ -279,6 +279,20 @@ post-launch TCP/HTTP counts remained zero. The run and behavior remain failed;
 the image is explicitly `startup-diagnostic`, `behaviorVerified=false` and no
 native browser package is established.
 
+A bounded audit of the pinned CFT startup/banner/config/network branches found
+no intentional requirement for an attached debugger before ordinary navigation.
+The notice is informational; its optional required-components startup wait is
+inactive with the fresh-profile trial's default configuration. This does not
+identify the observed hang or establish that it is CFT-only. The native build
+uses the separate upstream
+[`is_chrome_for_testing=false` default](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/build/config/chrome_build.gni#L19);
+the pins do not override it, and `build/BUILD.gn` therefore sets
+`CHROME_FOR_TESTING=false`. Root inspected those exact selected source files and
+the renderer of GN arguments. The CFT notice/config/startup branches are excluded
+by configuration, independently of branding. The next required evidence is
+ordinary startup and behavior on the actual native packages; no further reference
+trial is justified by this source audit alone.
+
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.
 
