@@ -237,12 +237,13 @@ namespace StoreNativeAction {
     Add-Type -AssemblyName UIAutomationClient
     Add-Type -AssemblyName UIAutomationTypes
     $initial = Get-CurrentPrompt
+    $identity = Get-OwnedIdentity
+    $identity.immediatelyRevalidated = $true
     # Reacquire the live native controls; a saved observer JSON cannot select an action.
+    # Keep this after the potentially slow CIM calls so checkbox state is fresh.
     $current = Get-CurrentPrompt
     if (-not [Windows.Automation.Automation]::Compare($initial.dialog, $current.dialog) -or
         -not [Windows.Automation.Automation]::Compare($initial.element, $current.element)) { throw 'native_prompt_changed' }
-    $identity = Get-OwnedIdentity
-    $identity.immediatelyRevalidated = $true
     $script:Report.identity = $identity
     if (-not [StoreNativeAction.Ownership]::IsUsableOwnedWindow($current.proof.nativeWindowHandle, $script:OwnedPid)) {
         throw 'native_window_changed_before_action'

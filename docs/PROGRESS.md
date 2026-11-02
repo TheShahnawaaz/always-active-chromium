@@ -13,7 +13,7 @@ have not yet passed on a custom binary.
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
 | macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: restored the prior compiler checkpoint, migrated native14 to native15, validated Dawn's exact Go toolchain and generated GN successfully. Ninja compilation began at 23:57:56 UTC on November 1 and remains in progress. | Preserve the live build and its retained objects; inspect its actual terminal result. |
-| Windows x64 | [Run 41365869868](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41365869868), immutable source `0963bca534ac`: restored the native15 checkpoint and passed exact Go/gperf tool and GN checks. Ninja rejected the next missing host input, `buildtools/win-format/clang-format.exe`, before C++ actions. The complete native15 checkpoint has been saved. | Hydrate the exact upstream formatter pin, then run the new declared-input audit before compilation. |
+| Windows x64 | [Run 41371149418](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41371149418), immutable source and workflow `3b05cd2dbe7c`: formatter repair and declared-input audit enabled; restoring the complete native15 checkpoint from the prior run. | Validate the exact formatter, inspect the bounded input audit, then compile if its declared leaves exist. |
 
 The earlier Mac run
 [41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
@@ -86,6 +86,18 @@ checks still remain on both custom packages. The separate
 [Store compatibility plan](../tests/STORE-COMPATIBILITY-PLAN.md) covers a second
 supported MV3 extension, uBlock Origin Lite, with update-check and genuine
 version-transition evidence kept distinct.
+
+The second extension's read-only prompt run
+[41371223903](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41371223903)
+passed **11/11 on both OSes**. Each actual native prompt named uBlock Origin
+Lite, included enabled Add extension/Cancel controls and the all-websites
+permission text. All eight assets and their manifests were verified. Again,
+no installation was accepted. The separate Windows action helper also passed
+[41372103012](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41372103012):
+Windows PowerShell 5 parsing and five refusal cases (PID, target, operation,
+creation identity and profile), each before any native UI access. These are
+negative guards, not proof of a successful native action. Full normal Store
+installation/restart/update-check/removal verification is still pending.
 
 An earlier local disabled Store button did not establish a general compatibility
 failure: a local brand-only counterfactual did not enable it, hosted reference
