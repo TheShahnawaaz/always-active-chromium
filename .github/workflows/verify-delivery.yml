@@ -49,6 +49,7 @@ jobs:
           node --test tests/test-store-compat.mjs
           node --test tests/test-window-capture.mjs
           node --test tests/test-no-debug-fixture.mjs
+          node --test tests/test-failed-window-diagnostic.mjs
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.source_tag }}

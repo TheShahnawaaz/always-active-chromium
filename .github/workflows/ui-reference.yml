@@ -37,6 +37,7 @@ jobs:
           python -m unittest discover -s ci -p test_ui_reference.py
           node --test tests/test-window-capture.mjs
           node --test tests/test-no-debug-fixture.mjs
+          node --test tests/test-failed-window-diagnostic.mjs
       - name: Validate capture helper syntax and invalid PID refusal
         shell: powershell
         run: |
@@ -51,6 +52,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Window capture refusal guard did not finish' }
           $guard = $raw | ConvertFrom-Json
           if ($guard.status -cne 'refused' -or (Test-Path -LiteralPath $output)) { throw 'Invalid PID was not refused without an image' }
+          $diagnostic = Join-Path $env:GITHUB_WORKSPACE 'tests/ui/failed-window-diagnostic.ps1'
+          $errors = $null
+          [void][Management.Automation.Language.Parser]::ParseFile($diagnostic, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) { throw 'Failed-window diagnostic parse failure' }
+          $env:AA_NO_DEBUG_PID = '1'
+          $raw = & powershell.exe -NoProfile -NonInteractive -File $diagnostic
+          if ($LASTEXITCODE -ne 0) { throw 'Failed-window diagnostic guard did not finish' }
+          $guard = $raw | ConvertFrom-Json
+          if ($guard.schema -ne 1 -or $guard.purpose -cne 'owned-failed-normal-window-diagnostic' -or $guard.status -cne 'unavailable' -or $guard.reason -cne 'bounded_owned_window_probe_failed') { throw 'Failed-window diagnostic did not refuse invalid PID' }
       - name: Acquire the exact official reference browser
         id: acquire
         shell: bash

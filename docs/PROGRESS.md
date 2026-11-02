@@ -11,7 +11,7 @@ interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455), immutable source `9f6d9a79aef2`, restored the verified completed stage-0 checkpoint, passed preparation/GN and resumed compilation at 03:56:20 UTC. Stage 0 ended at **12,688/46,818** actions in that resumed invocation, then stopped at its deadline with status **pending**. | Preserve the live continuation and inspect its real compilation result. |
+| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455), immutable source `9f6d9a79aef2`, restored the verified checkpoint and compiled from 03:56:20 to 05:04:00 UTC. Its checkpoint save is live; actual build status and action count are not yet available. REST step success is inconclusive under continue-on-error. | Preserve the save; inspect the ready manifest and real terminal logs without inferring success or failure. |
 | Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984), immutable source and workflow `697512488fc8`: restored native15, passed real clean Windows Rust execution and GN at 04:01:52 UTC, passed the complete declared-input audit, and began compilation at 04:02:29 UTC. | Preserve the live build; inspect any concrete compiler diagnostic or its completed checkpoint. |
 
 The previous Windows retry
@@ -153,6 +153,20 @@ fixture tests pass, including an unresolved version promise; the full-version
 assertion and resolved matching-version requirement remain mandatory. The next
 trial will establish whether pages navigate and execute before any capture.
 Capture reliability and actual custom-package appearance remain unverified.
+
+The second [run 41391883284](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41391883284)
+at `cd920e4` again stopped before capture. Its new counters establish **zero HTTP
+requests of any kind**, including zero page GETs, so neither test page was
+fetched. The identity-reverified owned window was **Untitled - Google Chrome
+for Testing**. Both version statuses remained no-report. All four assets and
+three checksum entries were verified, and owned cleanup passed. This does not
+support a UA-lookup delay as the cause. The reviewed next diagnostic classifies only owned direct-child roles and
+bounded owned-window address/error state, with target-window visibility,
+minimization and foreground booleans. It keeps finite partial snapshots if UIA
+stalls and never retains raw UI trees, addresses or child command lines.
+Eight sanitizer/fixture guards and source/workflow syntax checks pass; actual
+Windows PS5/UIA execution remains pending the next trial. No product, launch-flag,
+focus, security or assertion changes are made to obtain a pass.
 
 Both real launchable packages, native behavior/no-debug evidence, installation
 checks and actual-package Store compatibility are still required for completion.

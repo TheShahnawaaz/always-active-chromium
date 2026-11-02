@@ -10,6 +10,8 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import {captureOwnedWindow} from './lib/window-capture.mjs';
+import {parseFailedWindowDiagnostic} from './lib/failed-window-diagnostic.mjs';
+import {fileURLToPath} from 'node:url';
 
 const execute=promisify(execFile);
 const captureHelper=process.env.AA_WINDOW_CAPTURE_HELPER;
@@ -41,7 +43,7 @@ const report={schema:1,started:new Date().toISOString(),platform:process.platfor
   startupSelection:'Not assumed; control accepts whichever page supplies stable genuinely-hidden observations.',
   expectedVersion:options['expected-version'],expectedSourceRevision:'fb096c0011f9d50f0a264a9376420cdea9c421e3',
   versionObservation:'Website UA-CH fullVersionList; source revision is not observable without debugging and is not claimed by this test.',
-  limits:{timeoutMs:options['timeout-ms'],settleMs:options['settle-ms'],stableMs:options['stable-ms'],maxSamplesPerPage:256,maxPostBytes:16384,maxRequestCounter:1000000,failedWindowsWindowDiagnosticMs:6000},
+  limits:{timeoutMs:options['timeout-ms'],settleMs:options['settle-ms'],stableMs:options['stable-ms'],maxSamplesPerPage:256,maxPostBytes:16384,maxRequestCounter:1000000,failedWindowsWindowDiagnosticMs:12000},
   runs:[],limitations:[
     'This verifies the test-owned normal launch and passive webpage observations, not a host-wide audit of unrelated processes.',
     'No remote-debugging, automation, load-extension, focus emulation, lifecycle override, or browser-control API is used.',
@@ -77,12 +79,12 @@ function stableSuffix(samples,startedAt,kind) {
     latest:suffix.at(-1)??later.at(-1)??null};
 }
 
-async function processIdentity(child,profile,{timeoutMs=5000}={}) {
+async function processIdentity(child,profile,{timeoutMs=5000,windowsHide=false}={}) {
   if(child.exitCode!==null||child.signalCode!==null)return null;
   if(process.platform==='win32') {
     const script=`$p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$env:AA_NO_DEBUG_PID); if($null -eq $p){exit 0}; [pscustomobject]@{pid=$p.ProcessId; executable=$p.ExecutablePath; command=$p.CommandLine; started=$p.CreationDate.ToUniversalTime().ToString('o')} | ConvertTo-Json -Compress`;
     const {stdout}=await execute('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],
-      {timeout:timeoutMs,maxBuffer:65536,env:{...process.env,AA_NO_DEBUG_PID:String(child.pid)}});
+      {timeout:timeoutMs,maxBuffer:65536,windowsHide,env:{...process.env,AA_NO_DEBUG_PID:String(child.pid)}});
     if(!stdout.trim())return null;
     const identity=JSON.parse(stdout.replace(/^\uFEFF/,''));
     const executableMatches=identity.executable?.toLowerCase()===options.browser.toLowerCase();
@@ -98,32 +100,26 @@ async function processIdentity(child,profile,{timeoutMs=5000}={}) {
   return {...identity,owned:identity.pid===child.pid&&identity.processGroup===child.pid&&identity.command.includes(options.browser)&&identity.command.includes(`--user-data-dir=${profile}`)};
 }
 
-async function failedWindowsWindowDiagnostic(child,profile,initial) {
+async function failedWindowsWindowDiagnostic(child,profile,initial,args) {
   if(process.platform!=='win32')return {status:'unsupported'};
   try{
-    const fresh=await processIdentity(child,profile,{timeoutMs:2000});
+    const fresh=await processIdentity(child,profile,{timeoutMs:2000,windowsHide:true});
     const escape=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     const argument='--user-data-dir='+profile;
     const exactProfile=new RegExp(`(?:^|\\s)(?:"${escape(argument)}"|${escape(argument)})(?=\\s|$)`);
     if(!fresh?.owned||!initial?.owned||fresh.started!==initial.started||typeof fresh.command!=='string'||fresh.command.length>32768||!exactProfile.test(fresh.command))return {status:'unverified',reason:'fresh_owned_identity_unavailable'};
-    const script=String.raw`
-$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
-function Verify-Owned {
- $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$env:AA_NO_DEBUG_PID) -OperationTimeoutSec 2
- if($null -eq $p -or $p.CreationDate.ToUniversalTime().ToString('o') -cne $env:AA_NO_DEBUG_STARTED -or -not [string]::Equals($p.ExecutablePath,$env:AA_NO_DEBUG_EXECUTABLE,[StringComparison]::OrdinalIgnoreCase) -or $p.CommandLine -cne $env:AA_NO_DEBUG_COMMAND){throw 'owned_identity_changed'}
-}
-Verify-Owned
-$p=Get-Process -Id ([int]$env:AA_NO_DEBUG_PID) -ErrorAction Stop
-$title=[regex]::Replace([string]$p.MainWindowTitle,'\p{Cc}',' ')
-if($title.Length -gt 240){$title=$title.Substring(0,240)}
-$handle=$p.MainWindowHandle.ToInt64().ToString('x')
-Verify-Owned
-[pscustomobject]@{status='observed';pid=[int]$env:AA_NO_DEBUG_PID;started=$env:AA_NO_DEBUG_STARTED;identityReverified=$true;mainWindowTitle=$title;mainWindowHandle=$handle}|ConvertTo-Json -Compress
-`;
-    const {stdout}=await execute('powershell.exe',['-NoProfile','-NonInteractive','-Command',script],{timeout:4000,maxBuffer:4096,windowsHide:true,env:{...process.env,AA_NO_DEBUG_PID:String(child.pid),AA_NO_DEBUG_STARTED:fresh.started,AA_NO_DEBUG_EXECUTABLE:options.browser,AA_NO_DEBUG_COMMAND:fresh.command}});
-    const value=JSON.parse(stdout.replace(/^\uFEFF/,''));
-    if(value.status!=='observed'||value.pid!==child.pid||value.started!==initial.started||value.identityReverified!==true||typeof value.mainWindowTitle!=='string'||value.mainWindowTitle.length>240||Buffer.byteLength(value.mainWindowTitle)>1024||typeof value.mainWindowHandle!=='string'||!/^[0-9a-f]{1,16}$/.test(value.mainWindowHandle))throw Error('invalid_owned_window_diagnostic');
-    return value;
+    const urls=args?.filter(arg=>/^http:\/\/127\.0\.0\.1:[0-9]{1,5}\/page\/(?:alpha|beta)\?run=[0-9a-f-]{36}$/.test(arg));
+    if(urls?.length!==2)return {status:'unverified',reason:'expected_owned_urls_unavailable'};
+    const script=fileURLToPath(new URL('./ui/failed-window-diagnostic.ps1',import.meta.url));
+    const expected={pid:child.pid,started:initial.started};
+    try{
+      const {stdout}=await execute('powershell.exe',['-NoProfile','-NonInteractive','-File',script],{timeout:9500,killSignal:'SIGKILL',maxBuffer:16384,windowsHide:true,env:{...process.env,AA_NO_DEBUG_PID:String(child.pid),AA_NO_DEBUG_STARTED:fresh.started,AA_NO_DEBUG_EXECUTABLE:options.browser,AA_NO_DEBUG_COMMAND:fresh.command,AA_NO_DEBUG_URLS:JSON.stringify(urls)}});
+      return parseFailedWindowDiagnostic(stdout,expected);
+    }catch(error){
+      // A sanitized child snapshot can survive a provider stall. It cannot prove UIA.
+      if(error.killed===true&&typeof error.stdout==='string')return parseFailedWindowDiagnostic(error.stdout,expected,{timedOut:true});
+      throw error;
+    }
   }catch{return {status:'unavailable',reason:'bounded_owned_window_probe_failed'};}
 }
 
@@ -285,7 +281,7 @@ async function runMode(mode) {
   } catch(error) {
     addCheck(run,'normal-launch observation completes',false,error.stack);
   } finally {
-    if(process.platform==='win32'&&child?.pid&&run.tests.some(test=>test.status==='failed'))run.failedObservationWindow=await failedWindowsWindowDiagnostic(child,profile,identity);
+    if(process.platform==='win32'&&child?.pid&&run.tests.some(test=>test.status==='failed'))run.failedObservationWindow=await failedWindowsWindowDiagnostic(child,profile,identity,run.command?.args);
     if(child?.pid) {
       try {
         run.cleanup=await cleanup(child,profile,identity);
