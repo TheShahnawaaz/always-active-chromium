@@ -47,6 +47,15 @@ affirmative control and Cancel inside the same verified native dialog/window;
 web content, old snapshots, app-name-only targeting, global Enter, private
 installation APIs and privileged uninstall calls are excluded.
 
+On Windows the foreground handle must belong to the verified browser PID.
+It may be the owning window, its actual child, or a native popup whose direct
+owner and root owner both equal that window. The second reference trial
+observed this last relationship for the real Store modal; a shared process ID
+alone does not establish it. The native target dialog and all controls still
+need their separate ancestry, title and fresh-state checks. Owner relationships
+use Microsoft's documented [GetWindow/GW_OWNER](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindow)
+and [GetAncestor/GA_ROOTOWNER](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getancestor).
+
 For installation, actual hosted uBOL captures on both platforms established
 `Add "uBlock Origin Lite"?`, native Add extension/Cancel, and the permission
 `Read and change all your data on all websites`. The helper must freshly match

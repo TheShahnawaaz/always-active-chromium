@@ -161,30 +161,113 @@ async function processIdentity(browser,timeoutMs=3000,signal) {
   }
   let stdout;
   try {({stdout}=await execute('ps',['-ww','-p',String(pid),'-o','pid=','-o','pgid=','-o','lstart=','-o','command='],{timeout:timeoutMs,maxBuffer:65536,signal}));}
-  catch(error){if(error.code===1)return null;throw error;}
+  catch(error){if(error.code===1&&!String(error.stdout??'').trim()&&!String(error.stderr??'').trim())return null;throw error;}
   const match=stdout.match(/^\s*(\d+)\s+(\d+)\s+(\S+\s+\S+\s+\d+\s+\S+\s+\d+)\s+(.+)\s*$/);
   if(!match)throw Error('Cannot parse owned Store process identity');
   return {pid:Number(match[1]),processGroup:Number(match[2]),started:match[3].trim().replace(/\s+/g,' '),command:match[4],
     verified:Number(match[1])===pid&&Number(match[2])===pid&&match[4]===[browser.executable,...browser.args].join(' ')};
 }
 
+function probeError(error,operation) {
+  return {operation,code:typeof error.code==='string'?error.code:null,
+    exitCode:typeof error.code==='number'?error.code:null,
+    errno:typeof error.errno==='number'?error.errno:null,
+    syscall:typeof error.syscall==='string'?error.syscall.slice(0,80):null,
+    message:String(error.message??error).slice(0,500)};
+}
+
+// Diagnostic only: -g selects this one process group in Darwin's UNIX2003
+// mode; -x includes its nonterminal members. Never select all processes or
+// collect commands. Empty output cannot replace an ESRCH signal-zero proof.
+async function macGroupSnapshot(browser,deadline) {
+  const snapshot={scope:'exact-created-process-group',processGroup:browser.ownedPid,
+    callerUID:process.getuid(),absenceAuthoritative:false,maxRecords:64,records:[]};
+  if(browser.identity?.verified!==true||browser.identity.processGroup!==browser.ownedPid) {
+    return {...snapshot,status:'unverified',complete:false,reason:'Original process group identity was not verified'};
+  }
+  let stdout='',stderr='',exitCode=0;
+  try {
+    ({stdout,stderr}=await execute('/bin/ps',['-x','-g',String(browser.ownedPid),'-o','pid=','-o','ppid=','-o','uid=','-o','ruid=','-o','pgid=','-o','stat='],{
+      timeout:Math.max(1,Math.min(1000,deadline-Date.now())),maxBuffer:16384,
+      env:{...process.env,COMMAND_MODE:'unix2003',LC_ALL:'C'}}));
+  }catch(error) {
+    if(error.code!==1||String(error.stderr??'').trim()||String(error.stdout??'').trim()) {
+      return {...snapshot,status:'unverified',complete:false,error:probeError(error,'ps-group-snapshot')};
+    }
+    exitCode=1;
+  }
+  if(stderr.trim())return {...snapshot,status:'unverified',complete:false,reason:'Unexpected scoped ps diagnostic',stderr:stderr.slice(0,500)};
+  const lines=stdout.trim()?stdout.trim().split(/\r?\n/):[];
+  for(const line of lines.slice(0,64)) {
+    const match=line.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([A-Za-z0-9+<>=-]{1,16})\s*$/);
+    if(!match||Number(match[5])!==browser.ownedPid) {
+      return {...snapshot,status:'unverified',complete:false,reason:'Invalid or out-of-scope process-group metadata'};
+    }
+    snapshot.records.push({pid:Number(match[1]),parentPid:Number(match[2]),uid:Number(match[3]),realUID:Number(match[4]),processGroup:Number(match[5]),state:match[6]});
+  }
+  return {...snapshot,status:lines.length?'observed-members':'empty-observation',complete:lines.length<=64,exitCode,truncated:lines.length>64};
+}
+
+async function probePosixGroup(browser,deadline,result) {
+  const until=Math.min(Date.now()+3000,deadline);
+  const observations=[];
+  const signalZeroErrors=[];
+  let attempts=0,lastStatus='not-probed';
+  const observe=async(reason)=>{
+    if(process.platform==='darwin'&&observations.length<3&&deadline-Date.now()>100)observations.push({reason,...await macGroupSnapshot(browser,deadline)});
+  };
+  while(Date.now()<until) {
+    attempts++;
+    try {process.kill(-browser.ownedPid,0);lastStatus='exists';}
+    catch(error) {
+      if(error.code==='ESRCH') {
+        result.processGroupProbe={status:'gone',proof:'signal-zero-ESRCH',attempts,signalZeroErrors,observations};
+        return true;
+      }
+      lastStatus='unverified';
+      if(!signalZeroErrors.some(item=>item.code===error.code)&&signalZeroErrors.length<4)signalZeroErrors.push(probeError(error,'signal-zero-group'));
+      if(observations.length===0)await observe('signal-zero-error');
+    }
+    await delay(Math.min(100,Math.max(1,until-Date.now())));
+  }
+  await observe('final-unverified-or-existing-group');
+  result.processGroupProbe={status:lastStatus,proof:null,attempts,signalZeroErrors,observations};
+  return false; // EPERM, probe timeout and ps emptiness never mean gone.
+}
+
 async function closeOwned(browser,{deadline:outerDeadline=Date.now()+18000}={}) {
   if(browser.closed)return browser.lastClose;
   const deadline=Math.min(Date.now()+18000,outerDeadline);
   const remaining=()=>{const ms=deadline-Date.now();if(ms<100)throw Error('Owned Store cleanup exceeded 18 seconds');return ms;};
-  const inspect=()=>processIdentity(browser,Math.min(2000,remaining()));
-  const groupGone=async()=>{
-    const until=Math.min(Date.now()+3000,deadline);
-    while(Date.now()<until){try{process.kill(-browser.ownedPid,0);}catch(error){if(error.code==='ESRCH')return true;throw error;}await delay(100);}
-    return false;
+  const prior=browser.lastClose;
+  const sameGeneration=prior?.ownedPid===browser.ownedPid&&prior.generation===browser.generation&&
+    typeof prior.ownedStarted==='string'&&prior.ownedStarted===browser.identity?.started;
+  const result={ownedPid:browser.ownedPid,generation:browser.generation,ownedStarted:browser.identity?.started??null,
+    signals:sameGeneration?[...new Set(prior.signals)]:[],browserCloseRequested:sameGeneration&&prior.browserCloseRequested===true,
+    forcedCloseAttempted:sameGeneration&&prior.forcedCloseAttempted===true,
+    rootGone:false,processGroupGone:false,closedNormally:false,probeErrors:[],
+    lastVerifiedNormalClose:browser.lastVerifiedNormalClose??null};
+  if(sameGeneration)result.sameGenerationRetry={browserCloseRequested:prior.browserCloseRequested,signals:[...prior.signals],forcedCloseAttempted:prior.forcedCloseAttempted===true,rootGone:prior.rootGone,
+    processGroupGone:prior.processGroupGone,rootProbe:prior.rootProbe??null,probeErrors:prior.probeErrors??[],processGroupProbe:prior.processGroupProbe??null};
+  const rememberError=(error,operation)=>{if(result.probeErrors.length<8)result.probeErrors.push(probeError(error,operation));};
+  const inspect=async()=>{
+    try {
+      const identity=await processIdentity(browser,Math.min(2000,remaining()));
+      result.rootGone=identity===null;
+      result.rootProbe={status:identity===null?'original-root-exited':identity.verified?'verified-live':'unverified-live'};
+      if(identity)result.lastObservedRootIdentity=identity;
+      return identity;
+    }catch(error){result.rootGone=false;result.rootProbe={status:'unverified',error:probeError(error,'root-identity')};throw error;}
   };
-  const result={ownedPid:browser.ownedPid,generation:browser.generation,signals:[],browserCloseRequested:false};
   if(!browser.ownedPid)return {...result,rootGone:true,closedNormally:false};
+  try {
   let identity=await inspect();
   if(identity) {
     if(!browser.identity&&identity.verified)browser.identity=identity;
+    result.ownedStarted=browser.identity?.started??null;
     if(!identity.verified||identity.started!==browser.identity?.started)throw Error('Refusing cleanup: Store PID/profile/start identity is unverified');
     result.verifiedIdentity=identity;
+    if(process.platform==='darwin')result.processGroupBeforeClose=await macGroupSnapshot(browser,deadline);
     if(isWindows) {
       try {result.descendantSnapshot=await windowsSnapshot(browser,deadline);}
       catch(error){browser.treeComplete=false;browser.treeEverIncomplete=true;result.descendantSnapshot={complete:false,error:error.message};}
@@ -199,22 +282,25 @@ async function closeOwned(browser,{deadline:outerDeadline=Date.now()+18000}={}) 
     identity=await inspect();
     if(identity) {
       if(!identity.verified||identity.started!==browser.identity.started)throw Error('Refusing fallback cleanup of changed Store PID');
+      // A command/transport error can follow partial termination, especially
+      // taskkill. Never upgrade that uncertain forced attempt on a later retry.
       if(process.platform==='win32'){
         if(!browser.treeComplete)throw Error('Refusing Windows tree termination without a complete owned descendant snapshot');
-        await execute('taskkill.exe',['/PID',String(browser.ownedPid),'/T','/F'],{timeout:Math.min(8000,remaining()),maxBuffer:65536});result.signals.push('taskkill /T /F');
+        result.forcedCloseAttempted=true;
+        await execute('taskkill.exe',['/PID',String(browser.ownedPid),'/T','/F'],{timeout:Math.min(8000,remaining()),maxBuffer:65536});if(!result.signals.includes('taskkill /T /F'))result.signals.push('taskkill /T /F');
       }
-      else {process.kill(-browser.ownedPid,'SIGTERM');result.signals.push('SIGTERM');}
+      else {result.forcedCloseAttempted=true;process.kill(-browser.ownedPid,'SIGTERM');if(!result.signals.includes('SIGTERM'))result.signals.push('SIGTERM');}
       const signalUntil=Math.min(Date.now()+3000,deadline);
       while(Date.now()<signalUntil){if(!await inspect())break;await delay(100);}
       identity=await inspect();
       if(identity&&process.platform!=='win32') {
         if(!identity.verified||identity.started!==browser.identity.started)throw Error('Refusing unverified Store cleanup escalation');
-        process.kill(-browser.ownedPid,'SIGKILL');result.signals.push('SIGKILL');await delay(200);
+        process.kill(-browser.ownedPid,'SIGKILL');if(!result.signals.includes('SIGKILL'))result.signals.push('SIGKILL');await delay(200);
       }
     }
   }
   result.rootGone=(await inspect())===null;
-  if(process.platform!=='win32')result.processGroupGone=await groupGone();
+  if(process.platform!=='win32')result.processGroupGone=await probePosixGroup(browser,deadline,result);
   else {
     result.shutdownScope='verified-root-and-snapshotted-owned-Windows-descendants';
     let remainingProcesses;
@@ -229,7 +315,21 @@ async function closeOwned(browser,{deadline:outerDeadline=Date.now()+18000}={}) 
     // this field represents the verified tracked process tree on that platform.
     result.processGroupGone=result.processTreeGone;
   }
-  result.closedNormally=result.browserCloseRequested&&result.signals.length===0&&result.rootGone===true&&result.processGroupGone===true;
+  }catch(error) {
+    result.error=String(error.message??error).slice(0,500);rememberError(error,'close-owned');
+    // Preserve finite partial evidence instead of replacing it with {error}.
+    // No fallback signal is attempted after an identity/probe failure.
+    if(deadline-Date.now()>200)try {await inspect();}catch(probeFailure){rememberError(probeFailure,'final-root-identity');}
+    if(process.platform==='darwin'&&deadline-Date.now()>200&&!result.processGroupProbe) {
+      try {result.processGroupGone=await probePosixGroup(browser,deadline,result);}
+      catch(probeFailure){rememberError(probeFailure,'final-process-group');}
+    }
+  }
+  result.closedNormally=result.browserCloseRequested&&!result.forcedCloseAttempted&&result.signals.length===0&&result.rootGone===true&&result.processGroupGone===true;
+  if(result.closedNormally)browser.lastVerifiedNormalClose=immutable({ownedPid:result.ownedPid,generation:result.generation,ownedStarted:result.ownedStarted,
+    browserCloseRequested:true,forcedCloseAttempted:false,signals:[],rootGone:true,processGroupGone:true,closedNormally:true});
+  result.lastVerifiedNormalClose=browser.lastVerifiedNormalClose??null;
+  browser.cdp?.close();
   browser.cdp=undefined;
   browser.lastClose=immutable(result);
   browser.closed=result.rootGone===true&&result.processGroupGone===true;
@@ -282,13 +382,19 @@ async function launchGeneration(browser,signal,{deadline:outerDeadline=Date.now(
 }
 
 async function verifyStopped(browser) {
-  if(browser.lastClose?.closedNormally!==true||!browser.closed)throw Error('Restart requires a verified normal Browser.close boundary');
+  if(browser.lastClose?.closedNormally!==true||!browser.closed) {
+    const error=Error('Restart requires a verified normal Browser.close boundary');error.cleanup=browser.lastClose;throw error;
+  }
   if(isWindows) {
     const remaining=await windowsRemaining(browser,Date.now()+3500);
     if(!browser.treeComplete||!remaining.gone)throw Error('Owned Windows descendants remain or shutdown tracking is incomplete');
   } else {
-    try {process.kill(-browser.ownedPid,0);throw Error('Owned browser process group still exists');}
-    catch(error){if(error.code!=='ESRCH')throw error;}
+    const verification={...browser.lastClose,signals:[...browser.lastClose.signals],processGroupGone:false,closedNormally:false};
+    if(!await probePosixGroup(browser,Date.now()+3500,verification)) {
+      verification.error='Owned browser process group is not verified stopped';
+      browser.lastClose=immutable(verification);browser.closed=false;
+      const error=Error(verification.error);error.cleanup=browser.lastClose;throw error;
+    }
   }
 }
 

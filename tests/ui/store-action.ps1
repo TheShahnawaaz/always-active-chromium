@@ -135,6 +135,13 @@ function Get-CurrentPrompt {
         $cursor = $walker.GetParent($cursor)
     }
     if ($null -eq $ownedWindow) { throw 'no_owned_visible_foreground_native_window' }
+    $foregroundInChain = $false
+    foreach ($element in $chain) {
+        $current = $element.Current
+        if ($current.ProcessId -ne $script:OwnedPid) { throw 'native_focus_ancestry_changed' }
+        if ([long]$current.NativeWindowHandle -eq $foreground) { $foregroundInChain = $true }
+    }
+    if (-not $foregroundInChain) { throw 'foreground_not_in_owned_focus_ancestry' }
     $dialogs = New-Object 'System.Collections.Generic.List[object]'
     foreach ($element in $chain) {
         $record = Get-Control $element
@@ -176,7 +183,8 @@ function Get-CurrentPrompt {
     $proof = @{ nativeDialogVerified = $true; targetMatched = $true
                 heading = $script:Heading; affirmativeLabel = $script:Affirmative
                 affirmativeEnabled = $true; affirmativeUnique = $true
-                nativeWindowHandle = $ownedWindow; dialogTraversalComplete = $true }
+                nativeWindowHandle = $ownedWindow; foregroundWindowHandle = $foreground
+                foregroundInOwnedFocusAncestry = $true; dialogTraversalComplete = $true }
     if ($Operation -ceq 'accept-install') {
         $permission = @($records | Where-Object { $_.name -ceq 'Read and change all your data on all websites' })
         if ($permission.Count -lt 1) { throw 'observed_install_permission_text_missing' }
@@ -249,12 +257,18 @@ namespace StoreNativeAction {
         }
         public static bool IsUsableOwnedWindow(int window, int expectedPid) {
             if (window == 0) return false;
-            uint actualPid;
+            uint actualPid, foregroundPid;
             var handle = new IntPtr(window);
             var foreground = GetForegroundWindow();
             return IsWindow(handle) && IsWindowVisible(handle) && !IsIconic(handle) &&
                 GetWindowThreadProcessId(handle, out actualPid) != 0 && actualPid == (uint)expectedPid &&
-                (foreground == handle || IsChild(handle, foreground));
+                foreground != IntPtr.Zero && IsWindow(foreground) && IsWindowVisible(foreground) &&
+                GetWindowThreadProcessId(foreground, out foregroundPid) != 0 && foregroundPid == (uint)expectedPid &&
+                (foreground == handle || IsChild(handle, foreground) ||
+                 // The observed native modal popup is owned by the browser
+                 // window, rather than a child HWND. Require both direct
+                 // owner and root-owner equality, never merely a shared PID.
+                 (GetWindow(foreground, 4) == handle && GetAncestor(foreground, 3) == handle));
         }
         public static string[] Parse(string commandLine) {
             int count;
@@ -282,7 +296,8 @@ namespace StoreNativeAction {
     if (-not [Windows.Automation.Automation]::Compare($initial.dialog, $current.dialog) -or
         -not [Windows.Automation.Automation]::Compare($initial.element, $current.element)) { throw 'native_prompt_changed' }
     $script:Report.identity = $identity
-    if (-not [StoreNativeAction.Ownership]::IsUsableOwnedWindow($current.proof.nativeWindowHandle, $script:OwnedPid)) {
+    if ([StoreNativeAction.Ownership]::ForegroundHandle() -ne $current.proof.foregroundWindowHandle -or
+        -not [StoreNativeAction.Ownership]::IsUsableOwnedWindow($current.proof.nativeWindowHandle, $script:OwnedPid)) {
         throw 'native_window_changed_before_action'
     }
     Assert-Budget
