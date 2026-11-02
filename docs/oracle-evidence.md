@@ -617,3 +617,45 @@ explicit limitation. These successful reference mechanics do not verify a
 custom native package, native always-active behavior, or debugger-free everyday
 operation. Run those checks on actual built packages when available. Further
 reference trials are unnecessary unless a new issue changes the test scope.
+
+## Cached bindings and visible-started animation assertions
+
+A specific coverage gap was subsequently found: the harness recorded cached
+prototype bindings and a visible-started RAF chain without asserting the
+post-hide behavior. Four minimal assertions were added at controller commit
+`ffa902f6a930652b03e26e6ad56aaf287882f258`: prefixed visibility aliases, cached
+prototype visibility getters, cached document focus, and continued progress of
+that existing animation chain after tab deactivation had settled. This changed
+behavior-coverage trial is separate from the completed normal Store reference.
+
+[Reference run 41384856723](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384856723)
+completed successfully on both standard hosted platforms: **baseline 32/32**
+and **shipped-extension oracle 37/37** checks passed on each OS. All four new
+assertions passed in every control; no existing assertion failed. All 14 bounded
+assets, GitHub asset digests/sizes, both six-entry SHA manifests, exact controller
+identity and the original extension CRX digest in provenance were verified.
+Evidence is retained under `.runtime/oracle/hosted-behavior-41384856723` with
+`verified-summary.json` explicitly marking `nativeBrowserVerified=false`.
+
+| Report | SHA-256 |
+| --- | --- |
+| macOS baseline | `d08165cccbf66c947de87b3a9390950fec592d6efee2ceed7fbeae13500a9317` |
+| macOS oracle | `f36d4036a873159df483370ab18da3b74acbc2565bdf813ea3ea12981b11972c` |
+| Windows baseline | `5516f4b45c8e1063169ea313902921f759f32f23b06779f831e805f95cdc9df7` |
+| Windows oracle | `e03e03403cacc5dabb1b5cc0bec6c645b5f35b388cac9f5acace5e64db096110` |
+
+The prototype getters proved a genuine hidden document in all four controls:
+`prototypeHidden=true`, `prototypeVisibilityState="hidden"`. Baseline prefixed
+aliases also reported hidden, and its cached focus method returned false.
+The oracle's prefixed aliases reported visible and its cached focus method
+returned true, while the cached prototype visibility getters still exposed the
+real hidden state.
+
+The existing animation chain remained frozen over the measured 1.3-second
+post-settling hidden interval: macOS baseline **11 -> 11**, macOS oracle
+**12 -> 12**, Windows baseline **18 -> 18**, and Windows oracle **18 -> 18**.
+Callbacks accumulated before deactivation were excluded from this progress
+comparison. These results validate the new reference/oracle expectations and
+the oracle's observed scheduling limitation. The native mode must separately
+prove spoofed cached native bindings and continued hidden animation scheduling
+on actual built packages; no such native result is established here.

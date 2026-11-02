@@ -11,7 +11,7 @@ interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: preparation and GN passed after approved native15 migration. Its compilation step ended at 03:21:09 UTC on November 2; saving its compiler checkpoint is in progress. The final action count and build status are not yet verified. | Preserve the live save; inspect its ready manifest/logs and any automatic continuation. |
+| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455), immutable source `9f6d9a79aef2`, is restoring the verified completed stage-0 checkpoint. Stage 0 ended at **12,688/46,818** actions in that resumed invocation, then stopped at its controller deadline with status **pending**. | Preserve the live continuation and inspect its real compilation result. |
 | Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984), immutable source and workflow `697512488fc8`: fresh retry using the complete native15 checkpoint from run 41377808648, with clean exact-pinned Windows Rust hydration and early finite diagnostics. | Verify actual Windows Rust execution and the declared-input audit, then compilation. |
 
 The previous Windows retry
@@ -40,7 +40,12 @@ The Mac campaign restored the previous complete **7,566,257,986-byte** checkpoin
 which had completed **10,753 of 57,570** actions before discovering Dawn's
 missing nested Go tool. The current source hydrates the exact Dawn Go package
 and verifies its absolute executable version/host before GN. Those hosted
-checks passed. The obsolete native14 final tags were removed; approved old
+checks passed. The next stage completed another **12,688** actions in its resumed
+invocation before the time budget. Its five-part **8,029,991,859-byte** checkpoint
+manifest, all part digests/sizes and source/native identity were verified.
+The automatic continuation at 03:40:04 UTC uses the same older immutable source
+and workflow, so the newer CI-only speed changes do not apply to that campaign.
+The obsolete native14 final tags were removed; approved old
 checkpoints remain cache inputs only. Migration is opt-in and validates exact
 source hashes and unchanged build pins. No obsolete browser was delivered.
 
@@ -90,6 +95,15 @@ independently verified. These are CFT reference results only. See
 A `no_update` response does not establish server transport or an actual newer
 Store version transition. Actual native-package Store verification and a genuine
 version transition remain unverified.
+
+A focused coverage follow-up at `ffa902f` added explicit cached native binding,
+prefixed alias and visible-started animation-chain assertions. Hosted
+[run 41384856723](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384856723)
+passed **baseline 32/32 and shipped oracle 37/37 on each OS**, including all four
+new assertions. All 14 assets, hashes/manifests and controller identity were
+verified. The controls were genuinely hidden, and their existing animation
+chains remained frozen after settling. Native mode must separately prove its
+intended binding and continued-animation differences on actual packages.
 
 Both real launchable packages, native behavior/no-debug evidence, installation
 checks and actual-package Store compatibility are still required for completion.
