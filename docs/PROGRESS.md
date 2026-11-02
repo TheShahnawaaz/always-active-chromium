@@ -13,7 +13,7 @@ have not yet passed on a custom binary.
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
 | macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: restored the prior compiler checkpoint, migrated native14 to native15, validated Dawn's exact Go toolchain and generated GN successfully. Ninja compilation began at 23:57:56 UTC on November 1 and remains in progress. | Preserve the live build and its retained objects; inspect its actual terminal result. |
-| Windows x64 | [Run 41365869868](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41365869868), immutable source `0963bca534ac`: restored the native15 checkpoint and passed exact Go/gperf tool and GN checks. The compile step ended after nine seconds; the job is saving its checkpoint, with detailed build logs pending. | Let checkpoint saving finish, inspect the actual diagnostic, then make only measured dependency repairs. |
+| Windows x64 | [Run 41365869868](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41365869868), immutable source `0963bca534ac`: restored the native15 checkpoint and passed exact Go/gperf tool and GN checks. Ninja rejected the next missing host input, `buildtools/win-format/clang-format.exe`, before C++ actions. The complete native15 checkpoint has been saved. | Hydrate the exact upstream formatter pin, then run the new declared-input audit before compilation. |
 
 The earlier Mac run
 [41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
@@ -31,7 +31,11 @@ before executing C++ build actions. Its complete five-chunk checkpoint totals
 **7,705,525,026 bytes**. The current campaign restores it and hydrates the exact
 upstream gperf Git revision, executable, README and license with fixed hashes.
 Those checks passed on the hosted Windows runner at 00:37:15 UTC. The latest
-compile diagnostic is still unknown while checkpoint saving continues.
+run then rejected the missing `buildtools/win-format/clang-format.exe`, needed by
+Crubit's generated Rust/C++ support header. Its complete five-chunk native15
+checkpoint totals **7,773,142,945 bytes**. The next retry will include an exact
+formatter repair and the read-only declared-input audit, which reports missing
+leaves together before any compile attempt.
 
 Both original seed campaigns predate the detached-document fix. Their undelivered
 final release tags were removed after verifying that no corresponding release
@@ -67,14 +71,21 @@ extension, showed enabled Add extension/Cancel controls and its all-websites
 permission text. Normal browser close cancelled the prompt; the extension
 remained absent from the persisted registry.
 
-The latest Mac-only dialog inspection
-[41368323159](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41368323159)
-passed **10/11**. Its verified owned native window contained the correct prompt
-heading and enabled Add extension/Cancel controls, but the bounded accessibility
-capture omitted substantive permission text. This is an incomplete inspection,
-not a successful permission check. No permission was accepted or extension
-installed in any of these Store trials. Actual Store installation, execution,
-restart, update and removal checks still remain on both custom packages.
+The Mac-only dialog inspection
+[41370550957](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41370550957)
+subsequently passed **11/11**. The earlier capture stopped at depth eight before
+reaching the native sheet's permission text. The observer now applies a deeper
+bound only inside a verified owned native sheet, retaining its node, time,
+output and ownership limits. The actual AXSheet contains the exact target
+heading, enabled Add extension/Cancel controls, and its all-websites permission
+text. All four release assets and their checksum manifest were verified; normal
+browser close cancelled the unaccepted prompt and persisted target absence
+passed. No permission was accepted or extension installed in any of these
+Store trials. Actual Store installation, execution, restart, update and removal
+checks still remain on both custom packages. The separate
+[Store compatibility plan](../tests/STORE-COMPATIBILITY-PLAN.md) covers a second
+supported MV3 extension, uBlock Origin Lite, with update-check and genuine
+version-transition evidence kept distinct.
 
 An earlier local disabled Store button did not establish a general compatibility
 failure: a local brand-only counterfactual did not enable it, hosted reference
