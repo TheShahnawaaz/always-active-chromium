@@ -14,6 +14,13 @@ Windows preparation is complete, and the audit records 75,790 checked leaves,
 zero missing and no errors. Final package/runtime/Store/UI evidence remains
 pending. See CONTINUE.md for exact observations and the next dependent actions.
 
+The access probe [41527296038](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41527296038)
+passed on standard hosted Ubuntu: dispatch, draft creation, asset roundtrip and
+SHA-256 comparison, followed by temporary-draft deletion with the existing tag
+preserved. At 02:53 IST Mac had also passed preparation/audit and begun its
+incremental metadata rebuild. Windows was still compiling. No build was
+restarted, cancelled or moved to another provider.
+
 ## Current state — 2026-11-02
 
 There is no finished custom browser package yet. The exact-source **15-file**

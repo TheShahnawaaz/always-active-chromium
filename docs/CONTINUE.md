@@ -149,8 +149,14 @@ Mac 41524595935 restoring its checkpoint and Windows 41503529408 compiling.
 Neither job was cancelled or duplicated. This runtime can read Actions and
 download authenticated draft assets through the existing GitHub integration;
 no credentials were copied. The administrative Actions-permissions endpoint
-returns 403, which does not establish a workflow-dispatch failure. Dispatch
-write access still needs to be exercised when a real package is eligible.
+returns 403; it does not block the required operations. The actual
+`release-auth-probe.yml` dispatch, run **41527296038**, passed: standard hosted
+Ubuntu created a tiny draft at the pre-existing `ci-auth-probe-67dea4dbe7e2`,
+uploaded/downloaded and hash-verified its asset, then deleted the temporary
+draft while preserving that tag. Its workflow commit is `ce666c2c524b` and the
+asset SHA-256 is
+`82a67a4de74c3f53f271d7b616ed1ace78bfa878d289b03666e75d87ac75db88`.
+This establishes actual dispatch and hosted-publisher access, not a browser.
 
 The Mac ready-manifest bytes independently match
 `00c430daf2ecfbda592033547b82fa3f395a36755f1628e014a891ecdd890463`.
@@ -166,3 +172,14 @@ one Windows-only skip. No browser runtime result is inferred. Installation
 procedures are drafted in DISTRIBUTION.md and remain explicitly gated on actual
 fresh-delivery evidence. Continue monitoring the existing jobs, then inspect
 real compiler/package/test output before the next dependent action.
+
+At 02:53 IST (21:23 UTC November 2), Mac preparation and its declared-input
+audit had passed and incremental compilation was active since 21:21:50 UTC.
+Windows compilation remained active. Mac's current 270-minute absolute budget
+stops compilation around 07:02 IST November 3; Windows retains its immutable
+220-minute budget and stops around 03:56 IST. The respective six-hour runner
+limits are approximately 08:32 and 06:15 IST. Saves have a 120-minute step cap,
+but must finish within the remaining job limit; the observed maximum complete
+save is approximately 32 minutes. A disk guard also stops below 8 GiB free.
+These are stage/checkpoint limits, not completion estimates. Both pending
+campaigns resume only after successful complete saves; do not cancel them.
