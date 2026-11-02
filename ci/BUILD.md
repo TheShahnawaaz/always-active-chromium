@@ -121,6 +121,12 @@ tool output or environment values. Passing establishes declared input existence;
 validation-only inputs, headers discovered through dependency logs, undeclared
 inputs and runtime dependencies remain outside its scope. A real build is still
 required.
+The graph is streamed into a temporary file with a 512 MiB limit, then parsed
+one bounded line at a time; raw leaf-list output retains a separate 128 MiB
+memory limit. The report records actual read/retained byte counts. The temporary
+graph is removed before returning. Exceeding either bound remains incomplete,
+never a passing partial audit. This replaces the measured 128 MiB in-memory
+graph limit that stopped Windows run `41371149418` before checking any leaves.
 If this audit fails immediately after restoring an exact current-fingerprint
 checkpoint, with no native migration or compile attempt, the workflow keeps that
 complete checkpoint and skips an identical large upload. A corrected retry can

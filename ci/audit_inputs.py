@@ -6,17 +6,20 @@ or correctness. In particular, validation-only and undeclared inputs are outside
 the graph tools' scope. No build commands or dependency downloads are executed.
 """
 import argparse
+import io
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import threading
 import time
 
 
 LIMITS = {'tool_seconds': 60, 'overall_seconds': 120,
           'stdout_bytes': 128 << 20, 'stderr_bytes': 1 << 20,
+          'graph_stdout_bytes': 512 << 20,
           'node_count': 1000000, 'leaf_count': 500000,
           'path_bytes': 32768, 'report_bytes': 2 << 20}
 SCOPE = ('Existence of declared leaf inputs in the requested Ninja target graph; '
@@ -35,9 +38,18 @@ class AuditError(RuntimeError):
     pass
 
 
-def run_tool(command, cwd, deadline, limits):
+def run_tool(command, cwd, deadline, limits, output_path=None, output_stats=None):
+    if output_path is None:
+        return collect_tool(command, cwd, deadline, limits, None, output_stats)
+    with output_path.open('wb') as sink:
+        return collect_tool(command, cwd, deadline, limits, sink, output_stats)
+
+
+def collect_tool(command, cwd, deadline, limits, sink, output_stats):
     """Read bounded pipes; tool modes never execute a build or helper process."""
     buffers = [bytearray(), bytearray()]
+    counts = [0, 0]
+    retained = [0, 0]
     problems = []
     stop = threading.Event()
     process = subprocess.Popen([str(value) for value in command], cwd=cwd,
@@ -50,8 +62,14 @@ def run_tool(command, cwd, deadline, limits):
                 block = stream.read(65536)
                 if not block:
                     break
-                room = cap - len(buffers[index])
-                buffers[index].extend(block[:max(0, room)])
+                room = max(0, cap - retained[index])
+                kept = block[:room]
+                counts[index] += len(block)
+                retained[index] += len(kept)
+                if index == 0 and sink is not None:
+                    sink.write(kept)
+                else:
+                    buffers[index].extend(kept)
                 if len(block) > room:
                     problems.append(f'{"stdout" if index == 0 else "stderr"} byte limit exceeded')
                     stop.set()
@@ -62,7 +80,8 @@ def run_tool(command, cwd, deadline, limits):
         finally:
             stream.close()
 
-    readers = [threading.Thread(target=read, args=(process.stdout, 0, limits['stdout_bytes']), daemon=True),
+    stdout_cap = limits['graph_stdout_bytes'] if sink is not None else limits['stdout_bytes']
+    readers = [threading.Thread(target=read, args=(process.stdout, 0, stdout_cap), daemon=True),
                threading.Thread(target=read, args=(process.stderr, 1, limits['stderr_bytes']), daemon=True)]
     for reader in readers:
         reader.start()
@@ -80,6 +99,9 @@ def run_tool(command, cwd, deadline, limits):
         raise Incomplete('Read-only Ninja process did not exit after termination') from problem
     for reader in readers:
         reader.join(timeout=5)
+    if output_stats is not None:
+        output_stats.update(stdout_bytes_read=counts[0], stderr_bytes_read=counts[1],
+                            stdout_bytes_retained=retained[0], stderr_bytes_retained=retained[1])
     if any(reader.is_alive() for reader in readers):
         raise Incomplete('Tool output readers did not finish')
     if problems:
@@ -89,12 +111,13 @@ def run_tool(command, cwd, deadline, limits):
     if bytes(buffers[1]).strip():
         # A missing dyndep, for example, must not silently yield a complete audit.
         raise Incomplete('Ninja tool emitted a diagnostic; raw output withheld')
-    return bytes(buffers[0]).decode('utf-8', errors='strict')
+    return None if sink is not None else bytes(buffers[0]).decode('utf-8', errors='strict')
 
 
 def raw_leaves(text, limits):
     paths = set()
-    for path in text.splitlines():
+    for line in io.StringIO(text):
+        path = line.rstrip('\r\n')
         if not path or len(path.encode('utf-8')) > limits['path_bytes']:
             raise Incomplete('Invalid or over-limit leaf path')
         paths.add(path)
@@ -103,20 +126,43 @@ def raw_leaves(text, limits):
     return paths
 
 
-def scoped_leaves(graph, leaves, limits):
+def graph_lines(stream, limits):
+    """Never materialize the complete DOT output or an unbounded single line."""
+    cap = limits['path_bytes'] + 512
+    while True:
+        line = stream.readline(cap + 1)
+        if not line:
+            break
+        if len(line) > cap:
+            raise Incomplete('Graph line byte limit exceeded')
+        yield line.decode('utf-8', errors='strict')
+
+
+def scoped_leaves(graph, leaves, limits, deadline=None):
     """Parse the pinned tool's fixed lines, not general or shell-escaped DOT."""
     pointer = r'(?:0x)?[0-9a-fA-F]+'
     file_line = re.compile(r'^"(' + pointer + r')" \[label="(.*)"\]$')
     rule_line = re.compile(r'^"(' + pointer + r')" \[label="[^"\r\n]+", shape=ellipse\]$')
     edge_line = re.compile(r'^"(' + pointer + r')" -> "(' + pointer +
                            r')"(?: \[(?:label="[^"\r\n]*"|arrowhead=none(?: style=dotted)?)\])?$')
-    headers = {'digraph ninja {', 'rankdir="LR"',
-               'node [fontsize=10, shape=box, height=0.25]', 'edge [fontsize=10]', '}'}
+    headers = {'rankdir="LR"', 'node [fontsize=10, shape=box, height=0.25]', 'edge [fontsize=10]'}
     files, rules, incoming, sources = {}, set(), set(), set()
-    lines = graph.splitlines()
-    if not lines or lines[0] != 'digraph ninja {' or lines[-1] != '}':
-        raise Incomplete('Incomplete or unknown Ninja graph format')
-    for line in lines:
+    lines = io.StringIO(graph) if isinstance(graph, str) else graph
+    started, finished = False, False
+    for raw in lines:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise Incomplete('Overall time limit exceeded during graph parsing')
+        line = raw.rstrip('\r\n')
+        if not started:
+            if line != 'digraph ninja {':
+                raise Incomplete('Incomplete or unknown Ninja graph format')
+            started = True
+            continue
+        if finished:
+            raise Incomplete('Unexpected data after Ninja graph end')
+        if line == '}':
+            finished = True
+            continue
         if line in headers:
             continue
         match = file_line.fullmatch(line)
@@ -137,6 +183,8 @@ def scoped_leaves(graph, leaves, limits):
             raise Incomplete('Unknown Ninja graph line format')
         if len(files) + len(rules) > limits['node_count']:
             raise Incomplete('Graph node count limit exceeded')
+    if not started or not finished:
+        raise Incomplete('Incomplete or unknown Ninja graph format')
     if not sources.issubset(files.keys() | rules):
         raise Incomplete('Graph contains undefined edge sources')
     # Ninja graph replaces backslashes with '/'; raw targets preserves the
@@ -166,12 +214,18 @@ def audit(ninja, directory, targets, limits=None):
     report = {'schema': 1, 'status': 'error', 'scope': SCOPE, 'exclusions': EXCLUSIONS,
               'targets': list(targets), 'tool': str(ninja), 'bounds': limits,
               'commands': [['-t', 'graph', *targets], ['-t', 'targets', 'rule']],
+              'tool_output_bytes': {'graph': {}, 'leaf_list': {}},
               'counts': {'checked': 0, 'missing': 0}, 'missing': [],
               'missing_complete': False, 'errors': []}
     try:
-        graph = run_tool([ninja, '-t', 'graph', *targets], directory, deadline, limits)
-        leaves = raw_leaves(run_tool([ninja, '-t', 'targets', 'rule'], directory, deadline, limits), limits)
-        selected, counts = scoped_leaves(graph, leaves, limits)
+        with tempfile.TemporaryDirectory(prefix='aacc-input-audit-') as temporary:
+            graph = Path(temporary) / 'graph.dot'
+            run_tool([ninja, '-t', 'graph', *targets], directory, deadline, limits,
+                     output_path=graph, output_stats=report['tool_output_bytes']['graph'])
+            leaves = raw_leaves(run_tool([ninja, '-t', 'targets', 'rule'], directory, deadline, limits,
+                               output_stats=report['tool_output_bytes']['leaf_list']), limits)
+            with graph.open('rb') as stream:
+                selected, counts = scoped_leaves(graph_lines(stream, limits), leaves, limits, deadline)
         report['counts'].update(counts)
         missing_bytes = 0
         truncated = False

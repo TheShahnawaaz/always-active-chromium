@@ -1,5 +1,6 @@
 """Read-only Ninja input audit; fixtures never execute their build commands."""
 import json
+import io
 import os
 from pathlib import Path
 import shutil
@@ -46,8 +47,18 @@ class NinjaAuditTests(unittest.TestCase):
             directory = Path(temporary)
             expected = self.fixture(directory)
             before = {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in directory.iterdir()}
-            report = audit.audit(ninja, directory, ['chrome', 'mini_installer'])
+            # A real graph larger than the in-memory leaf-list cap must spool
+            # successfully without changing its leaf/phony/generated semantics.
+            limits = dict(audit.LIMITS, stdout_bytes=1024, graph_stdout_bytes=1 << 20)
+            with mock.patch.object(audit, 'run_tool', wraps=audit.run_tool) as tools:
+                report = audit.audit(ninja, directory, ['chrome', 'mini_installer'], limits)
+            graph_path = tools.call_args_list[0].kwargs['output_path']
+            self.assertFalse(graph_path.parent.exists())
             self.assertEqual(report['status'], 'missing', report)
+            self.assertGreater(report['tool_output_bytes']['graph']['stdout_bytes_read'], 1024)
+            self.assertEqual(report['tool_output_bytes']['graph']['stdout_bytes_read'],
+                             report['tool_output_bytes']['graph']['stdout_bytes_retained'])
+            self.assertLess(report['tool_output_bytes']['leaf_list']['stdout_bytes_read'], 1024)
             self.assertEqual(report['missing'], expected)
             self.assertTrue(report['missing_complete'])
             self.assertEqual(report['counts']['missing'], len(expected))
@@ -79,6 +90,35 @@ class NinjaAuditTests(unittest.TestCase):
                       'digraph ninja {\n"0x1" [label="file"]\n"0x1" [label="phony", shape=ellipse]\n}']:
             with self.subTest(graph=graph), self.assertRaises(audit.Incomplete):
                 audit.scoped_leaves(graph, {'file'}, audit.LIMITS)
+
+    def test_graph_parser_consumes_bounded_lines_and_honors_deadline(self):
+        graph = b'digraph ninja {\n"0x1" [label="leaf"]\n}\n'
+        selected, _ = audit.scoped_leaves(audit.graph_lines(io.BytesIO(graph), audit.LIMITS),
+                                          {'leaf'}, audit.LIMITS)
+        self.assertEqual(selected, ['leaf'])
+        with self.assertRaisesRegex(audit.Incomplete, 'line byte limit'):
+            list(audit.graph_lines(io.BytesIO(b'x' * 600), dict(audit.LIMITS, path_bytes=1)))
+        with self.assertRaisesRegex(audit.Incomplete, 'time limit'):
+            audit.scoped_leaves(audit.graph_lines(io.BytesIO(graph), audit.LIMITS),
+                                {'leaf'}, audit.LIMITS, time.monotonic() - 1)
+
+    def test_streamed_graph_limit_has_byte_counts_and_failed_audit_cleans_temp(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / 'graph.dot'
+            stats = {}
+            limits = dict(audit.LIMITS, graph_stdout_bytes=1024)
+            with self.assertRaisesRegex(audit.Incomplete, 'byte limit'):
+                audit.run_tool([sys.executable, '-c', 'print("x"*2048)'], root,
+                               time.monotonic() + 2, limits, output_path=output, output_stats=stats)
+            self.assertEqual(output.stat().st_size, 1024)
+            self.assertGreater(stats['stdout_bytes_read'], 1024)
+            self.assertEqual(stats['stdout_bytes_retained'], 1024)
+            with mock.patch.object(audit, 'run_tool', side_effect=audit.Incomplete('bounded fixture')) as tool:
+                report = audit.audit(Path('ninja'), root, ['chrome'])
+            self.assertEqual(report['status'], 'incomplete')
+            graph_path = tool.call_args.kwargs['output_path']
+            self.assertFalse(graph_path.parent.exists())
 
     def test_tool_output_and_time_are_bounded_without_publishing_raw_output(self):
         with tempfile.TemporaryDirectory() as temporary:
