@@ -230,8 +230,9 @@ patch was subsequently compiled and exercised in the real Mac app.** Run
 no-debug control/native 7/7 each, with the correct pinned revision reported.
 The staged package's 16 Mach-O parts pass strict ad-hoc verification while
 compiler outputs remain unchanged. This is Mac core/package evidence only:
-fresh extraction, normal Store compatibility and native UI evidence are separate
-delivery checks. Windows compilation/runtime verification remains pending.
+fresh extraction, all behavior modes and 20 normal Store phases subsequently
+passed in delivery 41533441385, with separate review of actual native UI pixels
+in docs/UI-REVIEW.md. Windows compilation/runtime verification remains pending.
 
 Future Chromium revisions require acquiring only the selected new source files,
 reviewing implementation/API changes, regenerating the patch with

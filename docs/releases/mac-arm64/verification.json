@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "platform": "mac-arm64",
+  "status": "verified-development-package",
+  "package": "always-active-chromium-156.0.8078.80-mac-arm64.zip",
+  "bytes": 252685495,
+  "sha256": "7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8",
+  "version": "156.0.8078.80",
+  "source_tag": "ci-source-e146fe41bca3",
+  "upstream_revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
+  "repository": "https://github.com/TheShahnawaaz/always-active-chromium",
+  "build_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935",
+  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385",
+  "delivery_evidence_tag": "delivery-verification-mac-arm64-41533441385-1",
+  "core_checks": {
+    "baseline": 32,
+    "native": 38,
+    "optional": 55,
+    "no_debug_control": 7,
+    "no_debug_native": 7
+  },
+  "store": {
+    "extension": "uBlock Origin Lite",
+    "version": "2026.1026.1812",
+    "phases_passed": 20,
+    "operations": [
+      "normal installation and native permission approval",
+      "audited source and worker execution",
+      "restart persistence",
+      "ordinary update check",
+      "normal native removal and restarted/persisted absence",
+      "verified owned-process cleanup"
+    ],
+    "update_result": "no_update",
+    "genuine_newer_version_transition_verified": false
+  },
+  "visual_review": {
+    "schema": 1,
+    "platform": "mac-arm64",
+    "reviewed_at": "2026-11-03T03:36:51+05:30",
+    "reviewed_by": "Codex visual inspection of the actual hosted-window PNG",
+    "source_tag": "ci-source-e146fe41bca3",
+    "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385",
+    "image": "mac-arm64-delivery-browser-window.png",
+    "image_sha256": "540fbca5d806231a06c3a759f8b8b60a6fd5b6a5caf89e8da0a12b142c1f6f52",
+    "dimensions": [
+      1000,
+      677
+    ],
+    "visual_review_complete": true,
+    "observations": [
+      "Complete normal browser window and rendered expected fixture page are visible.",
+      "Standard Mac window controls, Chromium tab strip, navigation/address bar, bookmark, profile and menu controls are visible.",
+      "No added always-active toolbar controls, badges or startup banners are visible."
+    ],
+    "limits": [
+      "One light-mode normal-window view; no pixel-equivalence claim against proprietary Google Chrome.",
+      "Other UI views/themes, OS permission dialogs and browser-download quarantine first launch are outside this image.",
+      "Original automated reports retain pending manual-review fields; this is a separate visual review."
+    ],
+    "image_release_tag": "delivery-verification-mac-arm64-41533441385-1"
+  },
+  "signing": {
+    "adhoc_parts_strictly_verified": 16,
+    "developer_id": false,
+    "notarized": false
+  },
+  "limitations": [
+    "Chromium branding/restricted Google services differ from official Chrome.",
+    "No project automatic browser updater; updates are manual.",
+    "Finite extension/behavior/UI coverage; see original evidence."
+  ],
+  "windows_status": "Not delivered yet; existing standard hosted Windows compilation continues."
+}

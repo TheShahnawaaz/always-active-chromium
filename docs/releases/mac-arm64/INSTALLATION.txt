@@ -1,0 +1,51 @@
+Always Active Chromium 156.0.8078.80 — macOS Apple Silicon
+
+Verified development package: Chromium, not official Google Chrome. The native
+always-active behavior is enabled by default, with the ordinary interface and
+extension system. No extension, debugging connection or helper is needed in
+normal use.
+
+VERIFY
+File: always-active-chromium-156.0.8078.80-mac-arm64.zip
+Bytes: 252685495
+SHA-256: 7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8
+
+In Terminal, from the download directory:
+  shasum -a 256 always-active-chromium-156.0.8078.80-mac-arm64.zip
+Compare the entire hash. The matching release SHA256SUMS manifest covers every
+original build package and evidence assets; repository documents are versioned in Git.
+
+INSTALL
+Extract the ZIP with Archive Utility. Move the complete Chromium.app into
+Applications, optionally inside a new Always Active Chromium folder. Do not
+replace Google Chrome or an existing standalone Chromium app/profile. Open the
+app normally. This is arm64 for Apple Silicon, not an Intel Mac package.
+
+The app is ad-hoc signed, without Apple Developer ID or notarization. macOS
+may require ordinary per-app approval for a downloaded app. Browser-download
+quarantine/first-launch approval was not exercised by hosted ZIP extraction.
+Do not disable Gatekeeper or strip quarantine as an installation step.
+No accessibility or recording permission is needed for native always-active use.
+
+Google Chrome's app and profile remain separate. If another standalone Chromium
+is present, choose a separate app folder and a fresh dedicated --user-data-dir.
+For an app inside /Applications/Always Active Chromium, one explicit launch is:
+  open -n "/Applications/Always Active Chromium/Chromium.app" --args --user-data-dir="$HOME/Library/Application Support/Always Active Chromium"
+Never point this browser at Google Chrome's profile directory.
+
+EXTENSIONS AND UPDATES
+Use normal Chrome Web Store Add and permission prompts. Fresh delivered-app
+verification passed all 20 phases for uBlock Origin Lite 2026.1026.1812:
+normal installation, audited source/worker execution, restart persistence,
+ordinary update check, normal removal and cleanup. no_update does not prove a
+future version upgrade. Separate unpacked MV3 fixture checks also passed.
+
+There is no automatic project browser updater. Install a newly built and verified
+package to update. Chromium branding, restricted Google services, account sync
+and DRM differ from official Chrome. Always-active behavior does not prevent
+OS sleep, freezing or tab discard.
+
+The repository docs/releases/mac-arm64/verification.json and visual-review.json
+link exact source/build/delivery evidence. Original delivery reports remain
+unchanged; the separate review records inspection of the actual screenshot.
+Windows is still compiling and is not included in this Mac package.

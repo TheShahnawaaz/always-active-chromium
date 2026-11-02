@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "platform": "mac-arm64",
+  "reviewed_at": "2026-11-03T03:36:51+05:30",
+  "reviewed_by": "Codex visual inspection of the actual hosted-window PNG",
+  "source_tag": "ci-source-e146fe41bca3",
+  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385",
+  "image": "mac-arm64-delivery-browser-window.png",
+  "image_sha256": "540fbca5d806231a06c3a759f8b8b60a6fd5b6a5caf89e8da0a12b142c1f6f52",
+  "dimensions": [
+    1000,
+    677
+  ],
+  "visual_review_complete": true,
+  "observations": [
+    "Complete normal browser window and rendered expected fixture page are visible.",
+    "Standard Mac window controls, Chromium tab strip, navigation/address bar, bookmark, profile and menu controls are visible.",
+    "No added always-active toolbar controls, badges or startup banners are visible."
+  ],
+  "limits": [
+    "One light-mode normal-window view; no pixel-equivalence claim against proprietary Google Chrome.",
+    "Other UI views/themes, OS permission dialogs and browser-download quarantine first launch are outside this image.",
+    "Original automated reports retain pending manual-review fields; this is a separate visual review."
+  ],
+  "image_release_tag": "delivery-verification-mac-arm64-41533441385-1"
+}

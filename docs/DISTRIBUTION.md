@@ -1,9 +1,9 @@
 # Browser identity and distribution
 
-The Mac package has passed automated fresh-extraction, native behavior and normal
-Store verification in run 41529944500. Manual UI review and Windows delivery
-remain pending. This document records distribution requirements and installation
-procedures; exact results belong in PROGRESS.md and the release notes.
+The Mac development package has passed fresh-extraction, native behavior and
+normal Store verification in run 41533441385, followed by visual review of its
+actual normal-window image. Windows delivery remains pending. Exact results and
+limits are in PROGRESS.md, UI-REVIEW.md and the release documentation.
 
 ## Appearance and identity
 
@@ -33,8 +33,9 @@ The pinned source enables desktop extensions on Mac/Windows without a branding
 gate in [buildflags.gni](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/buildflags/buildflags.gni#L43).
 The stable [Store API declaration](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/common/api/_api_features.json#L967)
 allows the real Chrome Web Store origin. Native install approval, CRX signature
-and origin checks remain unchanged. This is source evidence, not a successful
-Store installation on the custom build.
+and origin checks remain unchanged. In addition to this source evidence, actual
+Mac delivery 41533441385 passed all 20 normal uBlock Origin Lite Store phases.
+The corresponding Windows package remains unverified.
 
 Release verification must use a fresh owned profile, minimal launch flags, the
 actual Store Add button, and the actual identified, enabled native permission
@@ -116,12 +117,12 @@ focused standard AX window, window-server PID/title/bounds and unchanged state
 are checked before and after capture. Only the matching fixture window ID is
 passed to the capture tool. A private temporary directory and exclusive final
 PNG creation limit output to the owned test directory. The existing finite PNG,
-hash and native-run/extracted-executable binding checks apply. Hosted compilation
-and invalid-PID refusal passed. Its first real attempt passed the existing
-permission preflights but refused a nonunique AX/window-server match before
-capture; bounded owned-window diagnostics are in progress. There is no Mac image
-or visual-equivalence claim yet. Synthetic schema tests alone are not native UI
-evidence.
+hash and native-run/extracted-executable binding checks apply. Hosted compilation,
+invalid-PID refusal and actual capture passed. A diagnostic established identical
+owned AX/CG geometry with differing full title strings; each fixture title is
+verified independently and remains equal to its own initial value throughout
+capture. The real Mac image was visually inspected as recorded in UI-REVIEW.md.
+Synthetic schema tests alone are not native UI evidence.
 
 For a separately reviewed reference-only capture trial, the existing passive
 controller accepts `AA_WINDOW_CAPTURE_HELPER` and `AA_WINDOW_CAPTURE_MODE=control`
@@ -146,8 +147,8 @@ Actual image quality and completeness require observed pixels and manual review.
 
 ## Installation procedure
 
-These instructions describe the packages. **Mac has passed automated fresh
-delivery/Store checks; manual UI review and Windows verification remain pending.**
+These instructions describe the packages. **Mac has passed fresh delivery/Store
+checks and normal-window visual review; Windows verification remains pending.**
 Use only a package explicitly accompanied
 by passing delivery evidence and its matching SHA-256 manifest. Compiler
 checkpoints and diagnostic drafts are not browser downloads.
