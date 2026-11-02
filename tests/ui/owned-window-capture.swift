@@ -141,7 +141,7 @@ func axRect(_ window: AXUIElement) throws -> CGRect {
     guard [rect.origin.x, rect.origin.y, rect.width, rect.height].allSatisfy({ $0.isFinite }), rect.width >= 320, rect.height >= 240, rect.width <= 2048, rect.height <= 1536 else { throw ProbeError(message: "owned_window_bounds_unsupported") }
     return rect
 }
-struct WindowState: Equatable { let id: CGWindowID; let title: String; let rect: CGRect; let count: Int }
+struct WindowState: Equatable { let id: CGWindowID; let title: String; let serverTitle: String; let rect: CGRect; let count: Int }
 func windowState(_ pid: pid_t) throws -> WindowState {
     try checkBudget()
     guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
@@ -180,13 +180,15 @@ func windowState(_ pid: pid_t) throws -> WindowState {
     let candidates = owned.filter { item in
         guard (item[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
               (item[kCGWindowAlpha as String] as? NSNumber)?.doubleValue == 1,
-              item[kCGWindowName as String] as? String == title,
+              let serverTitle = item[kCGWindowName as String] as? String, serverTitle.utf8.count <= 512,
+              serverTitle.hasPrefix("Native visibility observation"),
               let bounds = item[kCGWindowBounds as String] as? [String: Any],
               let cgRect = CGRect(dictionaryRepresentation: bounds as CFDictionary) else { return false }
         return cgRect == rect
     }
-    guard candidates.count == 1, let number = candidates[0][kCGWindowNumber as String] as? NSNumber, number.uint32Value != 0 else { throw ProbeError(message: "unique_owned_window_id_unavailable") }
-    return WindowState(id: number.uint32Value, title: title, rect: rect, count: owned.count)
+    guard candidates.count == 1, let number = candidates[0][kCGWindowNumber as String] as? NSNumber, number.uint32Value != 0,
+          let serverTitle = candidates[0][kCGWindowName as String] as? String else { throw ProbeError(message: "unique_owned_window_id_unavailable") }
+    return WindowState(id: number.uint32Value, title: title, serverTitle: serverTitle, rect: rect, count: owned.count)
 }
 var temporary: URL?
 do {
