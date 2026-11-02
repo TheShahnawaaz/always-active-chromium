@@ -21,6 +21,25 @@ test('complete finite PNG and owned receipt still require manual visual review',
 test('uncertain capture or an equivalence claim cannot be accepted',()=>{for(const patch of [{captureOutcomeUncertain:true},{captureSucceeded:null},{uiEquivalenceVerified:true},{visualCompletenessVerified:true}]){const {png,receipt,expected}=fixture();assert.throws(()=>validateWindowCapture({...receipt,...patch},png,expected));}});
 test('other PID/profile/start or unowned window cannot be accepted',()=>{for(const patch of [{pid:9},{profile:'C:\\other'},{started:'different'}]){const {png,receipt,expected}=fixture();assert.throws(()=>validateWindowCapture(receipt,png,{...expected,...patch}));}const {png,receipt,expected}=fixture();receipt.window.foregroundVerified=false;assert.throws(()=>validateWindowCapture(receipt,png,expected));});
 test('PNG corruption, truncation, metadata mismatch and missing pixels refuse',()=>{const {png,receipt,expected}=fixture();const corrupted=Buffer.from(png);corrupted[40]^=1;assert.throws(()=>pngMetadata(corrupted));assert.throws(()=>pngMetadata(png.subarray(0,33)));assert.throws(()=>pngMetadata(png.subarray(0,png.length-12)));receipt.png.sha256='0'.repeat(64);assert.throws(()=>validateWindowCapture(receipt,png,expected));});
+function macFixture(){
+  const value=fixture();
+  Object.assign(value.expected,{platform:'darwin',executable:'/owned/Chromium',profile:'/owned/profile-native',started:'Mon Nov 2 21:00:00 2026'});
+  Object.assign(value.receipt,{platform:'darwin',method:'screencapture-owned-window-no-shadow'});
+  Object.assign(value.receipt.identity,value.expected,{startSeconds:1793653200,startMicroseconds:123456});
+  delete value.receipt.window.cloaked;
+  return value;
+}
+test('Mac capture requires its native method and exact case-sensitive owned paths',()=>{
+  const {receipt,png,expected}=macFixture();assert.equal(validateWindowCapture(receipt,png,expected).width,320);
+  for(const patch of [{platform:'win32'},{platform:'linux'},{executable:'/owned/chromium'},{profile:'/Owned/profile-native'}])assert.throws(()=>validateWindowCapture(receipt,png,{...expected,...patch}));
+  receipt.method='PrintWindow-full-window-flags-2';assert.throws(()=>validateWindowCapture(receipt,png,expected));
+});
+test('Mac capture rejects missing kernel start identity and diagnostic context',()=>{
+  for(const patch of [{startSeconds:0},{startSeconds:1.5},{startMicroseconds:-1},{startMicroseconds:1000000},{startMicroseconds:undefined}]){
+    const {receipt,png,expected}=macFixture();Object.assign(receipt.identity,patch);assert.throws(()=>validateWindowCapture(receipt,png,expected));
+  }
+  const {receipt,png,expected}=macFixture();receipt.captureContext='startup-diagnostic';assert.throws(()=>validateWindowCapture(receipt,png,{...expected,captureContext:'startup-diagnostic'}));
+});
 function diagnostic(kind='untitled'){
   const value=fixture();value.receipt.captureContext='startup-diagnostic';value.receipt.behaviorVerified=false;
   Object.assign(value.receipt.window,{titleKind:kind,fixtureTitleVerified:kind==='fixture',titleContextVerified:true,titleUnchangedAfterCapture:true});

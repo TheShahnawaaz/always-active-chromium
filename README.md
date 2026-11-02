@@ -4,9 +4,11 @@ Work in progress: a desktop Chromium build with native always-visible/focused
 behavior for macOS Apple Silicon and Windows x64, while retaining Chromium's
 standard interface and extension support.
 
-**No release has passed all delivery checks yet.** A real Mac app has been built,
-packaged and exercised; source-revision metadata and fullscreen test assumptions
-need correction before a fresh verification run. Windows compilation continues.
+**No release has passed all delivery checks yet.** The real Mac app now passes
+all core behavior modes after the revision-metadata/fullscreen corrections:
+baseline 32/32, native 38/38, optional 55/55, and paired no-debug 7/7 per mode.
+Fresh extracted-package and normal Store verification is running separately.
+Windows compilation continues.
 The implementation goal is active.
 The repository contains the native patch and its exact-source applicator,
 a resumable GitHub-hosted build workflow and behavior tests. Build and runtime results are tracked in

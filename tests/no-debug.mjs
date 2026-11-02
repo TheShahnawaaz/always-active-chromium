@@ -228,7 +228,7 @@ async function runMode(mode) {
     const origin=`http://127.0.0.1:${server.address().port}`;
     const urls=['alpha','beta'].map(pageName=>`${origin}/page/${pageName}?run=${token}`);
     const captureThisRun=Boolean(captureHelper)&&mode===captureMode;
-    const args=[`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check',...(mode==='control'?['--disable-features=AlwaysActive']:[]),...(captureThisRun?['--window-size=1280,900']:[]),...urls];
+    const args=[`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check',...(mode==='control'?['--disable-features=AlwaysActive']:[]),...(captureThisRun?[process.platform==='darwin'?'--window-size=1000,700':'--window-size=1280,900']:[]),...urls];
     run.command={executable:options.browser,args};
     const log=await open(path.join(options.output,`${mode}-browser.log`),'wx',0o600);
     let spawnError;

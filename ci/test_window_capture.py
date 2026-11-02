@@ -58,7 +58,68 @@ class CaptureEvidenceTests(unittest.TestCase):
             expected_pid=kwargs.get('expected_pid', 1234),
             expected_started=kwargs.get('expected_started', self.receipt['identity']['started']),
             expected_profile=kwargs.get('expected_profile', self.receipt['identity']['profile']),
-            allow_startup_diagnostic=kwargs.get('allow_startup_diagnostic', False))
+            allow_startup_diagnostic=kwargs.get('allow_startup_diagnostic', False),
+            expected_platform=kwargs.get('expected_platform', 'win32'))
+
+    def mac_fixture(self):
+        receipt = copy.deepcopy(self.receipt)
+        receipt.update(platform='darwin', method='screencapture-owned-window-no-shadow')
+        receipt['identity'].update(executable='/owned/Chromium', profile='/owned/profile-native',
+            started='Mon Nov 2 21:00:00 2026', startSeconds=1793653200, startMicroseconds=123456)
+        receipt['window'].pop('cloaked')
+        return receipt
+
+    def test_mac_method_kernel_creation_and_case_sensitive_bindings(self):
+        receipt = self.mac_fixture()
+        expected = dict(expected_platform='darwin', expected_executable='/owned/Chromium',
+            expected_profile='/owned/profile-native', expected_started=receipt['identity']['started'])
+        result = self.validate(receipt, **expected)
+        self.assertEqual(result['method'], 'screencapture-owned-window-no-shadow')
+        self.assertEqual(result['identity']['startMicroseconds'], 123456)
+        for patch in [{'expected_platform': 'win32'}, {'expected_platform': 'linux'},
+                      {'expected_executable': '/owned/chromium'}, {'expected_profile': '/Owned/profile-native'}]:
+            with self.assertRaises(ValueError):
+                self.validate(receipt, **dict(expected, **patch))
+        for key, value in [('startSeconds', 0), ('startSeconds', True), ('startMicroseconds', -1),
+                           ('startMicroseconds', 1000000), ('started', 'unknown')]:
+            bad = copy.deepcopy(receipt)
+            bad['identity'][key] = value
+            with self.assertRaises(ValueError):
+                self.validate(bad, **expected)
+        bad = copy.deepcopy(receipt)
+        bad.update(captureContext='startup-diagnostic', behaviorVerified=False)
+        with self.assertRaises(ValueError):
+            self.validate(bad, **expected, allow_startup_diagnostic=True)
+
+    def test_mac_image_publication_binds_the_acquired_executable_and_native_run(self):
+        receipt = self.mac_fixture()
+        project = self.root / 'mac-project'
+        output = project / 'reports/delivery-behavior/no-debug'
+        output.mkdir(parents=True)
+        (output / 'browser-window.png').write_bytes(self.data)
+        (output / 'browser-window-capture.json').write_text(json.dumps(receipt))
+        run = {'mode': 'native', 'ownedPid': 1234, 'processIdentity': {'owned': True, 'started': receipt['identity']['started']},
+            'command': {'executable': receipt['identity']['executable'], 'args': ['--user-data-dir=' + receipt['identity']['profile']]},
+            'appearance': {'status': 'captured', 'receipt': receipt}}
+        (project / 'reports/delivery-behavior/results.json').write_text(json.dumps({'schema': 1, 'status': 'failed',
+            'variants': {'no-debug': {'results': {'runs': [run]}}}}))
+        acquisition = project / '.runtime/delivery'
+        acquisition.mkdir(parents=True)
+        (acquisition / 'delivery-provenance.json').write_text(json.dumps({'schema': 1, 'stage': 'real-package-delivery',
+            'status': 'delivered', 'platform': 'mac-arm64', 'source_tag': 'ci-source-' + 'a'*12, 'browser': receipt['identity']['executable']}))
+        environment = {'AA_PLATFORM': 'mac-arm64', 'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_RUN_ID': '123',
+            'GITHUB_SHA': 'b'*40, 'AA_PACKAGE_SOURCE_TAG': 'ci-source-' + 'a'*12}
+        _, _, files = self.module.collect(project, environment)
+        status = json.loads((project / 'packages/delivery-verification/mac-arm64-delivery-status.json').read_text())
+        self.assertFalse(status['custom_native_browser_verified'])
+        self.assertEqual(status['appearance']['status'], 'captured')
+        self.assertEqual(status['appearance']['manualReview'], 'pending')
+        self.assertEqual(len([file for file in files if file.suffix == '.png']), 1)
+        run['command']['executable'] = '/owned/chromium'
+        (project / 'reports/delivery-behavior/results.json').write_text(json.dumps({'schema': 1,
+            'variants': {'no-debug': {'results': {'runs': [run]}}}}))
+        _, _, files = self.module.collect(project, environment)
+        self.assertFalse(any(file.suffix == '.png' for file in files))
 
     def test_failed_startup_image_requires_explicit_context_and_cannot_be_behavior_proof(self):
         receipt = copy.deepcopy(self.receipt)

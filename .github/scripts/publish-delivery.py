@@ -11,16 +11,23 @@ import zlib
 
 def validate_appearance_capture(receipt, png, expected_executable=None, expected_pid=None,
                                 expected_started=None, expected_profile=None,
-                                allow_startup_diagnostic=False):
+                                allow_startup_diagnostic=False, expected_platform='win32'):
     """Validate finite owned-window capture evidence, never visual equivalence."""
+    method = {'win32': 'PrintWindow-full-window-flags-2',
+              'darwin': 'screencapture-owned-window-no-shadow'}.get(expected_platform)
+    target = 'mac-arm64' if expected_platform == 'darwin' else 'win-x64'
     if (not isinstance(receipt, dict) or receipt.get('schema') != 1 or receipt.get('purpose') != 'owned-normal-browser-window-capture' or
-            receipt.get('platform') != 'win32' or receipt.get('status') != 'captured' or receipt.get('method') != 'PrintWindow-full-window-flags-2' or
+            method is None or receipt.get('platform') != expected_platform or receipt.get('status') != 'captured' or receipt.get('method') != method or
             receipt.get('captureAttempted') is not True or receipt.get('captureSucceeded') is not True or receipt.get('captureOutcomeUncertain') is not False or
             receipt.get('manualReview') != 'pending' or receipt.get('uiEquivalenceVerified') is not False or receipt.get('visualCompletenessVerified') is not False or
             receipt.get('nativeUiAccessed') is not True or receipt.get('errors') != []):
         raise ValueError('Unverified appearance receipt')
     identity, window, image = receipt.get('identity', {}), receipt.get('window', {}), receipt.get('png', {})
     context = receipt.get('captureContext', 'fixture')
+    if expected_platform == 'darwin' and (context != 'fixture' or not isinstance(identity, dict) or
+            type(identity.get('startSeconds')) is not int or identity['startSeconds'] <= 0 or
+            type(identity.get('startMicroseconds')) is not int or not 0 <= identity['startMicroseconds'] <= 999999):
+        raise ValueError('Mac capture creation identity/context missing')
     if context not in ['fixture', 'startup-diagnostic'] or (context == 'startup-diagnostic' and
             (allow_startup_diagnostic is not True or receipt.get('behaviorVerified') is not False)):
         raise ValueError('Capture context is not authorized')
@@ -34,18 +41,20 @@ def validate_appearance_capture(receipt, png, expected_executable=None, expected
          context == 'startup-diagnostic' and title_kind == 'untitled' and window.get('fixtureTitleVerified') is False))
     if (not isinstance(identity, dict) or not all(identity.get(key) is True for key in ['verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified']) or
             type(identity.get('pid')) is not int or identity['pid'] <= 1 or
-            not isinstance(identity.get('started'), str) or not re.fullmatch(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{7}Z', identity['started']) or
+            not isinstance(identity.get('started'), str) or not re.fullmatch(
+                r'(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d\d:\d\d:\d\d \d{4}'
+                if expected_platform == 'darwin' else r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{7}Z', identity['started']) or
             any(not isinstance(identity.get(key), str) or not 1 <= len(identity[key]) <= 4096 or '\n' in identity[key] for key in ['profile', 'executable'])):
         raise ValueError('Unverified capture process identity')
     for observed, expected in [(identity['executable'], expected_executable), (identity['profile'], expected_profile)]:
-        if expected is not None and not same_executable(observed, expected, 'win-x64'):
+        if expected is not None and not same_executable(observed, expected, target):
             raise ValueError('Capture executable/profile mismatch')
     if expected_pid is not None and identity['pid'] != expected_pid or expected_started is not None and identity['started'] != expected_started:
         raise ValueError('Capture PID/start mismatch')
     if (not isinstance(window, dict) or window.get('ownerPID') != identity['pid'] or
             not isinstance(window.get('handle'), str) or not re.fullmatch(r'[0-9a-f]{1,16}', window['handle']) or int(window['handle'], 16) == 0 or
             not all(window.get(key) is True for key in ['foregroundVerified', 'visible', 'normalTopLevelVerified', 'unchangedAfterCapture']) or not title_verified or
-            window.get('minimized') is not False or window.get('cloaked') is not False or type(window.get('dpi')) is not int or not 48 <= window['dpi'] <= 768 or
+            window.get('minimized') is not False or expected_platform == 'win32' and window.get('cloaked') is not False or type(window.get('dpi')) is not int or not 48 <= window['dpi'] <= 768 or
             type(receipt.get('visitedWindows')) is not int or not 1 <= receipt['visitedWindows'] <= 8):
         raise ValueError('Unverified capture window')
     content = receipt.get('contentCheck', {})
@@ -102,7 +111,7 @@ def validate_appearance_capture(receipt, png, expected_executable=None, expected
     return {'status': 'captured', 'method': receipt['method'], 'manualReview': 'pending',
         'uiEquivalenceVerified': False, 'visualCompletenessVerified': False,
         'captureContext': context, 'behaviorVerified': False,
-        'identity': {key: identity[key] for key in ['pid', 'executable', 'profile', 'started', 'verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified']},
+        'identity': {key: identity[key] for key in ['pid', 'executable', 'profile', 'started', 'verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified'] + (['startSeconds', 'startMicroseconds'] if expected_platform == 'darwin' else [])},
         'window': {**{key: window[key] for key in ['handle', 'ownerPID', 'width', 'height', 'dpi']}, 'titleKind': title_kind},
         'png': {'width': width, 'height': height, 'bytes': len(data), 'sha256': digest}}
 
@@ -293,9 +302,9 @@ def collect(project, env):
         copied = destination / f'{target}-delivery-{kind}.json'
         copied.write_bytes(payload)
         selected.append(copied)
-    appearance = {'status': 'not-requested' if target == 'mac-arm64' else 'not-captured', 'manualReview': 'pending',
+    appearance = {'status': 'not-captured', 'manualReview': 'pending',
                   'uiEquivalenceVerified': False, 'visualCompletenessVerified': False}
-    if target == 'win-x64':
+    if target in ('mac-arm64', 'win-x64'):
         receipt_file = project / 'reports/delivery-behavior/no-debug/browser-window-capture.json'
         png_file = receipt_file.with_name('browser-window.png')
         try:
@@ -311,10 +320,11 @@ def collect(project, env):
                 raise ValueError('Appearance receipt not bound to native no-debug run')
             run = native[0]
             profiles = [item[len('--user-data-dir='):] for item in run.get('command', {}).get('args', []) if item.startswith('--user-data-dir=')]
-            if len(profiles) != 1 or run.get('processIdentity', {}).get('owned') is not True or not same_executable(run.get('command', {}).get('executable'), provenance['browser'], 'win-x64'):
+            if len(profiles) != 1 or run.get('processIdentity', {}).get('owned') is not True or not same_executable(run.get('command', {}).get('executable'), provenance['browser'], target):
                 raise ValueError('Appearance run identity missing')
             appearance = validate_appearance_capture(receipt, png_file, expected_executable=reports.get('provenance', {}).get('browser'),
-                expected_pid=run.get('ownedPid'), expected_started=run['processIdentity'].get('started'), expected_profile=profiles[0])
+                expected_pid=run.get('ownedPid'), expected_started=run['processIdentity'].get('started'), expected_profile=profiles[0],
+                expected_platform='darwin' if target == 'mac-arm64' else 'win32')
             for original, suffix in [(receipt_file, 'window-capture.json'), (png_file, 'browser-window.png')]:
                 copied = destination / f'{target}-delivery-{suffix}'
                 copied.write_bytes(original.read_bytes())

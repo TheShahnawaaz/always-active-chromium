@@ -2,6 +2,22 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+Mac **41524595935** now passes compile, strict 16-part ad-hoc package sealing,
+and core checks: baseline **32/32**, native **38/38**, optional **55/55**, paired
+no-debug **7/7 each**. Its e146 ZIP is **252,685,495 bytes**, SHA-256
+`7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8`.
+All six build assets and five checksum entries were independently verified.
+The checkpoint save continues and is preserved.
+
+Fresh-delivery [41529944500](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41529944500)
+passed real extraction/signature/architecture/identity checks, all behavior
+modes, and **20/20 normal Store phases** on the extracted custom app. Its five
+delivery assets, all server digests/sizes and all four manifest entries were
+independently checked. Package source remains `ci-source-e146fe41bca3`;
+controller is `0728fb141cee`. Manual UI appearance review is still pending.
+A guarded Mac owned-window capture is being added to the existing verifier.
+Windows **41503529408** is still compiling; no healthy build was interrupted.
+
 The continuation is running in the published cloud project environment.
 Actual API checks at 02:46 IST (21:16 UTC November 2) show Mac
 [41524595935](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935)

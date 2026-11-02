@@ -63,6 +63,9 @@ jobs:
           mkdir -p .runtime
           xcrun swiftc -O tests/ui/store-ui.swift -o .runtime/store-ui
           xcrun swiftc -O tests/ui/store-action.swift -o .runtime/store-action
+          xcrun swiftc -O tests/ui/owned-window-capture.swift -o .runtime/owned-window-capture
+          .runtime/owned-window-capture --pid 1 --profile /nonexistent-owned-test-profile --executable /nonexistent-test-browser --expected-started invalid-pid-guard --output /nonexistent/browser-window.png --context fixture --purpose appearance > .runtime/delivery-capture-guard.json
+          python -c 'import json; from pathlib import Path; x=json.loads(Path(".runtime/delivery-capture-guard.json").read_text()); assert x["status"]=="refused" and x["captureAttempted"] is False and x["captureSucceeded"] is False and x["nativeUiAccessed"] is False and x["visitedWindows"]==0'
           .runtime/store-action --pid 1 --profile /nonexistent-owned-test-profile --executable /nonexistent-test-browser --expected-started invalid-pid-guard --expected-start-seconds 1 --expected-start-microseconds 0 --target ubol --operation accept-install > .runtime/delivery-action-guard.json
           python -c 'import json; from pathlib import Path; x=json.loads(Path(".runtime/delivery-action-guard.json").read_text()); assert x["status"]=="refused" and x["actionAttempted"] is False and x["actionPerformed"] is False and x["nativeUiAccessed"] is False and x["visitedNodes"]==0'
           echo "AA_STORE_UI_HELPER=$GITHUB_WORKSPACE/.runtime/store-ui" >> "$GITHUB_ENV"
@@ -98,7 +101,7 @@ jobs:
         shell: bash
         env:
           AA_BROWSER: ${{ steps.acquire.outputs.browser }}
-          AA_WINDOW_CAPTURE_HELPER: ${{ inputs.platform == 'win-x64' && format('{0}/tests/ui/owned-window-capture.ps1', github.workspace) || '' }}
+          AA_WINDOW_CAPTURE_HELPER: ${{ inputs.platform == 'win-x64' && format('{0}/tests/ui/owned-window-capture.ps1', github.workspace) || format('{0}/.runtime/owned-window-capture', github.workspace) }}
           AA_WINDOW_CAPTURE_MODE: native
         run: python ci/verify.py --browser "$AA_BROWSER" --output reports/delivery-behavior
       - name: Verify normal Store compatibility on the delivered browser

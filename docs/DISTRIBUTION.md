@@ -1,8 +1,9 @@
 # Browser identity and distribution
 
-No installable native browser package has been verified yet. This document
-records the distribution requirements; completed results belong in PROGRESS.md
-and the eventual release notes.
+The Mac package has passed automated fresh-extraction, native behavior and normal
+Store verification in run 41529944500. Manual UI review and Windows delivery
+remain pending. This document records distribution requirements and installation
+procedures; exact results belong in PROGRESS.md and the release notes.
 
 ## Appearance and identity
 
@@ -106,6 +107,19 @@ remain separate from runtime/Store outcomes. A retained image is **pending manua
 visual review**; API success and nonuniform pixels do not establish complete
 rendering or UI equivalence. No Mac recording permission is requested.
 
+The Mac verifier now optionally captures its task-owned foreground fixture
+window through the system `screencapture -l` window-only route, with no shadow.
+It first checks existing screen-capture and accessibility permission; unavailable
+permission produces an unsupported receipt without a prompt. Kernel executable,
+argv/profile, owner, process-group/session and microsecond start identity,
+focused standard AX window, window-server PID/title/bounds and unchanged state
+are checked before and after capture. Only the matching fixture window ID is
+passed to the capture tool. A private temporary directory and exclusive final
+PNG creation limit output to the owned test directory. The existing finite PNG,
+hash and native-run/extracted-executable binding checks apply. The first hosted
+compile/capture of this helper remains pending; synthetic schema tests alone
+are not native UI evidence.
+
 For a separately reviewed reference-only capture trial, the existing passive
 controller accepts `AA_WINDOW_CAPTURE_HELPER` and `AA_WINDOW_CAPTURE_MODE=control`
 with `--mode control`. That produces reference capture mechanics evidence only;
@@ -129,8 +143,9 @@ Actual image quality and completeness require observed pixels and manual review.
 
 ## Installation procedure
 
-These instructions describe the intended packages. **Neither platform has yet
-passed fresh-delivery verification.** Use only a package explicitly accompanied
+These instructions describe the packages. **Mac has passed automated fresh
+delivery/Store checks; manual UI review and Windows verification remain pending.**
+Use only a package explicitly accompanied
 by passing delivery evidence and its matching SHA-256 manifest. Compiler
 checkpoints and diagnostic drafts are not browser downloads.
 

@@ -49,6 +49,33 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+Latest Mac progress: **run 41524595935** at `ci-source-e146fe41bca3` compiled
+successfully, sealed all 16 Mach-O parts with compiler outputs unchanged, and
+passed core baseline **32/32**, native **38/38**, optional **55/55**, paired
+no-debug control/native **7/7 each**. The correct pinned upstream revision is
+reported. Its complete draft is **431995111**, tag
+`build-156.0.8078.80-mac-arm64-c9ac6366f39a-e146fe41bca3`.
+ZIP asset **703257988** is **252,685,495 bytes**, SHA-256
+`7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8`.
+All six downloaded assets match server sizes/digests and all five manifest
+entries. The new compiler checkpoint save is still running; do not interrupt it
+or select its draft before a complete ready marker appears.
+
+Fresh actual-package delivery **41529944500** also passed, controller
+`0728fb141cee`, source still e146. Draft **431998425**, tag
+`delivery-verification-mac-arm64-41529944500-1`, contains all five independently
+hash-verified delivery assets. The extracted arm64 `org.chromium.Chromium` app
+passes strict signature verification and all four behavior modes. All **20/20**
+normal uBlock Origin Lite Store phases pass, including source audit, worker
+execution, restarts, ordinary update check, native UI removal and cleanup.
+The executable SHA-256 is
+`593391740bc2ebfc205148734c1f2b7be66a3fc1ef50987665003bb7afd8424b`.
+The updater's `no_update` does not establish a genuine newer-version transition.
+**Manual UI appearance review remains pending**; the first delivery run did not
+request a Mac image. The continuation adds a guarded, permission-preflighted
+Mac window capture to the existing verifier for that remaining evidence.
+Windows 41503529408 remains in its existing compilation; preserve it.
+
 Chromium is pinned to `156.0.8078.80`, upstream
 `fb096c0011f9d50f0a264a9376420cdea9c421e3`. The native16 patch has not changed.
 Native fingerprints remain:
@@ -117,9 +144,9 @@ avoid racing an existing automatic continuation with a second queued job.
    tag and both `build.final_release_tag(platform, HEAD)` tags. Never retarget
    an existing tag. Push commits/tags before dispatch. Keep `migrate_native=false`
    for exact native16 caches, `bootstrap_only=false`, `auto_resume=true`.
-3. New Mac build should restore the newest complete cache, run prepare/GN,
-   incrementally rebuild metadata consumers, repackage and rerun core tests.
-   Do not cold-build or change compiler/native pins to repair metadata.
+3. Mac metadata rebuild and fresh-delivery/Store verification have passed.
+   Finish its native UI evidence using the same real e146 ZIP; no additional
+   browser compile is needed. Do not cold-build or change compiler/native pins.
 4. Finish Windows through standard hosted stages. Read real failure diagnostics
    and preserve completed checkpoints; no blind repeated reference trials.
 5. For each real package with passing core tests, dispatch

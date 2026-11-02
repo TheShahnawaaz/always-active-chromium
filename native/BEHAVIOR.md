@@ -136,7 +136,11 @@ before the fullscreen-exit visual-properties update. Their associated renderer
 receivers use the same AgentGroupScheduler default task runner. No renderer
 acknowledgement, new IPC, timer heuristic, permission change, or delay to the
 ordinary OS fullscreen-exit path is introduced. This is intended to protect
-normal tab-switch snapshots; **a built custom browser has not yet verified it**.
+normal tab-switch snapshots. The real Mac core run
+[41524595935](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935)
+now passes natural snapshot retention, event suppression, actual CSS/OS exit,
+foreground clearing, saved input focus/selection and queued rapid reactivation.
+Fresh-delivery checks and Windows runtime verification remain separate.
 
 This ordering change requires both the master and fullscreen features, a live
 active non-error primary web document, and the old tab to own tab-exclusive
@@ -165,8 +169,10 @@ force captured content to stop painting. The upstream fullscreen-within-tab
 capture mode is outside the exclusive-tab ordering guard. Headful Mac/Windows
 checks must verify natural snapshot retention, real OS/CSS fullscreen exit,
 foreground reset, event filtering, input-focus restoration, split panes,
-drag/close behavior, rapid reactivation, and cross-process frames before the
-optional behavior can be considered verified.
+drag/close behavior, rapid reactivation, and cross-process frames. The Mac core
+run covers natural tab switches, rapid reactivation and ordinary frame behavior;
+split-pane/drag/close and fullscreen cross-process-frame scenarios remain outside
+that finite result, and Windows runtime verification remains pending.
 
 The optional background reload mode cancels a Navigation API `reload` event
 only for an eligible actually hidden main-frame document, when the navigation
@@ -219,10 +225,13 @@ independent BSD `patch --dry-run`, digest/context validation, exact application,
 idempotence, verify-applied, reverse dry-run, exact reverse round trip,
 partial-application recovery, foreign-edit rejection without partial writes,
 and wrong-version rejection. These establish patch mechanics only. **The C++
-patch has not yet been compiled or run in a custom browser.** Build success,
-native feature behavior, visual comparison, native Mac/Windows launch/signing,
-and normal extension/Web Store compatibility require the GitHub-hosted builds
-and native runtime tests; do not infer them from these static checks.
+patch was subsequently compiled and exercised in the real Mac app.** Run
+41524595935 passes baseline 32/32, native 38/38, optional 55/55 and paired
+no-debug control/native 7/7 each, with the correct pinned revision reported.
+The staged package's 16 Mach-O parts pass strict ad-hoc verification while
+compiler outputs remain unchanged. This is Mac core/package evidence only:
+fresh extraction, normal Store compatibility and native UI evidence are separate
+delivery checks. Windows compilation/runtime verification remains pending.
 
 Future Chromium revisions require acquiring only the selected new source files,
 reviewing implementation/API changes, regenerating the patch with
