@@ -27,6 +27,12 @@ text. `identity.started` returns the supplied normalized launch identity for
 report matching, while the precise native fields must also match. Windows uses
 the exact seven-fraction-digit CIM creation string.
 
+Mac actions additionally require finite positive current native AXPosition and
+AXSize bounds for both buttons inside the active, nonhidden, nonminimized owning
+window. They must also fit inside the native sheet when its bounds are exposed.
+Missing mandatory or partially exposed bounds refuse the action; no coordinate
+input fallback is used.
+
 Before acting, prove the exact PID/executable/profile, process owner/session,
 and creation identity. Reacquire the entire target-specific native dialog after
 that identity check, including permission text or checkbox state, immediately

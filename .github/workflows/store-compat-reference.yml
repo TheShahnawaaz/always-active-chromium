@@ -1,0 +1,105 @@
+name: Verify normal Store installation on reference browsers
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Standard GitHub-hosted reference target
+        type: choice
+        options: [both, mac-arm64, win-x64]
+        default: both
+
+permissions:
+  contents: read
+
+jobs:
+  store:
+    name: Normal Store reference on ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["mac-arm64","win-x64"]' || format('["{0}"]', inputs.platform)) }}
+    runs-on: ${{ matrix.platform == 'mac-arm64' && 'macos-26' || 'windows-2025-vs2026' }}
+    timeout-minutes: 20
+    concurrency:
+      group: store-compat-reference-${{ matrix.platform }}
+      cancel-in-progress: false
+    permissions:
+      contents: write # Bounded JSON evidence only, in a clearly labeled reference draft.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AA_REFERENCE_ROOT: .runtime/store-compat-reference
+      AA_PLATFORM: ${{ matrix.platform }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Check bounded evidence policy before any browser or permission action
+        run: node --test tests/test-store-compat.mjs
+      - name: Compile separate Mac observers and native action helper
+        if: matrix.platform == 'mac-arm64'
+        shell: bash
+        run: |
+          mkdir -p .runtime
+          xcrun swiftc -O tests/ui/store-ui.swift -o .runtime/store-ui
+          xcrun swiftc -O tests/ui/store-action.swift -o .runtime/store-action
+          .runtime/store-action --pid 1 --profile /nonexistent-owned-test-profile --executable /nonexistent-test-browser --expected-started invalid-pid-guard --expected-start-seconds 1 --expected-start-microseconds 0 --target ubol --operation accept-install > .runtime/store-action-guard.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          guard = json.loads(Path('.runtime/store-action-guard.json').read_text())
+          assert guard['schema'] == 1 and guard['status'] == 'refused'
+          assert guard['actionAttempted'] is False and guard['actionPerformed'] is False
+          assert guard['nativeUiAccessed'] is False and guard['visitedNodes'] == 0
+          PY
+          echo "AA_STORE_UI_HELPER=$GITHUB_WORKSPACE/.runtime/store-ui" >> "$GITHUB_ENV"
+          echo "AA_STORE_ACTION_HELPER=$GITHUB_WORKSPACE/.runtime/store-action" >> "$GITHUB_ENV"
+      - name: Validate Windows helper parsing and select its exact paths
+        if: matrix.platform == 'win-x64'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $helper = Join-Path $env:GITHUB_WORKSPACE 'tests/ui/store-action.ps1'
+          $tokens = $null
+          $parseErrors = $null
+          [void][Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -ne 0) { throw 'Native action helper has parse errors' }
+          $raw = & powershell.exe -NoProfile -NonInteractive -File $helper -PidValue 0 -Target ubol -Operation accept-install
+          if ($LASTEXITCODE -ne 0) { throw 'Native action guard failed' }
+          $guard = $raw | ConvertFrom-Json
+          if ($guard.status -cne 'refused' -or $guard.actionAttempted -ne $false -or
+              $guard.actionPerformed -ne $false -or $guard.visitedNodes -ne 0) {
+            throw 'Native action guard did not refuse before UI access'
+          }
+          Add-Content -Path $env:GITHUB_ENV -Value "AA_STORE_UI_HELPER=$env:GITHUB_WORKSPACE/tests/ui/store-ui.ps1"
+          Add-Content -Path $env:GITHUB_ENV -Value "AA_STORE_ACTION_HELPER=$helper"
+      - name: Acquire the pinned official reference browser
+        id: acquire
+        shell: bash
+        run: python tests/acquire-reference.py --platform "${{ matrix.platform == 'mac-arm64' && 'mac-arm64' || 'win64' }}" --output "$AA_REFERENCE_ROOT"
+      - name: Verify normal uBOL installation, execution, restart, update check and removal
+        id: inspect
+        continue-on-error: true
+        timeout-minutes: 14
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+        run: node tests/store-compat.mjs --browser "$AA_BROWSER" --output reports/store-compat
+      - name: Retain bounded reference results only
+        if: ${{ always() && steps.acquire.outcome == 'success' }}
+        env:
+          AA_STORE_OUTCOME: ${{ steps.inspect.outcome }}
+        run: python .github/scripts/publish-store-compat-reference.py
+      - name: Report incomplete reference verification
+        if: ${{ always() && steps.inspect.outcome != 'success' }}
+        shell: bash
+        run: |
+          echo 'Normal Store reference verification failed; inspect the bounded phase results.' >&2
+          exit 1
