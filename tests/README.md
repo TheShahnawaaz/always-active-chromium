@@ -210,11 +210,18 @@ move/press/release input to that button. It never calls `element.click` or an
 installation API. The native helper runs in read-only `dialog` mode afterward;
 there is **no acceptance action**.
 
-The captured prompt must have verified same-PID native-window ancestry, the
-exact target extension name, Add extension/Cancel button roles and labels, and
-substantive permission text. Actual role/subrole/title/value fields are retained
-as finite observations; helper exit zero or a generic browser window alone does
-not establish prompt identity. The controller then closes the owned browser
+The captured prompt must belong to a verified same-PID native window and contain
+the exact target extension name, enabled Add extension/Cancel button roles and
+labels, and substantive permission text. Focused ancestry and a macOS owned
+visible window/sheet subtree are recorded as distinct proof kinds; the latter
+must establish its owning window and known visible/non-minimized state without
+claiming a focused-element ancestor chain. Only records carrying the relevant
+ownership proof contribute prompt text or buttons. Actual role/subrole/title/value
+fields are retained as finite observations; helper exit zero or a generic
+browser window alone does not establish prompt identity. Four probes are
+scheduled around 0.5, 10, 20, and 30 seconds after Add, within a 45-second total
+dialog budget and a 15-second maximum per probe, so fast empty observations do
+not exhaust the attempt count immediately. The controller then closes the owned browser
 normally, cancelling the unaccepted prompt. Read-only target-registry queries
 are attempted, and persisted extension preferences must contain no target entry
 after closure. Forced fallback cleanup is recorded and cannot pass the normal

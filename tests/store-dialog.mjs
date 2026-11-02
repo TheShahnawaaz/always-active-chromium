@@ -22,7 +22,7 @@ process.once('SIGINT',()=>{interrupted='SIGINT';abort.abort();});
 process.once('SIGTERM',()=>{interrupted='SIGTERM';abort.abort();});
 const report={schema:1,stage:'normal-store-dialog-inspection-NO-INSTALL-ACCEPTANCE',started:new Date().toISOString(),platform:process.platform,architecture:process.arch,target,
   tests:[],observations:{},inputEvents:[],installation:{addClickAttempted:false,addClicked:false,accepted:false,acceptInteractionPerformed:false,successfulInstallVerified:false,targetInstalledObserved:null},
-  limits:{actionBudgetMs:180000,cleanupBudgetMs:18000,listingMs:60000,scrollAttemptMs:7000,maxScrollAttempts:1,dialogMs:45000,nativeUiProbeMs:15000,maxDialogProbes:4,maxNativeUiBytes:65536,maxProfilePreferenceBytes:8388608,maxCandidateRecords:8,maxTextLength:240},
+  limits:{actionBudgetMs:180000,cleanupBudgetMs:18000,listingMs:60000,scrollAttemptMs:7000,maxScrollAttempts:1,dialogMs:45000,nativeUiProbeMs:15000,maxDialogProbes:4,dialogProbeScheduledOffsetsMs:[500,10000,20000,30000],maxNativeUiBytes:65536,maxProfilePreferenceBytes:8388608,maxCandidateRecords:8,maxTextLength:240},
   limitations:[
     'This is an inspection of the real permission UI, not a completed extension install/restart/update/removal gate.',
     'Only CDP Input mouse events may click the actual enabled Store Add button; no element.click, private install API, auto-confirm, security bypass, extension load, or emulation is used.',
@@ -64,13 +64,32 @@ async function queryTargetInstalled(until) {
 
 function inspectPrompt(probe) {
   const inspection=probe.dialogInspection;
-  const windowVerified=probe.identity?.verified===true&&inspection?.window?.windowRoleVerified===true&&
+  const isNativeWindow=record=>['AXWindow','ControlType.Window'].includes(String(record?.role??''));
+  const windowVerified=probe.identity?.verified===true&&probe.identity.pid===report.ownedPid&&
+    isNativeWindow(inspection?.window)&&inspection.window.windowRoleVerified===true&&
     (process.platform!=='win32'||inspection.window.nativeWindowOwnershipVerified===true);
+  const focusedChainFieldsVerified=inspection?.focused?.windowOwnershipVerified===true&&
+    inspection.window?.windowOwnershipVerified===true&&
+    ((isNativeWindow(inspection.focused)&&(inspection.ancestors??[]).length===0)||
+      (inspection.ancestors??[]).some(record=>isNativeWindow(record)&&record.windowOwnershipVerified===true));
+  // The unchanged Windows helper predates proofKind, but supplies the full
+  // focused-chain proof. Never infer a window-only proof from observed status.
+  const legacyFocusedKind=inspection?.proofKind==null&&focusedChainFieldsVerified;
+  const proofKind=inspection?.proofKind??(legacyFocusedKind?'focused-ancestry':null);
+  const focusedAncestryVerified=windowVerified&&proofKind==='focused-ancestry'&&focusedChainFieldsVerified;
+  const ownedVisibleWindowSubtreeVerified=windowVerified&&process.platform==='darwin'&&proofKind==='owned-visible-window'&&
+    probe.accessibility?.applicationHidden===false&&inspection.window.minimized===false&&inspection.window.ownWindowSubtreeVerified===true;
+  const ownsRecord=record=>proofKind==='focused-ancestry'?record?.windowOwnershipVerified===true:
+    proofKind==='owned-visible-window'?record?.ownWindowSubtreeVerified===true:false;
   const normalized=value=>String(value??'').trim().replace(/\s+/g,' ');
   const fields=record=>[record?.title,record?.description,record?.value].map(normalized).filter(Boolean);
   const isButton=record=>/button/i.test(String(record?.role??''));
   const candidates=(inspection?.containers??[]).slice(0,4).map((container,index)=>{
-    const records=[container,...(container.controls??[])].slice(0,128);
+    const owner=container.owningWindow;
+    const containerOwnershipVerified=ownsRecord(container)&&(proofKind==='focused-ancestry'?focusedAncestryVerified:
+      ownedVisibleWindowSubtreeVerified&&owner?.ownerPID===report.ownedPid&&owner.windowRoleVerified===true&&
+      owner.minimized===false&&owner.applicationHidden===false);
+    const records=[container,...(container.controls??[])].slice(0,128).filter(ownsRecord);
     const strings=[...new Set(records.flatMap(fields))];
     const targetMatched=strings.some(text=>text.toLowerCase().includes(target.name.toLowerCase()));
     const buttons=records.filter(isButton).map(record=>({role:record.role,subrole:record.subrole??null,title:normalized(record.title),description:normalized(record.description),value:normalized(record.value),enabled:record.enabled,identifier:record.identifier??record.automationId??null}));
@@ -78,13 +97,17 @@ function inspectPrompt(probe) {
     const cancel=buttons.filter(button=>[button.title,button.description,button.value].some(label=>/^cancel$/i.test(label)));
     const permissionTexts=strings.filter(text=>/read|change|websites|permissions|it can/i.test(text)).slice(0,24);
     return {index,role:container.role,subrole:container.subrole??null,selectionReason:container.selectionReason??null,
+      containerOwnershipVerified,owningWindow:owner??null,
       title:normalized(container.title),targetMatched,addButtons:add,cancelButtons:cancel,permissionTexts,
       substantivePermissionTextCaptured:permissionTexts.some(text=>/read|change|websites/i.test(text)),
       text:strings.slice(0,64),controls:buttons.slice(0,24)};
   });
-  const matched=candidates.find(candidate=>candidate.targetMatched&&candidate.addButtons.length>0&&candidate.cancelButtons.length>0&&candidate.substantivePermissionTextCaptured);
-  return {ownedNativeWindowAncestryVerified:windowVerified,helperStatus:probe.status,inspectionStatus:inspection?.status??'unavailable',
-    targetPromptObserved:windowVerified&&inspection?.status==='observed'&&Boolean(matched),matchedContainer:matched??null,candidates};
+  const matched=candidates.find(candidate=>candidate.containerOwnershipVerified&&candidate.targetMatched&&
+    candidate.addButtons.some(button=>button.enabled===true)&&candidate.cancelButtons.some(button=>button.enabled===true)&&candidate.substantivePermissionTextCaptured);
+  return {proofKind,proofKindSource:inspection?.proofKind?'explicit-helper-field':legacyFocusedKind?'legacy-focused-chain-fields':null,
+    ownedNativeWindowVerified:windowVerified,ownedNativeWindowAncestryVerified:focusedAncestryVerified,focusedAncestryVerified,
+    ownedVisibleWindowSubtreeVerified,helperStatus:probe.status,inspectionStatus:inspection?.status??'unavailable',
+    targetPromptObserved:inspection?.status==='observed'&&Boolean(matched),matchedContainer:matched??null,candidates};
 }
 
 async function inspectProfileRegistry() {
@@ -184,17 +207,24 @@ try {
   }
   report.installation.addClicked=true;
   report.observations.dialogAttempts=[];
-  const dialogUntil=deadline(45000);
+  const dialogStarted=Date.now(),dialogUntil=deadline(report.limits.dialogMs);
   let probe,prompt;
-  for(let attempt=0;attempt<4&&Date.now()<dialogUntil;attempt++) {
-    await delay(500);
+  for(let attempt=0;attempt<report.limits.maxDialogProbes&&Date.now()<dialogUntil;attempt++) {
+    const scheduledOffsetMs=report.limits.dialogProbeScheduledOffsetsMs[attempt];
+    const waitMs=Math.min(dialogStarted+scheduledOffsetMs,dialogUntil)-Date.now();
+    if(waitMs>0)await delay(waitMs,undefined,{signal:abort.signal});
+    if(Date.now()>=dialogUntil)break;
+    const startedOffsetMs=Date.now()-dialogStarted;
     probe=await probeOwnedStoreUi(browser,{mode:'dialog',deadline:dialogUntil,signal:abort.signal});
     prompt=inspectPrompt(probe);
-    report.observations.dialogAttempts.push({attempt:attempt+1,status:probe.status,inspectionStatus:probe.dialogInspection?.status??null,targetPromptObserved:prompt.targetPromptObserved,truncated:probe.truncated??false});
+    report.observations.dialogAttempts.push({attempt:attempt+1,scheduledOffsetMs,startedOffsetMs,completedOffsetMs:Date.now()-dialogStarted,
+      status:probe.status,inspectionStatus:probe.dialogInspection?.status??null,proofKind:prompt.proofKind,
+      ownedNativeWindowVerified:prompt.ownedNativeWindowVerified,focusedAncestryVerified:prompt.focusedAncestryVerified,
+      ownedVisibleWindowSubtreeVerified:prompt.ownedVisibleWindowSubtreeVerified,targetPromptObserved:prompt.targetPromptObserved,
+      notes:(probe.dialogInspection?.notes??[]).slice(0,8),truncated:probe.truncated??false});
     report.observations.nativeDialogProbe=probe;report.observations.prompt=prompt;
     if(prompt.targetPromptObserved)break;
     if(abort.signal.aborted)throw Error('Inspection interrupted');
-    await delay(500);
   }
   check('actual owned target permission dialog captured',prompt?.targetPromptObserved===true,prompt);
   report.observations.targetRegistryWhilePrompt=await queryTargetInstalled(deadline(5000));

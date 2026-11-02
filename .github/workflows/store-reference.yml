@@ -3,6 +3,11 @@ name: Inspect normal Store and native permission UI
 on:
   workflow_dispatch:
     inputs:
+      platform:
+        description: Standard GitHub-hosted target
+        type: choice
+        options: [both, mac-arm64, win-x64]
+        default: both
       phase:
         description: Observe prerequisites or open and inspect the unaccepted permission dialog
         type: choice
@@ -18,14 +23,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: mac-arm64
-            download: mac-arm64
-            runner: macos-26
-          - platform: win-x64
-            download: win64
-            runner: windows-2025-vs2026
-    runs-on: ${{ matrix.runner }}
+        platform: ${{ fromJSON(inputs.platform == 'both' && '["mac-arm64","win-x64"]' || format('["{0}"]', inputs.platform)) }}
+    runs-on: ${{ matrix.platform == 'mac-arm64' && 'macos-26' || 'windows-2025-vs2026' }}
     timeout-minutes: 20
     permissions:
       contents: write # Finite JSON evidence in a draft; no Actions storage.
@@ -66,7 +65,7 @@ jobs:
       - name: Acquire pinned official reference browser
         id: acquire
         shell: bash
-        run: python tests/acquire-reference.py --platform "${{ matrix.download }}" --output "$AA_REFERENCE_ROOT"
+        run: python tests/acquire-reference.py --platform "${{ matrix.platform == 'mac-arm64' && 'mac-arm64' || 'win64' }}" --output "$AA_REFERENCE_ROOT"
       - name: Inspect the Store page or unaccepted native permission dialog
         id: inspect
         continue-on-error: true

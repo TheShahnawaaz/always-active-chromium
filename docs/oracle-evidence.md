@@ -418,15 +418,83 @@ Both are CFT reference observations, not native-browser compatibility results:
   make it ready. No native UI action was performed.
 - The owned browser closed cleanly; root and POSIX process group were gone.
 
-The installation and permission-dialog gate remains **not tested**, and the
-disabled Add button is an unresolved readiness blocker. A preflight capture
-pass must not be presented as a successful extension installation or as proof
-that the future native browser supports the normal Store UI. Shipped frontend
-predicate analysis and actual built-browser interaction are separate follow-ups.
+At the time of these initial local captures, installation and permission-dialog
+inspection were untested, and the disabled Add button blocked further local
+interaction. The subsequent hosted and local observations below supersede that
+readiness limitation for those runs. A preflight capture pass does not establish
+a successful extension installation or normal Store support in a future native
+browser.
 
 The helper was subsequently tightened: application access and observed roots
 are recorded separately from actual native windows. `ready` now requires an
 owned `AXWindow`, known non-hidden application state, and known non-minimized
 window state. An application-only tree or unknown visibility cannot establish
 native-dialog readiness. The older capture above predates this stricter check;
-the next hosted preflight must exercise the updated helper.
+the hosted preflight below exercised the updated helper.
+
+## Hosted Store prerequisites and real permission-dialog inspection
+
+Standard GitHub-hosted macOS arm64 and Windows x64 run **41362212167** passed
+**6/6** read-only Store preflight checks on each platform using the pinned
+unmodified CFT browser. Both observed an enabled DOM/AX **Add to Chrome** button
+with `pointer-events:auto`, exposed `webstorePrivate`, and strict helper
+readiness backed by an actual owned native window (`AXWindow` on macOS and
+`ControlType.Window` on Windows). Neither preflight attempted installation.
+Downloaded reports and their asset digests were verified; report SHA-256 values:
+
+- macOS: `c1e772b7fa1e3521718e50b96c5128d563a4ebc2376b675fc84306e3c31f7a58`.
+- Windows: `5697ebdd679921185dd0e689521c5825fcbed5bb484f0479614aed0edac487f2`.
+
+The first two dialog-inspection runs stopped before dispatching any input
+because the enabled Add button's center lay outside the real viewport. The
+normal OS window was narrower than its requested size. One ordinary
+`DOM.scrollIntoViewIfNeeded` on the exact observed Add element resolved the
+clipping in the third run; fresh enabled, visible, viewport, and hit-test checks
+all passed before normal CDP mouse input was sent to Add. No device/viewport
+emulation, forced coordinates, DOM click, private installation call, or native
+permission action was used.
+
+Run **41365872867** on Windows passed **11/11** dialog-inspection checks. The
+native UIA capture included the heading
+`Add "Always active Window - Always Visible"?`, enabled native
+`ControlType.Button` controls named **Add extension** and **Cancel**, and the
+permission text **Read and change all your data on all websites**. The focused
+control's same-PID ancestor chain reached an actual owned native window, whose
+HWND ownership was verified. The target was absent before and while the prompt
+was unaccepted. Normal browser closure cancelled the prompt, and persisted
+extension preferences contained no target entry. The controller performed no
+acceptance action. Report `.runtime/store-dialog-win-third.json` SHA-256:
+`b6d7e7e8791bd55c3c4f7da988aba757ca3b73c9504c3fe735c779c05aea1e4c`.
+
+The same run on macOS passed **10/11** checks. Add received normal input after
+all click guards passed, but each of four native probes returned
+`no_owned_focused_element`; no target permission prompt was captured. The
+helper still observed a trusted, non-hidden application and an actual owned,
+non-minimized `AXWindow`. This proves those prerequisites, not a permission
+dialog. Normal close and the absent persisted target checks passed. Report
+`.runtime/store-dialog-mac-third.json` SHA-256:
+`01fd13bca0ceca7fefe89430bee5f67f00904bd6235ac8c1fcf248bd8de17efd`.
+Those four fast empty probes exhausted their attempt count in roughly seven
+seconds rather than observing across the full declared 45-second window.
+The controller now schedules probes around 0.5, 10, 20, and 30 seconds, with the
+same 45-second overall budget and 15-second per-probe bound. Focused ancestry is
+recorded separately from a read-only owned visible window/sheet subtree;
+neither proof kind can pass without the target name, enabled native buttons,
+permission text, and ownership of the contributing records. Hosted execution
+of the revised waiting and macOS window/sheet capture remains pending.
+
+A later private local namespace probe sampled the same listing at initial,
+5-second, and 15-second offsets. All samples exposed `chrome.management` as an
+object and `management.getAll` as a function; `getAll` was never invoked. The
+three approved read-only Store methods returned target status `installable`,
+full Chrome version `156.0.8078.80`, and incognito `false`. Add was enabled with
+`pointer-events:auto` in every sample. No input or installation was attempted;
+owned PID/group cleanup completed normally. Private report SHA-256:
+`52a6bd0c41d3f1c7a89d247f2aa77d6b6813a960480f1b99d14c45065654a068`.
+The earlier local disabled state therefore cannot be treated as a persistent
+local or universal CFT restriction; its cause remains unproven.
+
+These results establish reference-browser preflight and Windows prompt
+inspection mechanics. They do **not** establish a completed Store installation,
+restart persistence, genuine Store update, removal, or native-browser success.
+Those gates remain required on actual built macOS and Windows packages.

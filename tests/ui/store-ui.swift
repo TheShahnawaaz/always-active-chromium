@@ -267,7 +267,99 @@ func ownedElementAttribute(_ element: AXUIElement, _ name: CFString,
     return child
 }
 
-func inspectDialog(_ application: AXUIElement, pid: pid_t) -> [String: Any] {
+func inspectOwnedVisibleWindows(_ application: AXUIElement, pid: pid_t,
+                                windows: [(AXUIElement, [String: Any])],
+                                focusNotes: [String]) -> [String: Any] {
+    var result: [String: Any] = [
+        "status": "not-found", "proofKind": "owned-visible-window",
+        "focused": NSNull(), "ancestors": [[String: Any]](),
+        "containers": [[String: Any]](), "notes": focusNotes,
+        "promptIdentityVerified": false, "truncated": false,
+        "maxAncestorDepth": maxAncestorDepth, "applicationHidden": false,
+        "observationScope": "owned_visible_window_subtree_only_not_verified_install_prompt"
+    ]
+    do {
+        guard NSRunningApplication(processIdentifier: pid)?.isHidden == false else {
+            result["notes"] = focusNotes + ["owned_application_visibility_not_known_visible"]
+            return result
+        }
+        var candidates = windows.map { $0.0 }
+        // The application may expose its native focused window while omitting
+        // its focused control. This is still window-only evidence.
+        do {
+            if let focusedWindow = try ownedElementAttribute(application, kAXFocusedWindowAttribute as CFString, pid: pid) {
+                candidates.removeAll(where: { CFEqual($0, focusedWindow) })
+                candidates.insert(focusedWindow, at: 0)
+            }
+        } catch {
+            result["notes"] = focusNotes + ["owned_focused_window_query_unavailable"]
+        }
+        var containers: [[String: Any]] = []
+        for window in candidates.prefix(maxWindows) {
+            try checkBudget()
+            var owner: pid_t = 0
+            guard AXUIElementGetPid(window, &owner) == .success, owner == pid,
+                  try attribute(window, kAXRoleAttribute as CFString) as? String == "AXWindow",
+                  (try attribute(window, kAXMinimizedAttribute as CFString) as? NSNumber)?.boolValue == false else { continue }
+            guard var windowRecord = try snapshot(window, pid: pid, depth: 0, detailed: true) else { break }
+            windowRecord["windowRoleVerified"] = true
+            windowRecord["minimized"] = false
+            windowRecord["applicationHidden"] = false
+            windowRecord["ownerPID"] = pid
+            windowRecord["ownWindowSubtreeVerified"] = true
+            if result["window"] == nil { result["window"] = windowRecord }
+
+            // Sheets are exposed as AXChildren with AXSheet roles. Stay below
+            // this verified window; never substitute the application/menu tree.
+            guard containers.count < 4, visited < maxNodes else { truncated = true; break }
+            var record = windowRecord
+            record["selectionReason"] = "owned_visible_window_subtree"
+            record["owningWindow"] = windowRecord
+            var controls: [[String: Any]] = []
+            var pending: [(AXUIElement, Int, Int)] = [(window, 0, 0)]
+            var seen: [AXUIElement] = [window]
+            do {
+                while !pending.isEmpty, visited < maxNodes {
+                    // Prefer native sheets/dialogs/groups over toolbars and web
+                    // areas without relaxing the shared depth/node bounds.
+                    let next = pending.indices.min { pending[$0].2 < pending[$1].2 }!
+                    let (parent, depth, _) = pending.remove(at: next)
+                    if depth >= maxDepth { truncated = true; continue }
+                    for child in try elements(parent, kAXChildrenAttribute as CFString, cap: maxNodes - visited) {
+                        if seen.contains(where: { CFEqual($0, child) }) { continue }
+                        guard var childRecord = try snapshot(child, pid: pid, depth: depth + 1, detailed: true) else { continue }
+                        seen.append(child)
+                        childRecord["ownWindowSubtreeVerified"] = true
+                        controls.append(childRecord)
+                        let role = childRecord["role"] as? String ?? ""
+                        let subrole = childRecord["subrole"] as? String ?? ""
+                        let semantic = ["AXSheet", "AXDialog", "AXAlert"].contains(role) || subrole.localizedCaseInsensitiveContains("dialog")
+                        let broad = ["AXWebArea", "AXToolbar", "AXMenuBar", "AXTabGroup"].contains(role)
+                        pending.append((child, depth + 1, semantic ? 0 : (broad ? 20 : 5)))
+                    }
+                }
+                if !pending.isEmpty { truncated = true }
+            } catch {
+                truncated = true
+                result["notes"] = focusNotes + [bounded((error as? ProbeError)?.message ?? "owned_window_traversal_error")]
+            }
+            record["controls"] = controls
+            containers.append(record)
+            result["containers"] = containers
+            result["status"] = "observed"
+            if containers.count >= 4 || visited >= maxNodes || ProcessInfo.processInfo.systemUptime >= deadline { break }
+        }
+        if containers.isEmpty { result["notes"] = focusNotes + ["no_known_visible_owned_native_window_subtree"] }
+    } catch {
+        result["status"] = "error"
+        result["notes"] = focusNotes + [bounded((error as? ProbeError)?.message ?? "owned_window_inspection_error")]
+    }
+    result["truncated"] = truncated
+    return result
+}
+
+func inspectDialog(_ application: AXUIElement, pid: pid_t,
+                   windows: [(AXUIElement, [String: Any])]) -> [String: Any] {
     var result: [String: Any] = [
         "status": "not-found", "focused": NSNull(), "ancestors": [[String: Any]](),
         "containers": [[String: Any]](), "notes": [String](),
@@ -279,9 +371,24 @@ func inspectDialog(_ application: AXUIElement, pid: pid_t) -> [String: Any] {
             result["notes"] = ["owned_application_not_active"]
             return result
         }
-        guard let focused = try ownedElementAttribute(application, kAXFocusedUIElementAttribute as CFString, pid: pid) else {
-            result["notes"] = ["no_owned_focused_element"]
-            return result
+        var focused: AXUIElement?
+        var focusNotes: [String] = []
+        var focusSource = "application"
+        do { focused = try ownedElementAttribute(application, kAXFocusedUIElementAttribute as CFString, pid: pid) }
+        catch { focusNotes.append(bounded((error as? ProbeError)?.message ?? "application_focus_query_error")) }
+        if focused == nil {
+            focusSource = "system_same_pid"
+            focusNotes.append("application_focus_unavailable")
+            let system = AXUIElementCreateSystemWide()
+            _ = AXUIElementSetMessagingTimeout(system, 0.15)
+            // Obtain only the focused pointer; reject a foreign PID before any
+            // role, title, value, ancestor, or child inspection of that object.
+            do { focused = try ownedElementAttribute(system, kAXFocusedUIElementAttribute as CFString, pid: pid) }
+            catch { focusNotes.append(bounded((error as? ProbeError)?.message ?? "system_focus_query_error")) }
+        }
+        guard let focused else {
+            return inspectOwnedVisibleWindows(application, pid: pid, windows: windows,
+                                              focusNotes: focusNotes + ["no_owned_focused_element"])
         }
         // Before reading text/value, prove every ancestor belongs to the same PID
         // and the focused subtree reaches an actual native AXWindow.
@@ -302,10 +409,9 @@ func inspectDialog(_ application: AXUIElement, pid: pid_t) -> [String: Any] {
             cursor = try ownedElementAttribute(current, kAXParentAttribute as CFString, pid: pid)
         }
         guard windowVerified else {
-            result["notes"] = ["focused_element_has_no_verified_owned_window_ancestry"]
             if chain.count >= maxAncestorDepth || visited >= maxNodes { truncated = true }
-            result["truncated"] = truncated
-            return result
+            return inspectOwnedVisibleWindows(application, pid: pid, windows: windows,
+                                              focusNotes: focusNotes + ["focused_element_has_no_verified_owned_window_ancestry"])
         }
         var records: [[String: Any]] = []
         for (depth, element) in chain.enumerated() {
@@ -323,6 +429,8 @@ func inspectDialog(_ application: AXUIElement, pid: pid_t) -> [String: Any] {
         result["ancestors"] = Array(records.dropFirst())
         result["window"] = windowRecord
         result["status"] = "observed"
+        result["proofKind"] = "focused-ancestry"
+        result["focusSource"] = focusSource
         result["notes"] = ["owned_focused_ui_only_not_a_verified_install_prompt"]
 
         // Prefer a semantic dialog if exposed, then nearby focused ancestors;
@@ -440,7 +548,7 @@ do {
     }
     // A non-window root cannot consume the traversal budget ahead of real windows.
     candidates.sort { ($0.1["windowRoleVerified"] as? Bool == true) && ($1.1["windowRoleVerified"] as? Bool != true) }
-    if mode == "dialog" { report["dialogInspection"] = inspectDialog(application, pid: pid) }
+    if mode == "dialog" { report["dialogInspection"] = inspectDialog(application, pid: pid, windows: candidates) }
     for (window, candidate) in candidates {
         var record = candidate
         var controls: [[String: Any]] = []
