@@ -25,6 +25,17 @@ are preserved. There is no native14 or cold fallback. Native16 compilation and
 runtime behavior are still unverified. Mac can resume independently while the
 Windows tool repair is reviewed.
 
+The Windows RC repair restores the exact DEPS `rc_win` hook: the missing
+603,648-byte AMD64 compiler at `build/toolchain/win/rc/win/rc.exe`, verified against
+its checked-in SHA-1, independent SHA-256 and immutable GCS generation. It does
+not replace Microsoft's SDK compiler or alter Chromium's source driver. A real
+post-GN smoke test will use the pinned Python/tool wrapper/environment and
+compare a tiny compiled resource with the SDK compiler's output. Nine focused
+repair guards and 15 existing build guards passed at root (one Windows-only
+extractor integration skipped locally); actual hosted RC execution remains
+unverified. Native16 fingerprints and the Mac path stay unchanged. The Windows
+retry can queue behind the current save and restore its newest complete cache.
+
 The previous Windows retry
 [41377808648](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41377808648)
 verified all 96 files in the two exact-pinned Microsoft source dependency roots,

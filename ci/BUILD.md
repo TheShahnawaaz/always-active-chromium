@@ -44,6 +44,13 @@ Dawn's source generator uses its own nested
 the host Mac arm64 or Windows amd64 CIPD package is SHA-256 checked against
 the immutable ZIP digest in `build.py`, then its absolute executable must report
 the expected version and host. It never substitutes a system Go installation.
+Windows resource compilation restores the exact pinned `rc_win` DEPS hook:
+`build/toolchain/win/rc/win/rc.exe`, SHA-1
+`dea7da0d9bfcb8dad6cf53ca608dddac3459faaa`, with independently pinned SHA-256,
+size, generation and AMD64 PE checks. After GN, a tiny numeric resource passes
+through the unchanged pinned tool wrapper, Clang preprocessor, this compiler and
+the ordinary Microsoft SDK compiler comparison before Ninja starts. Correct
+existing tool bytes retain their mtimes; unknown binaries are not overwritten.
 Host Mac Swift comes from the selected Xcode;
 the hermetic Swift package is an iOS requirement.
 Windows Rust is staged as a clean exact-DEPS package and atomically swapped,

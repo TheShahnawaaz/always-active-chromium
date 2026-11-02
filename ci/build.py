@@ -411,6 +411,8 @@ def hydrate(src, platform):
     hydrate_crubit_formatter(src, platform, scope, enabled, hydrate_entries)
     if platform == 'win-x64':
         records.extend(hydrate_windows_gperf(src, scope, enabled))
+        from windows_rc import ensure_windows_rc
+        records.extend(ensure_windows_rc(src, scope, enabled, fetch))
         from hydrate_sources import hydrate_windows_sources
         records.extend(hydrate_windows_sources(src, scope, enabled))
     devtools = src / 'third_party/devtools-frontend/src'
@@ -538,6 +540,14 @@ def prepare(platform):
         # its official override in the generated Ninja regeneration command.
         command.append('--script-executable=//third_party/cpython3/host/bin/python3.exe')
     run(command, cwd=src)
+    if platform == 'win-x64':
+        from windows_rc import preflight_windows_rc
+        try:
+            preflight = preflight_windows_rc(src)
+            print(f'Windows resource compiler preflight: {preflight["status"]}', flush=True)
+        except Exception as problem:
+            prepare_diagnostic(src, platform, problem)
+            raise
     state['phase'] = 'build-ready'
     state['status'] = 'prepared'
     state_file.write_text(json.dumps(state, indent=2) + '\n')
