@@ -80,11 +80,27 @@ output or a reference browser. Both routes create separate owned test profiles.
 The delivered executable runs the existing master-off, native-default,
 optional-feature and paired no-debug checks, followed by the reviewed normal
 Store install/execution/restart/update-check/removal flow. Reports bind the
-acquired executable to its canonical path, size and SHA-256. Only bounded JSON
-and checksums go to a separate `delivery-verification-*` draft; profiles, browser
-logs, packages and extension source are excluded. Missing or partial evidence
+acquired executable to its canonical path, size and SHA-256. Bounded JSON,
+checksums and at most one verified owned-window PNG go to a separate
+`delivery-verification-*` draft; profiles, browser logs, packages and extension
+source are excluded. Missing or partial evidence
 cannot produce a verified result. Signing/notarization and a genuine Store
 version upgrade remain separate from these checks.
+
+Windows delivery enables an optional full-window capture during the native
+no-debug phase. The helper requires the exact owned PID/profile/executable/start
+and a normal foreground window, then uses `PrintWindow` with a 15-second external
+deadline. The PNG is limited to 2048×1536, 3,145,728 pixels and 3 MiB, with bounds,
+identity, complete PNG structure and hash checked before publication. There is
+no desktop fallback, input simulation or browser-debug capture. Capture errors
+remain separate from runtime/Store outcomes. A retained image is **pending manual
+visual review**; API success and nonuniform pixels do not establish complete
+rendering or UI equivalence. No Mac recording permission is requested.
+
+For a separately reviewed reference-only capture trial, the existing passive
+controller accepts `AA_WINDOW_CAPTURE_HELPER` and `AA_WINDOW_CAPTURE_MODE=control`
+with `--mode control`. That produces reference capture mechanics evidence only;
+it cannot establish custom-package or native-feature success.
 
 ## Updates
 

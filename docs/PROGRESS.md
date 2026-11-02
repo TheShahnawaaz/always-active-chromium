@@ -128,6 +128,20 @@ All **20 focused delivery tests** and the existing **four cleanup tests** passed
 at root, together with Python/workflow syntax and unchanged native fingerprints.
 Actual delivery execution remains pending until the real packages exist.
 
+To verify the explicit desktop-appearance requirement, Windows delivery now
+requests one optional owned full-window image during its existing native
+no-debug phase, after passive behavior observations and before verified cleanup.
+A separate helper rechecks PID/executable/profile/creation/SID/session and the
+unique normal foreground HWND before and after one bounded `PrintWindow` call.
+There is no desktop fallback or input/debugging action. PNG integrity and
+identity are validated; capture failure stays distinct from runtime/Store
+results. Every retained image remains pending manual visual review, with no
+UI-equivalence or complete-pixel claim. Root passed four Node guards (one
+Windows-only guard skipped locally), six Python image guards, two reference
+publication guards and the 20 delivery guards, plus syntax/diff checks.
+The new reference-only workflow will measure Windows capture reliability on
+pinned CFT; actual custom-package appearance remains unverified.
+
 Both real launchable packages, native behavior/no-debug evidence, installation
 checks and actual-package Store compatibility are still required for completion.
 Stock Chrome and its profiles remain untouched. All build compute remains on

@@ -1,0 +1,76 @@
+name: Inspect normal Windows reference window
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  window:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+    concurrency:
+      group: ui-reference-win-x64
+      cancel-in-progress: false
+    permissions:
+      contents: write # One bounded owned-window PNG, finite JSON and checksums.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AA_PLATFORM: win-x64
+      AA_REFERENCE_ROOT: .runtime/ui-reference
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Check finite image and reference-publication guards
+        shell: bash
+        run: |
+          python -m unittest discover -s ci -p test_window_capture.py
+          python -m unittest discover -s ci -p test_ui_reference.py
+          node --test tests/test-window-capture.mjs
+      - name: Validate capture helper syntax and invalid PID refusal
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $helper = Join-Path $env:GITHUB_WORKSPACE 'tests/ui/owned-window-capture.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) { throw 'Window capture helper parse failure' }
+          $output = Join-Path $env:GITHUB_WORKSPACE '.runtime/refused-capture/browser-window.png'
+          $raw = & powershell.exe -NoProfile -NonInteractive -File $helper -PidValue 0 -Profile /nonexistent-owned-profile -Executable /nonexistent-owned-browser -ExpectedStarted invalid-pid -OutputFile $output
+          if ($LASTEXITCODE -ne 0) { throw 'Window capture refusal guard did not finish' }
+          $guard = $raw | ConvertFrom-Json
+          if ($guard.status -cne 'refused' -or (Test-Path -LiteralPath $output)) { throw 'Invalid PID was not refused without an image' }
+      - name: Acquire the exact official reference browser
+        id: acquire
+        shell: bash
+        run: python tests/acquire-reference.py --platform win64 --output "$AA_REFERENCE_ROOT"
+      - name: Observe normal launch and capture its owned window
+        id: inspect
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+          AA_WINDOW_CAPTURE_HELPER: ${{ github.workspace }}/tests/ui/owned-window-capture.ps1
+          AA_WINDOW_CAPTURE_MODE: control
+        run: node tests/no-debug.mjs --browser "$AA_BROWSER" --mode control --output reports/ui-reference
+      - name: Retain reference-only window evidence for visual review
+        if: ${{ always() && steps.acquire.outcome == 'success' }}
+        timeout-minutes: 5
+        env:
+          AA_REFERENCE_BROWSER: ${{ steps.acquire.outputs.browser }}
+          AA_INSPECTION_OUTCOME: ${{ steps.inspect.outcome }}
+        run: python .github/scripts/publish-ui-reference.py
+      - name: Fail incomplete normal-launch observation
+        if: ${{ always() && steps.inspect.outcome != 'success' }}
+        run: python -c 'raise SystemExit("Reference window observation is incomplete; inspect retained bounded evidence.")'

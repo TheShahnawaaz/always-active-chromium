@@ -24,7 +24,7 @@ jobs:
       group: verify-delivery-${{ inputs.platform }}
       cancel-in-progress: false
     permissions:
-      contents: write # Finite JSON/checksum evidence in a separate draft only.
+      contents: write # Finite JSON/checksums and one owned-window PNG in a draft.
     env:
       GH_TOKEN: ${{ github.token }}
       AA_PLATFORM: ${{ inputs.platform }}
@@ -45,7 +45,9 @@ jobs:
         run: |
           python -c 'import os,re; assert re.fullmatch(r"ci-source-[0-9a-f]{12}",os.environ["AA_PACKAGE_SOURCE_TAG"])'
           python -m unittest discover -s ci -p test_acquire_delivery.py
+          python -m unittest discover -s ci -p test_window_capture.py
           node --test tests/test-store-compat.mjs
+          node --test tests/test-window-capture.mjs
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ inputs.source_tag }}
@@ -93,6 +95,8 @@ jobs:
         shell: bash
         env:
           AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+          AA_WINDOW_CAPTURE_HELPER: ${{ inputs.platform == 'win-x64' && format('{0}/tests/ui/owned-window-capture.ps1', github.workspace) || '' }}
+          AA_WINDOW_CAPTURE_MODE: native
         run: python ci/verify.py --browser "$AA_BROWSER" --output reports/delivery-behavior
       - name: Verify normal Store compatibility on the delivered browser
         id: store

@@ -9,8 +9,12 @@ import http from 'node:http';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import {captureOwnedWindow} from './lib/window-capture.mjs';
 
 const execute=promisify(execFile);
+const captureHelper=process.env.AA_WINDOW_CAPTURE_HELPER;
+const captureMode=process.env.AA_WINDOW_CAPTURE_MODE??'native';
+if(captureHelper&&!['native','control'].includes(captureMode))throw Error('Window capture mode must be native or control.');
 const options={mode:'paired',output:path.resolve('.runtime/no-debug'),browser:process.env.CHROME_PATH,
   'expected-version':'156.0.8078.80','timeout-ms':'45000','settle-ms':'5000','stable-ms':'2500'};
 for(let i=2;i<process.argv.length;i++) {
@@ -182,7 +186,8 @@ async function runMode(mode) {
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
     const origin=`http://127.0.0.1:${server.address().port}`;
     const urls=['alpha','beta'].map(pageName=>`${origin}/page/${pageName}?run=${token}`);
-    const args=[`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check',...(mode==='control'?['--disable-features=AlwaysActive']:[]),...urls];
+    const captureThisRun=Boolean(captureHelper)&&mode===captureMode;
+    const args=[`--user-data-dir=${profile}`,'--no-first-run','--no-default-browser-check',...(mode==='control'?['--disable-features=AlwaysActive']:[]),...(captureThisRun?['--window-size=1280,900']:[]),...urls];
     run.command={executable:options.browser,args};
     const log=await open(path.join(options.output,`${mode}-browser.log`),'wx',0o600);
     let spawnError;
@@ -227,6 +232,15 @@ async function runMode(mode) {
     try {await access(path.join(profile,'DevToolsActivePort'));} catch(error) {if(error.code==='ENOENT')portFileExists=false;else throw error;}
     addCheck(run,'owned profile exposes no remote debugging port file',!portFileExists);
     addCheck(run,'normal launch has no debugging, automation, extension, or emulation flags',args.every(arg=>!/^--(?:remote-debugging|enable-automation|headless|load-extension|disable-extensions-except)/.test(arg)),args);
+    if(captureThisRun){
+      run.appearance={status:'not-captured',manualReview:'pending',uiEquivalenceVerified:false};
+      if(run.tests.every(test=>test.status==='passed')){
+        try{
+          const current=await processIdentity(child,profile);
+          if(current?.owned&&current.started===identity.started)run.appearance=await captureOwnedWindow({helper:captureHelper,pid:child.pid,profile,executable:options.browser,started:identity.started,output:options.output});
+        }catch{run.appearance.error='capture_evidence_unavailable';}
+      }
+    }
   } catch(error) {
     addCheck(run,'normal-launch observation completes',false,error.stack);
   } finally {

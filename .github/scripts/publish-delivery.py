@@ -5,6 +5,92 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import struct
+import zlib
+
+
+def validate_appearance_capture(receipt, png, expected_executable=None, expected_pid=None,
+                                expected_started=None, expected_profile=None):
+    """Validate finite owned-window capture evidence, never visual equivalence."""
+    if (not isinstance(receipt, dict) or receipt.get('schema') != 1 or receipt.get('purpose') != 'owned-normal-browser-window-capture' or
+            receipt.get('platform') != 'win32' or receipt.get('status') != 'captured' or receipt.get('method') != 'PrintWindow-full-window-flags-0' or
+            receipt.get('captureAttempted') is not True or receipt.get('captureSucceeded') is not True or receipt.get('captureOutcomeUncertain') is not False or
+            receipt.get('manualReview') != 'pending' or receipt.get('uiEquivalenceVerified') is not False or receipt.get('visualCompletenessVerified') is not False or
+            receipt.get('nativeUiAccessed') is not True or receipt.get('errors') != []):
+        raise ValueError('Unverified appearance receipt')
+    identity, window, image = receipt.get('identity', {}), receipt.get('window', {}), receipt.get('png', {})
+    if (not isinstance(identity, dict) or not all(identity.get(key) is True for key in ['verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified']) or
+            type(identity.get('pid')) is not int or identity['pid'] <= 1 or
+            not isinstance(identity.get('started'), str) or not re.fullmatch(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{7}Z', identity['started']) or
+            any(not isinstance(identity.get(key), str) or not 1 <= len(identity[key]) <= 4096 or '\n' in identity[key] for key in ['profile', 'executable'])):
+        raise ValueError('Unverified capture process identity')
+    for observed, expected in [(identity['executable'], expected_executable), (identity['profile'], expected_profile)]:
+        if expected is not None and not same_executable(observed, expected, 'win-x64'):
+            raise ValueError('Capture executable/profile mismatch')
+    if expected_pid is not None and identity['pid'] != expected_pid or expected_started is not None and identity['started'] != expected_started:
+        raise ValueError('Capture PID/start mismatch')
+    if (not isinstance(window, dict) or window.get('ownerPID') != identity['pid'] or
+            not isinstance(window.get('handle'), str) or not re.fullmatch(r'[0-9a-f]{1,16}', window['handle']) or int(window['handle'], 16) == 0 or
+            not all(window.get(key) is True for key in ['foregroundVerified', 'visible', 'normalTopLevelVerified', 'fixtureTitleVerified', 'unchangedAfterCapture']) or
+            window.get('minimized') is not False or window.get('cloaked') is not False or type(window.get('dpi')) is not int or not 48 <= window['dpi'] <= 768 or
+            type(receipt.get('visitedWindows')) is not int or not 1 <= receipt['visitedWindows'] <= 8):
+        raise ValueError('Unverified capture window')
+    content = receipt.get('contentCheck', {})
+    if (not isinstance(content, dict) or content.get('nonUniform') is not True or content.get('visualCompletenessVerified') is not False or
+            content.get('sampleCount') != 768 or type(content.get('uniqueSampleColors')) is not int or not 2 <= content['uniqueSampleColors'] <= 768):
+        raise ValueError('Capture blankness observation missing')
+    png = Path(png)
+    if png.is_symlink() or not png.is_file() or not 57 <= png.stat().st_size <= 3145728:
+        raise ValueError('Invalid finite PNG file')
+    data = png.read_bytes()
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        raise ValueError('PNG signature required')
+    offset, width, height, channels, ended, compressed = 8, None, None, None, False, []
+    while offset < len(data):
+        if offset + 12 > len(data):
+            raise ValueError('Truncated PNG')
+        size = struct.unpack_from('>I', data, offset)[0]
+        kind = data[offset+4:offset+8]
+        end = offset + 12 + size
+        if end > len(data) or re.fullmatch(b'[A-Za-z]{4}', kind) is None or zlib.crc32(data[offset+4:end-4]) != struct.unpack_from('>I', data, end-4)[0]:
+            raise ValueError('Invalid PNG chunk')
+        body = data[offset+8:end-4]
+        if offset == 8:
+            if kind != b'IHDR' or size != 13:
+                raise ValueError('PNG IHDR required')
+            width, height, depth, color, compression, filtering, interlace = struct.unpack('>IIBBBBB', body)
+            channels = 3 if color == 2 else 4 if color == 6 else None
+            if not 320 <= width <= 2048 or not 240 <= height <= 1536 or width*height > 3145728 or depth != 8 or not channels or any([compression, filtering, interlace]):
+                raise ValueError('Unsupported bounded PNG dimensions/format')
+        elif kind == b'IHDR':
+            raise ValueError('Duplicate PNG IHDR')
+        if kind == b'IDAT':
+            compressed.append(body)
+        if kind == b'IEND':
+            if size or end != len(data):
+                raise ValueError('Invalid PNG ending')
+            ended = True
+            break
+        offset = end
+    if not ended or not compressed:
+        raise ValueError('Incomplete PNG')
+    stride = width * channels + 1
+    decoder = zlib.decompressobj()
+    try:
+        pixels = decoder.decompress(b''.join(compressed), stride*height+1)
+    except zlib.error as error:
+        raise ValueError('Invalid PNG compression') from error
+    if len(pixels) != stride*height or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail or any(pixels[row*stride] > 4 for row in range(height)):
+        raise ValueError('Invalid PNG pixel stream')
+    digest = hashlib.sha256(data).hexdigest()
+    if (not isinstance(image, dict) or image.get('file') != 'browser-window.png' or image.get('sha256') != digest or image.get('bytes') != len(data) or
+            image.get('width') != width or image.get('height') != height or window.get('width') != width or window.get('height') != height):
+        raise ValueError('PNG/receipt binding mismatch')
+    return {'status': 'captured', 'method': receipt['method'], 'manualReview': 'pending',
+        'uiEquivalenceVerified': False, 'visualCompletenessVerified': False,
+        'identity': {key: identity[key] for key in ['pid', 'executable', 'profile', 'started', 'verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified']},
+        'window': {key: window[key] for key in ['handle', 'ownerPID', 'width', 'height', 'dpi']},
+        'png': {'width': width, 'height': height, 'bytes': len(data), 'sha256': digest}}
 
 
 def same_executable(left, right, target):
@@ -193,6 +279,34 @@ def collect(project, env):
         copied = destination / f'{target}-delivery-{kind}.json'
         copied.write_bytes(payload)
         selected.append(copied)
+    appearance = {'status': 'not-requested' if target == 'mac-arm64' else 'not-captured', 'manualReview': 'pending',
+                  'uiEquivalenceVerified': False, 'visualCompletenessVerified': False}
+    if target == 'win-x64':
+        receipt_file = project / 'reports/delivery-behavior/no-debug/browser-window-capture.json'
+        png_file = receipt_file.with_name('browser-window.png')
+        try:
+            if receipt_file.is_symlink() or not receipt_file.is_file() or not receipt_file.resolve().is_relative_to(project.resolve()) or receipt_file.stat().st_size > 65536 or not png_file.resolve().is_relative_to(project.resolve()):
+                raise ValueError('Missing or unsafe appearance evidence')
+            receipt = json.loads(receipt_file.read_bytes())
+            provenance = reports.get('provenance', {})
+            if provenance.get('status') != 'delivered' or not isinstance(provenance.get('browser'), str):
+                raise ValueError('Appearance is not bound to an acquired delivery')
+            runs = reports.get('behavior', {}).get('variants', {}).get('no-debug', {}).get('results', {}).get('runs', [])
+            native = [item for item in runs if item.get('mode') == 'native']
+            if len(native) != 1 or native[0].get('appearance', {}).get('status') != 'captured' or native[0].get('appearance', {}).get('receipt') != receipt:
+                raise ValueError('Appearance receipt not bound to native no-debug run')
+            run = native[0]
+            profiles = [item[len('--user-data-dir='):] for item in run.get('command', {}).get('args', []) if item.startswith('--user-data-dir=')]
+            if len(profiles) != 1 or run.get('processIdentity', {}).get('owned') is not True or not same_executable(run.get('command', {}).get('executable'), provenance['browser'], 'win-x64'):
+                raise ValueError('Appearance run identity missing')
+            appearance = validate_appearance_capture(receipt, png_file, expected_executable=reports.get('provenance', {}).get('browser'),
+                expected_pid=run.get('ownedPid'), expected_started=run['processIdentity'].get('started'), expected_profile=profiles[0])
+            for original, suffix in [(receipt_file, 'window-capture.json'), (png_file, 'browser-window.png')]:
+                copied = destination / f'{target}-delivery-{suffix}'
+                copied.write_bytes(original.read_bytes())
+                selected.append(copied)
+        except (OSError, TypeError, ValueError, AttributeError, KeyError):
+            appearance['reason'] = 'capture_missing_uncertain_or_unverified'
     try:
         checks = verification_checks(reports, target)
     except (TypeError, ValueError, AttributeError, KeyError):
@@ -204,9 +318,11 @@ def collect(project, env):
         'controller_commit': env['GITHUB_SHA'], 'run_url': f'https://github.com/{repository}/actions/runs/{run_id}',
         'custom_native_browser_verified': passed, 'status': 'passed' if passed else 'failed',
         'verification_checks': checks,
+        'appearance': appearance,
         'report_errors': report_errors,
         'outcomes': {key: env.get('AA_' + key.upper() + '_OUTCOME', '') for key in ['acquire', 'behavior', 'store']},
         'scope': 'Real draft package provenance and installed/extracted browser behavior plus normal Store compatibility. '
+                 'Appearance remains pending manual review even if a window PNG was captured. '
                  'Inspect individual limits; no Developer ID/notarization/Authenticode or genuine Store version upgrade is established.'}
     metadata = destination / f'{target}-delivery-status.json'
     metadata.write_text(json.dumps(status, indent=2) + '\n', encoding='utf-8')
@@ -215,7 +331,7 @@ def collect(project, env):
     sums.write_text(''.join(f'{hashlib.sha256(item.read_bytes()).hexdigest()}  {item.name}\n' for item in sorted(selected)), encoding='utf-8')
     selected.append(sums)
     notes = destination / '.notes.txt'
-    notes.write_text(status['scope'] + '\n\nFinite JSON/checksum evidence only. No profiles, browser logs, native UI trees, '
+    notes.write_text(status['scope'] + '\n\nFinite JSON/checksum evidence and at most one verified owned-window PNG. No profiles, browser logs, native UI trees, '
                      'extension sources/packages or browser binaries are uploaded by this verifier.\n', encoding='utf-8')
     return f'delivery-verification-{target}-{run_id}-{attempt}', notes, selected
 
