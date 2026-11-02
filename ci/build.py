@@ -346,6 +346,7 @@ def hydrate(src, platform):
                 f'src/third_party/typescript/{host}/src',
                 'src/third_party/subresource-filter-ruleset/data'}
     if platform == 'win-x64':
+        selected.discard('src/third_party/rust-toolchain')
         selected.update({'src/third_party/lzma_sdk/bin/host_platform',
                          'src/third_party/lzma_sdk/bin/win64',
                          'src/third_party/wtl', 'src/third_party/webview2'})
@@ -404,6 +405,9 @@ def hydrate(src, platform):
             marker.write_text(json.dumps({'plan_sha256': plan, 'records': records[start:]}, indent=2) + '\n')
 
     hydrate_entries(scope['deps'], src.parent, selected, enabled)
+    if platform == 'win-x64':
+        from rust_host import ensure_windows_rust
+        records.extend(ensure_windows_rust(src, scope['deps']['src/third_party/rust-toolchain'], fetch))
     hydrate_crubit_formatter(src, platform, scope, enabled, hydrate_entries)
     if platform == 'win-x64':
         records.extend(hydrate_windows_gperf(src, scope, enabled))
@@ -454,6 +458,33 @@ def set_build_env(src):
     os.environ['PATH'] = str(src / 'third_party/depot_tools') + os.pathsep + os.environ['PATH']
 
 
+def prepare_diagnostic(src, platform, problem=None):
+    from compile_diagnostics import safe_path, write_report
+    import re
+    events = []
+    if problem is not None:
+        event = {'kind': 'tool_preflight_error', 'exception': type(problem).__name__}
+        for name in ('code', 'stage', 'tool', 'expected_host', 'observed_host'):
+            value = getattr(problem, name, None)
+            if isinstance(value, str) and re.fullmatch(r'[A-Za-z0-9_./:+-]{1,160}', value) and '://' not in value:
+                event[name] = value
+        for name in ('errno', 'winerror', 'exit_code', 'returncode'):
+            value = getattr(problem, name, None)
+            if type(value) is int:
+                event['exit_code' if name == 'returncode' else name] = value
+        filename = getattr(problem, 'filename', None)
+        if isinstance(filename, str):
+            value = safe_path(filename, src)
+            if value:
+                event['path'] = value
+        events.append(event)
+    report = {'schema': 1, 'platform': platform, 'status': 'failed' if problem is not None else 'complete',
+              'stage': 'dependency-hydration-and-tool-preflight', 'events': events,
+              'scope': 'Finite selected-dependency hydration/tool-preflight diagnostics only. '
+                       'No raw commands, environment, stdout/stderr or URLs; no GN, compilation or browser success is established.'}
+    write_report(PROJECT / 'reports' / platform / 'prepare-diagnostics.json', report)
+
+
 def prepare(platform):
     root = root_path()
     src = root / 'src'
@@ -489,7 +520,12 @@ def prepare(platform):
     # Every resume checks the selected dependency plan. Per-dependency markers
     # avoid touching unchanged tool binaries/mtimes, while newly required tools
     # can be hydrated without silently skipping the bootstrap phase.
-    hydrate(src, platform)
+    try:
+        hydrate(src, platform)
+    except Exception as problem:
+        prepare_diagnostic(src, platform, problem)
+        raise
+    prepare_diagnostic(src, platform)
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src])
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src, '--verify-applied'])
     out = src / 'out/AlwaysActive'
@@ -529,12 +565,19 @@ def stop(process):
 
 
 def compile_browser(platform, bootstrap_only):
+    from compile_diagnostics import (Collector, manifest_policy, no_completed_actions,
+                                     snapshot_log, start_capture, verify_version, write_report)
     root = root_path()
     src = root / 'src'
     set_build_env(src)
     state_file = root / 'state.json'
     state = json.loads(state_file.read_text())
     status = 'pending'
+    collector = Collector(src)
+    before = snapshot_log(src / 'out/AlwaysActive/.ninja_log')
+    manifest_before = manifest_policy(src / 'out/AlwaysActive/build.ninja')
+    version = False
+    process = None
     if not bootstrap_only:
         # Leaves more than two hours for checkpoint compression/upload before 6h.
         deadline = float(os.environ['AA_JOB_STARTED']) + 220 * 60
@@ -542,11 +585,19 @@ def compile_browser(platform, bootstrap_only):
         command = [str(executable), '-C', 'out/AlwaysActive', '-j', '3' if platform == 'win-x64' else '2', 'chrome']
         if platform == 'win-x64':
             command.append('mini_installer')
+        version = verify_version(executable)
         print('+', subprocess.list2cmdline(command), flush=True)
-        process = subprocess.Popen(command, cwd=src,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0,
-            start_new_session=os.name != 'nt')
-        while process.poll() is None:
+        try:
+            process = subprocess.Popen(command, cwd=src, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0,
+                start_new_session=os.name != 'nt')
+        except OSError as problem:
+            from compile_diagnostics import safe_path
+            collector.event('process_launch_error', path=safe_path(str(executable), src), errno=problem.errno,
+                            winerror=getattr(problem, 'winerror', None))
+            status = 'failed'
+        reader = start_capture(process, collector) if process is not None else None
+        while process is not None and process.poll() is None:
             free = shutil.disk_usage(root).free
             print(f'Build running; {max(0, deadline-time.time())/60:.0f} min to checkpoint; {free/(1<<30):.1f} GiB free', flush=True)
             if free < 8 * (1 << 30):
@@ -561,11 +612,35 @@ def compile_browser(platform, bootstrap_only):
             except subprocess.TimeoutExpired:
                 pass
         else:
-            status = 'complete' if process.returncode == 0 else 'failed'
+            if process is not None:
+                status = 'complete' if process.returncode == 0 else 'failed'
+        if reader is not None:
+            reader.join(timeout=10)
+            if reader.is_alive():
+                collector.complete = False
+    after = snapshot_log(src / 'out/AlwaysActive/.ninja_log')
+    manifest_after = manifest_policy(src / 'out/AlwaysActive/build.ninja')
+    exit_code = process.returncode if process is not None else None
+    no_actions = no_completed_actions(before, after, manifest_before, manifest_after,
+                                     collector, status, exit_code, version)
+    report = {'schema': 1, 'platform': platform, 'status': status, 'exit_code': exit_code,
+              'scope': 'Structured compiler/action diagnostics only; no raw commands, logs or environment. '
+                       'A failed-stage reuse proof concerns newly completed Ninja command actions only, '
+                       'not browser correctness or build success.',
+              'events': collector.events, 'console_bytes': collector.bytes_seen,
+              'capture_complete': collector.complete, 'oversized_context_lines': collector.oversized_lines,
+              'checkpoint_reuse': {'no_new_completed_actions': no_actions,
+                  'basis': 'Pinned Ninja 1.12.1 normal failure; known log path; unchanged valid v6 log or both absent; '
+                           'successful command actions create/append and flush the log; logging errors excluded.',
+                  'version_verified': version, 'normal_failure': collector.normal_failure,
+                  'logging_error': collector.log_error, 'before': before, 'after': after,
+                  'manifest_before': manifest_before, 'manifest_after': manifest_after}}
+    write_report(PROJECT / 'reports' / platform / 'compile-diagnostics.json', report)
     state['status'] = status
     state['last_run'] = os.environ.get('GITHUB_RUN_ID', '')
     state_file.write_text(json.dumps(state, indent=2) + '\n')
     output('status', status)
+    output('no_new_completed_actions', str(no_actions).lower())
     if status in ('failed', 'disk-blocked'):
         return 1
     return 0

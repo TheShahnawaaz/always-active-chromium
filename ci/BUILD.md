@@ -46,6 +46,11 @@ the immutable ZIP digest in `build.py`, then its absolute executable must report
 the expected version and host. It never substitutes a system Go installation.
 Host Mac Swift comes from the selected Xcode;
 the hermetic Swift package is an iOS requirement.
+Windows Rust is staged as a clean exact-DEPS package and atomically swapped,
+following upstream's replacement semantics. It verifies PE AMD64, compiler
+release/commit/host and the exact extensionless subprocess call used by
+`find_std_rlibs.py` through pinned CPython, including target standard libraries.
+A validated clean install is reused without modifying its files' mtimes.
 GCS downloads are SHA-256/size checked against DEPS. GN/Ninja CIPD zip hashes are
 also fixed in `pins.json`; other CIPD build packages use their DEPS version and
 record the downloaded hash in `dependencies.json` in the checkpoint. GCS archive
@@ -65,6 +70,17 @@ later tool download or GN generation fails. That failed run still skips
 compilation and automatic continuation. A corrected retry rehydrates any
 incomplete dependencies, rechecks the patch, and regenerates GN. An interrupted
 or unvalidated source extraction is never declared checkpointable.
+
+Future-source runs publish bounded structured tool-preflight and compiler/action
+JSON before any large checkpoint upload. Normal console output remains available,
+while these drafts exclude raw commands, logs, environment and URLs. A failed
+compile can reuse its previous checkpoint only after an exact fingerprint restore
+without native migration and a verified pinned-Ninja proof of zero new completed
+command actions: normal exit1, complete capture, known unchanged log location,
+and an unchanged valid v6 log or both logs absent. Pinned Ninja creates/appends and
+flushes that log for successful actions; logging errors invalidate the proof.
+Fresh source, migrations, successful actions, time-budget stops and any uncertainty
+retain the normal save. Older immutable campaigns without the new helpers also save.
 
 ## Measured runners and build choices
 
