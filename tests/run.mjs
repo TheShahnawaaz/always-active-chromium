@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { launchBrowser, page } from './lib/browser.mjs';
 import { serve } from './lib/site.mjs';
+import { isExpectedWindowedWindow } from './lib/window-state.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const args={mode:'native',output:path.resolve('.runtime/oracle/run'),browser:process.env.CHROME_PATH};
@@ -288,6 +289,7 @@ try {
   const fs=await page(cdp,site.url+'/fixture?case=fullscreen');
   const fullscreenWindow=await cdp.send('Browser.getWindowForTarget',{targetId:fs.targetId});
   check('fullscreen tab comparison uses one native window',fullscreenWindow.windowId===coverWindow.windowId,{fullscreenWindow,coverWindow});
+  observe('fullscreenWindowBeforeEntry',fullscreenWindow);
   // Target activation selects the tab/window without Page.bringToFront's extra
   // WebContents::Focus(), which would mask broken saved-focus restoration.
   await cdp.send('Target.activateTarget',{targetId:fs.targetId});
@@ -313,7 +315,7 @@ try {
     for(let i=0;i<50;i++) {
       hiddenNative=await cdp.evaluate(fs.sessionId,"({cssFullscreen:document.documentElement.matches(':fullscreen'),cssFullscreenElement:document.querySelector(':fullscreen')?.id??null})");
       hiddenWindow=await cdp.send('Browser.getWindowForTarget',{targetId:fs.targetId});
-      if(!hiddenNative.cssFullscreen&&hiddenNative.cssFullscreenElement===null&&hiddenWindow.bounds.windowState==='normal')break;
+      if(!hiddenNative.cssFullscreen&&hiddenNative.cssFullscreenElement===null&&isExpectedWindowedWindow(hiddenWindow,fullscreenWindow.windowId))break;
       await delay(100);
     }
     await delay(100);
@@ -324,7 +326,7 @@ try {
       check('optional fullscreen natural tab switch retains original binding snapshot',after.state.fullscreenElement==='fixture-root'&&after.state.fullscreenElement===visible.fullscreenElement&&after.state.fullscreen===true&&after.state.webkitIsFullScreen===true,{visible,after:after.state});
       check('optional fullscreen natural tab switch suppresses exit notifications',after.events.length===0,after.events);
       check('optional fullscreen does not retain native CSS fullscreen state',hiddenNative.cssFullscreen===false&&hiddenNative.cssFullscreenElement===null,hiddenNative);
-      check('optional fullscreen OS window exits to normal state',hiddenWindow.bounds.windowState==='normal',hiddenWindow);
+      check('optional fullscreen OS window exits to windowed state',isExpectedWindowedWindow(hiddenWindow,fullscreenWindow.windowId),hiddenWindow);
       check('optional fullscreen background input has no actual focus',hiddenFocus.actualFocus===false,hiddenFocus);
       const hiddenSynthetic=await cdp.evaluate(fs.sessionId,"probeEvents.length=0;for(const type of ['fullscreenchange','webkitfullscreenchange','fullscreenerror']){window.dispatchEvent(new Event(type));document.dispatchEvent(new Event(type,{bubbles:true}));}probeEvents.slice()");
       check('optional fullscreen suppresses events in hidden document',hiddenSynthetic.length===0,hiddenSynthetic);
@@ -333,12 +335,12 @@ try {
       for(let i=0;i<30;i++) {
         returned=await cdp.evaluate(fs.sessionId,`({state:readProbe(),cssFullscreen:document.documentElement.matches(':fullscreen'),focus:${focusExpression}})`);
         returnedWindow=await cdp.send('Browser.getWindowForTarget',{targetId:fs.targetId});
-        if(returned.state.fullscreenElement===null&&returned.state.fullscreen===false&&returned.state.webkitIsFullScreen===false&&!returned.cssFullscreen&&returned.focus.activeElement===focusSentinel.activeElement&&returned.focus.actualFocus===true&&returned.focus.value===focusSentinel.value&&returned.focus.selectionStart===focusSentinel.selectionStart&&returned.focus.selectionEnd===focusSentinel.selectionEnd&&returnedWindow.bounds.windowState==='normal')break;
+        if(returned.state.fullscreenElement===null&&returned.state.fullscreen===false&&returned.state.webkitIsFullScreen===false&&!returned.cssFullscreen&&returned.focus.activeElement===focusSentinel.activeElement&&returned.focus.actualFocus===true&&returned.focus.value===focusSentinel.value&&returned.focus.selectionStart===focusSentinel.selectionStart&&returned.focus.selectionEnd===focusSentinel.selectionEnd&&isExpectedWindowedWindow(returnedWindow,fullscreenWindow.windowId))break;
         await delay(100);
       }
       observe('fullscreenReturnedForeground',returned);
       observe('fullscreenReturnedWindow',returnedWindow);
-      check('optional fullscreen returning foreground clears snapshot',returned.state.fullscreenElement===null&&returned.state.fullscreen===false&&returned.state.webkitIsFullScreen===false&&returned.cssFullscreen===false&&returnedWindow.bounds.windowState==='normal',{returned,returnedWindow});
+      check('optional fullscreen returning foreground clears snapshot',returned.state.fullscreenElement===null&&returned.state.fullscreen===false&&returned.state.webkitIsFullScreen===false&&returned.cssFullscreen===false&&isExpectedWindowedWindow(returnedWindow,fullscreenWindow.windowId),{returned,returnedWindow});
       check('optional fullscreen tab activation restores real input focus without refocusing',returned.focus.activeElement==='input'&&returned.focus.activeElement===focusSentinel.activeElement&&returned.focus.actualFocus===true&&returned.focus.value===focusSentinel.value&&returned.focus.selectionStart===focusSentinel.selectionStart&&returned.focus.selectionEnd===focusSentinel.selectionEnd,{before:focusSentinel,duringFullscreen:visibleFocus,returned:returned.focus});
       await cdp.send('Target.activateTarget',{targetId:other.targetId}); await delay(200);
       const hiddenAgain=await cdp.evaluate(fs.sessionId,"({state:readProbe(),cssFullscreen:document.documentElement.matches(':fullscreen')})");
@@ -351,10 +353,10 @@ try {
       for(let i=0;i<50;i++) {
         visibleExitNative=await cdp.evaluate(fs.sessionId,"document.documentElement.matches(':fullscreen')");
         visibleExitWindow=await cdp.send('Browser.getWindowForTarget',{targetId:fs.targetId});
-        if(!visibleExitNative&&visibleExitWindow.bounds.windowState==='normal')break;
+        if(!visibleExitNative&&isExpectedWindowedWindow(visibleExitWindow,fullscreenWindow.windowId))break;
         await delay(100);
       }
-      check('optional fullscreen explicit foreground exit clears actual fullscreen',visibleExitNative===false&&visibleExitWindow.bounds.windowState==='normal',{cssFullscreen:visibleExitNative,window:visibleExitWindow});
+      check('optional fullscreen explicit foreground exit clears actual fullscreen',visibleExitNative===false&&isExpectedWindowedWindow(visibleExitWindow,fullscreenWindow.windowId),{cssFullscreen:visibleExitNative,window:visibleExitWindow});
 
       // Exercise supported queued activation, not synthetic reentrant browser
       // observers. CDP.send writes ordered WebSocket frames synchronously; queue
@@ -379,11 +381,11 @@ try {
         for(let i=0;i<50;i++) {
           rapidAfter=await cdp.evaluate(fs.sessionId,`({state:readProbe(),cssFullscreen:document.documentElement.matches(':fullscreen'),focus:${focusExpression},events:probeEvents.filter(e=>e.type.includes('fullscreen'))})`);
           rapidWindow=await cdp.send('Browser.getWindowForTarget',{targetId:fs.targetId});
-          if(!rapidAfter.cssFullscreen&&rapidAfter.state.fullscreenElement===null&&rapidAfter.state.fullscreen===false&&rapidAfter.state.webkitIsFullScreen===false&&rapidAfter.focus.activeElement===focusSentinel.activeElement&&rapidAfter.focus.actualFocus&&rapidAfter.focus.value===focusSentinel.value&&rapidAfter.focus.selectionStart===focusSentinel.selectionStart&&rapidAfter.focus.selectionEnd===focusSentinel.selectionEnd&&rapidWindow.bounds.windowState==='normal')break;
+          if(!rapidAfter.cssFullscreen&&rapidAfter.state.fullscreenElement===null&&rapidAfter.state.fullscreen===false&&rapidAfter.state.webkitIsFullScreen===false&&rapidAfter.focus.activeElement===focusSentinel.activeElement&&rapidAfter.focus.actualFocus&&rapidAfter.focus.value===focusSentinel.value&&rapidAfter.focus.selectionStart===focusSentinel.selectionStart&&rapidAfter.focus.selectionEnd===focusSentinel.selectionEnd&&isExpectedWindowedWindow(rapidWindow,fullscreenWindow.windowId))break;
           await delay(100);
         }
         observe('fullscreenRapidActivation',{before:rapidBefore,after:rapidAfter,window:rapidWindow,activationElapsedMs});
-        check('rapid tab activation exits actual fullscreen and clears foreground snapshot',rapidAfter.cssFullscreen===false&&rapidAfter.state.fullscreenElement===null&&rapidAfter.state.fullscreen===false&&rapidAfter.state.webkitIsFullScreen===false&&rapidWindow.bounds.windowState==='normal',{rapidAfter,rapidWindow});
+        check('rapid tab activation exits actual fullscreen and clears foreground snapshot',rapidAfter.cssFullscreen===false&&rapidAfter.state.fullscreenElement===null&&rapidAfter.state.fullscreen===false&&rapidAfter.state.webkitIsFullScreen===false&&isExpectedWindowedWindow(rapidWindow,fullscreenWindow.windowId),{rapidAfter,rapidWindow});
         check('rapid tab activation preserves actual input focus and selection',rapidAfter.focus.activeElement===focusSentinel.activeElement&&rapidAfter.focus.actualFocus===true&&rapidAfter.focus.value===focusSentinel.value&&rapidAfter.focus.selectionStart===focusSentinel.selectionStart&&rapidAfter.focus.selectionEnd===focusSentinel.selectionEnd,{before:focusSentinel,after:rapidAfter.focus});
         await cdp.send('Target.activateTarget',{targetId:other.targetId}); await delay(200);
         const rapidHiddenAgain=await cdp.evaluate(fs.sessionId,"({state:readProbe(),cssFullscreen:document.documentElement.matches(':fullscreen')})");
@@ -392,7 +394,7 @@ try {
         await cdp.send('Target.activateTarget',{targetId:fs.targetId});
       } else check('rapid tab activation scenario can enter real fullscreen',false,rapidEntry);
     } else {
-      if(args.mode!=='oracle') check('default or master-disabled fullscreen preserves normal exit state',after.state.fullscreenElement===null&&after.state.fullscreen===false&&after.state.webkitIsFullScreen===false&&hiddenNative.cssFullscreen===false&&hiddenNative.cssFullscreenElement===null&&hiddenWindow.bounds.windowState==='normal',{after,hiddenNative,hiddenWindow});
+      if(args.mode!=='oracle') check('default or master-disabled fullscreen preserves windowed exit state',after.state.fullscreenElement===null&&after.state.fullscreen===false&&after.state.webkitIsFullScreen===false&&hiddenNative.cssFullscreen===false&&hiddenNative.cssFullscreenElement===null&&isExpectedWindowedWindow(hiddenWindow,fullscreenWindow.windowId),{after,hiddenNative,hiddenWindow});
       // References only observe restoration here; their fullscreen contract is
       // not the new optional native snapshot contract.
       await cdp.send('Target.activateTarget',{targetId:fs.targetId}); await delay(200);

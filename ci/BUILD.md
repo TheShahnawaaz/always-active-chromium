@@ -68,6 +68,14 @@ Before GN, the native applicator runs `--check`, applies idempotently, then runs
 `--verify-applied`. Its exact source and output hashes reject another version or
 an unexpected edit. Source/patch/configuration fingerprints isolate checkpoints;
 documentation and authoring caches are excluded from that fingerprint.
+Archive builds also authenticate the pinned upstream Git commit object and ten
+small source/generator inputs before emitting standard `build/util/LASTCHANGE`
+and `LASTCHANGE.committime`. The supported GN argument
+`use_dummy_lastchange=false` selects those real values for this nonofficial,
+unbranded build. The receipt is retained in checkpoint state and package build
+provenance. Compiler pins and native fingerprints stay unchanged; GN/Ninja
+regenerate metadata and rebuild affected consumers incrementally. The dummy
+file, generated C++ headers and official/branding flags are never rewritten.
 Each resumed prepare checks hydration again: per-dependency plan markers skip
 unchanged packages and preserve their mtimes, while newly selected tools are
 hydrated. `hydration_revision` in the pins versions the hydration semantics.

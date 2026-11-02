@@ -123,9 +123,20 @@ def fingerprint(platform):
     return digest.hexdigest()
 
 
-def rendered_gn_args(platform):
+def rendered_gn_args(platform, revision_receipt=None):
     values = dict(PINS['common_gn_args'])
     values.update(PINS['platform_gn_args'][platform])
+    if revision_receipt is not None:
+        if (revision_receipt.get('status') != 'complete' or
+                revision_receipt.get('revision') != PINS['revision'] or
+                revision_receipt.get('metadata_gn_args') != {'use_dummy_lastchange': False} or
+                values.get('is_official_build') is not False or
+                values.get('is_chrome_branded') is not False):
+            raise RuntimeError('Authenticated nonofficial source revision receipt required')
+        # Upstream otherwise uses LASTCHANGE.dummy for nonofficial builds.
+        # This supported argument selects authenticated archive metadata only;
+        # compiler/native pins and the reusable object fingerprint stay intact.
+        values['use_dummy_lastchange'] = False
     return ''.join(f'{key} = {json.dumps(value)}\n' for key, value in values.items())
 
 
@@ -534,9 +545,12 @@ def prepare(platform):
     prepare_diagnostic(src, platform)
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src])
     run([sys.executable, PROJECT / 'native/apply_patches.py', '--source', src, '--verify-applied'])
+    from source_revision import ensure_source_revision
+    state['source_revision'] = ensure_source_revision(src, PINS)
+    state_file.write_text(json.dumps(state, indent=2) + '\n')
     out = src / 'out/AlwaysActive'
     out.mkdir(parents=True, exist_ok=True)
-    write_if_changed(out / 'args.gn', rendered_gn_args(platform))
+    write_if_changed(out / 'args.gn', rendered_gn_args(platform, state['source_revision']))
     command = [gn_path(src, platform), 'gen', 'out/AlwaysActive', '--fail-on-unused-args']
     if platform == 'win-x64':
         # GN's dotfile names extensionless python3; this Windows CIPD host

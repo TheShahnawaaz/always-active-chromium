@@ -6,13 +6,14 @@ There is no finished custom browser package yet. The exact-source **15-file**
 native16 patch targets Chromium `156.0.8078.80`. It includes
 visibility/focus/event/animation behavior, detached-document safety and optional
 fullscreen/background-navigation controls and the pinned KURL method correction. Application/reversal/digest checks
-pass; the complete Mac Ninja build has succeeded, while packaging and native
-runtime verification remain pending. The standard
+pass; the real Mac app has been packaged and exercised, with unresolved source
+revision metadata and fullscreen test assumptions. Full delivery verification
+remains pending on both platforms. The standard
 interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | Native16 source `b3237eac7f70` completed Ninja successfully at 19:27:00 UTC in [41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189): exit 0, complete capture, no structured errors. Packaging reported `code has no resources but signature indicates they must be present`; tests/publication were skipped. Its six-part **9,900,397,712-byte** complete native16 cache is verified. [Retry 41515581981](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41515581981), source `706479414249`, is restoring that cache with the staged sealing fix. | Inspect actual signature metadata, packaging, browser/runtime results and final assets. No native source or compiler pins changed. |
+| macOS arm64 | [41515581981](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41515581981), source `706479414249`, built and packaged the real app. All 16 Mach-O parts passed strict staged signing verification with source bytes/mtimes preserved. Actual core tests: baseline 30 pass/2 fail, native 37/1, optional 52/3; paired no-debug control 7/7 and native 7/7. The native-only failure is the upstream revision reporting zeros. Other failures assume a restored maximized window must be `normal`. A 252,684,636-byte draft ZIP exists with verified published checksums. Checkpoint save was still active at 20:56 UTC. | Incrementally rebuild with authenticated revision metadata, rerun corrected window-state checks, then verify a fresh extracted delivery, Store behavior and UI. |
 | Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. [Retry 41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408), source `81735e8f2ce2`, restored the verified **7,741,978,948-byte** native16 checkpoint, passed mandatory clean CPython/default GN-desc/RC preparation at 19:13:02 UTC and audited all **75,790** scoped leaves with zero missing. Compilation began at 19:13:47 UTC. | Preserve the live compilation and inspect its actual next result. |
 
 The 18:53 UTC official version check still identifies `156.0.8078.80` as
@@ -21,6 +22,25 @@ Chrome for Testing Stable and the pinnable, fraction-1 Stable release on both
 and [Windows x64](https://versionhistory.googleapis.com/v1/chrome/platforms/win64/channels/stable/versions/all/releases?filter=endtime%3Dnone).
 The higher `157.0.8103.26` entry is a non-pinnable 0.005 rollout, not the selected
 full Stable release. Source pins and the native16 fingerprints remain unchanged.
+
+The Mac run now establishes actual native default behavior on the staged app;
+it does not establish a verified final installer. Its ZIP SHA-256 is
+`5d3e2f23fca62e07c4d2ea26e69ce467ffd8ddc3d0ea8dab82b36b9ed2392252`.
+The source revision failure comes from upstream's nonofficial
+`use_dummy_lastchange` default. The repair authenticates the actual pinned Git
+commit and generator inputs, emits standard LASTCHANGE metadata, and explicitly
+selects it with the supported GN argument while keeping official/branding flags
+false. Seven focused tests pass, including the real pinned version generators.
+Fullscreen checks now accept only `normal` or `maximized` on the exact expected
+window; four focused tests reject fullscreen, minimized, unknown or wrong-window
+results. CSS state, binding snapshots, event suppression and focus checks remain.
+
+The user requested laptop-independent work. GitHub jobs and their configured
+bounded continuations already run remotely. Codex Cloud had no published
+environment; connecting GitHub reached an OpenAI authentication rate-limit
+error. No independent cloud coding task has been created. See
+[the continuation handoff](CONTINUE.md); do not claim autonomous cloud debugging
+is running until a real hosted task is started and verified.
 
 The initial measured complete checkpoint saves took 19m12s–25m33s. The final
 9.90 GB Mac cache subsequently took **31m34s** and remains the observed maximum.
@@ -37,8 +57,8 @@ including both real native15 source sets and actual Ninja selective rebuilding.
 The migration permits only Mac source `9f6d9a79aef2` / fingerprint `3ea184…` and
 Windows source `697512488fc8` / `bc48a0…`; unchanged source/object bytes and mtimes
 are preserved. There is no native14 or cold fallback. Windows native16 compilation
-and both platforms' native runtime behavior remain unverified. The complete Mac
-compile does not establish a finished or launchable package.
+remains unverified. The complete Mac compile and its later partial runtime results
+do not establish a finished delivery.
 
 Mac packaging now prepares a fresh independent app copy, inventories actual
 Mach-O/signature metadata, and signs inside-out using an ad-hoc identity only
@@ -54,7 +74,8 @@ packaging/extraction path and unchanged executable hash after the ZIP roundtrip;
 these are not Chromium runtime tests. Seven bounded diagnostic guards and 15
 existing build checks pass (one Windows-only check skipped locally). Fixed
 bounded signing JSON is published before a long checkpoint so future packaging
-failures can be inspected promptly. Actual Chromium signing/runtime remains pending.
+failures can be inspected promptly. Run 41515581981 subsequently verified actual
+Chromium signing and exercised the staged app, as recorded above.
 
 The Windows RC repair restores the exact DEPS `rc_win` hook: the missing
 603,648-byte AMD64 compiler at `build/toolchain/win/rc/win/rc.exe`, verified against
