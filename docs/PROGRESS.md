@@ -2,6 +2,15 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows stage 1 resumed compilation at 04:49 IST** in
+[41541479553](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41541479553).
+Checkpoint restoration, mandatory source/tool/GN preparation and the input audit
+passed. The audit checked **75,790 leaves, zero missing**, no errors, in 23.218s.
+All six bounded preparation/input assets, server sizes/digests and four checksum
+entries were verified against exact source/workflow `81735e8f2ce2`. No duplicate
+dispatch or cancellation occurred. The remaining-action counter from the prior
+invocation is not an overall percentage or a reliable short ETA.
+
 **Windows stage 0 is safely complete; automatic stage 1 is restoring.**
 [41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408)
 ended successfully after a final resumed counter of **6,270/37,979 actions**

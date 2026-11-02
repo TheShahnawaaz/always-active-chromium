@@ -49,6 +49,15 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Current Windows stage 1 is compiling.** Run **41541479553** successfully
+restored the verified checkpoint (22:59:17–23:17:51 UTC), completed source/tool/GN
+preparation without diagnostic events, and passed its declared-input audit:
+**75,790 checked, zero missing, no errors**, 23.218 seconds. All six preparation/
+input assets and four checksum entries were independently verified against API
+digests/sizes and exact source/workflow `81735e8f2ce2`. Real compilation began
+at **23:19:04 UTC November 2 / 04:49 IST November 3**. Preserve the live compile;
+the next absolute cutoff remains approximately 08:07 IST, not a finish estimate.
+
 **Windows checkpoint is verified complete and automatic stage 1 is running.**
 Stage 0 **41503529408** completed successfully. Its final resumed Ninja counter
 was **6,270/37,979**, leaving **31,709** declared actions at that point; this is
