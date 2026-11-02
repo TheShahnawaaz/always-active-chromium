@@ -1,15 +1,52 @@
-"""Retain only fixed bounded audit/compile JSON before a large checkpoint."""
+"""Retain fixed bounded build/signing JSON before a large checkpoint."""
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import subprocess
 
 
+def validate_package_report(report):
+    allowed = {'schema', 'platform', 'status', 'stage', 'code', 'scope', 'counts', 'parts', 'source_unchanged'}
+    if (set(report) - allowed or report.get('platform') != 'mac-arm64' or
+            report.get('status') not in ('complete', 'failed') or
+            not isinstance(report.get('stage'), str) or not re.fullmatch(r'[a-z0-9_-]{1,80}', report['stage']) or
+            report.get('code') is not None and (not isinstance(report['code'], str) or not re.fullmatch(r'[a-z0-9_]{1,100}', report['code'])) or
+            not isinstance(report.get('scope'), str) or len(report['scope']) > 1024 or
+            report.get('source_unchanged') is not None and type(report['source_unchanged']) is not bool):
+        raise ValueError('Unexpected Mac package diagnostic fields')
+    counts = report.get('counts')
+    if (not isinstance(counts, dict) or set(counts) != {'files', 'macho', 'bundles', 'planned', 'signed', 'verified'} or
+            any(type(value) is not int or not 0 <= value <= 1000000 for value in counts.values())):
+        raise ValueError('Unexpected Mac package counts')
+    parts = report.get('parts')
+    if not isinstance(parts, list) or len(parts) > 48:
+        raise ValueError('Unexpected Mac package inventory')
+    for part in parts:
+        if not isinstance(part, dict) or set(part) - {'path', 'kind', 'identifier', 'baseline', 'after'}:
+            raise ValueError('Unexpected package part fields')
+        path = part.get('path')
+        identifier = part.get('identifier')
+        if (not isinstance(path, str) or not 1 <= len(path) <= 1024 or
+                any(char in path for char in ['\\', '\n', '\r', '\0']) or PurePosixPath(path).is_absolute() or
+                '..' in PurePosixPath(path).parts or part.get('kind') not in ('bundle', 'macho') or
+                identifier is not None and (not isinstance(identifier, str) or not re.fullmatch(r'[A-Za-z0-9_. -]{1,256}', identifier))):
+            raise ValueError('Unexpected package part identity')
+        for field in ('baseline', 'after'):
+            value = part.get(field)
+            if field == 'after' and value is None:
+                continue
+            if (not isinstance(value, dict) or set(value) != {'signature', 'flags', 'enforcement_flags', 'entitlements_sha256'} or
+                    value.get('signature') not in ('unsigned', 'adhoc', 'non-adhoc') or
+                    any(type(value.get(key)) is not int or not 0 <= value[key] <= 0xffffffff for key in ('flags', 'enforcement_flags')) or
+                    not isinstance(value.get('entitlements_sha256'), str) or not re.fullmatch(r'[0-9a-f]{64}', value['entitlements_sha256'])):
+                raise ValueError('Unexpected package signature metadata')
+
+
 def collect(project, env):
     phase = env.get('AA_DIAGNOSTIC_PHASE', 'audit')
-    if phase not in ('audit', 'compile', 'prepare'):
+    if phase not in ('audit', 'compile', 'prepare', 'package'):
         raise ValueError('Unexpected diagnostic phase')
     platform = env['AA_PLATFORM']
     repository = env['GITHUB_REPOSITORY']
@@ -26,7 +63,7 @@ def collect(project, env):
     if any(not re.fullmatch(r'[0-9a-f]{40}', value)
            for value in (source_commit, workflow_commit)):
         raise ValueError('Unexpected source/workflow commit')
-    outcome = env[{'audit': 'AA_AUDIT_OUTCOME', 'compile': 'AA_COMPILE_OUTCOME', 'prepare': 'AA_PREPARE_OUTCOME'}[phase]]
+    outcome = env[{'audit': 'AA_AUDIT_OUTCOME', 'compile': 'AA_COMPILE_OUTCOME', 'prepare': 'AA_PREPARE_OUTCOME', 'package': 'AA_PACKAGE_OUTCOME'}[phase]]
     if outcome not in ('success', 'failure', 'cancelled', 'skipped'):
         raise ValueError('Unexpected audit outcome')
 
@@ -70,6 +107,8 @@ def collect(project, env):
             for name in ('manifest_before', 'manifest_after'):
                 if not isinstance(proof.get(name), dict) or set(proof[name]) - {'valid', 'sha256'}:
                     raise ValueError('Unexpected Ninja manifest proof fields')
+        if phase == 'package':
+            validate_package_report(audit)
         audit_status = audit['status']
         target = destination / f'{platform}-{report_name}.json'
         target.write_bytes(payload)
@@ -89,7 +128,7 @@ def collect(project, env):
                  'Only finite JSON and checksums are retained; raw tool logs, profiles, '
                  'source archives and build outputs are excluded.',
     }
-    if phase in ('compile', 'prepare'):
+    if phase in ('compile', 'prepare', 'package'):
         status[f'{phase}_step_outcome'] = status.pop('audit_step_outcome')
         status[f'{phase}_report_available'] = status.pop('audit_report_available')
         status[f'{phase}_report_status'] = status.pop('audit_report_status')

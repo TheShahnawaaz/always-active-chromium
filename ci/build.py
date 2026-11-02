@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 from urllib.parse import quote
 import zipfile
@@ -669,10 +670,18 @@ def package(platform):
     packages = PROJECT / 'packages'
     packages.mkdir(exist_ok=True)
     stem = f'always-active-chromium-{PINS["version"]}-{platform}'
+    mac_signing = None
     if platform == 'mac-arm64':
-        app = out / 'Chromium.app'
+        from mac_package import stage_signed_app
+        staging = Path(tempfile.mkdtemp(prefix='mac-stage-', dir=packages))
+        signed = stage_signed_app(out / 'Chromium.app', staging / 'Chromium.app', PINS['version'],
+                                  PROJECT / 'reports' / platform / 'package-diagnostics.json')
+        app = Path(signed['app'])
+        mac_signing = json.loads((PROJECT / 'reports' / platform / 'package-diagnostics.json').read_text())
         run(['codesign', '--verify', '--deep', '--strict', app])
         run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', app, packages / f'{stem}.zip'])
+        # Core checks use the same sealed app that was put into the archive.
+        output('browser', signed['browser'])
     else:
         installer = out / 'mini_installer.exe'
         if not installer.is_file():
@@ -684,6 +693,8 @@ def package(platform):
                 'workflow_run': os.environ.get('GITHUB_RUN_ID'),
                 'runner_image': os.environ.get('ImageVersion'),
                 'signing': 'No Developer ID/notarization or Windows Authenticode certificate configured.'}
+    if mac_signing is not None:
+        manifest['mac_signing'] = mac_signing
     (packages / f'{stem}-build.json').write_text(json.dumps(manifest, indent=2) + '\n')
     (packages / f'{stem}-SHA256SUMS.txt').write_text(''.join(
         f'{sha256(path)}  {path.name}\n' for path in sorted(packages.glob(stem + '*')) if not path.name.endswith('SHA256SUMS.txt')))

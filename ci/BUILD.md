@@ -344,6 +344,17 @@ packages: no Apple Developer ID/notarization or Windows Authenticode certificate
 is configured. They keep Chromium's own identity/profile, separate from Google
 Chrome. See `docs/DISTRIBUTION.md` for installation and product differences.
 
+For the default unsigned/linker-ad-hoc Mac build, packaging first creates a
+fresh staged app. Its actual ARM64 Mach-O files, bundle identities, relative
+symlinks, flags and entitlement digests are checked before inside-out ad-hoc
+sealing. Existing entitlements/enforcement flags must match afterward; unsupported
+stronger flags or non-ad-hoc identities are refused. There is no deep signing,
+new runtime option, development entitlement, private identity, or OS setting
+change. Source bytes and mtimes must remain unchanged. The browser checks use
+the staged executable that is zipped, and bounded signing diagnostics publish
+before the large compiler checkpoint. A fresh delivery workflow independently
+extracts that ZIP and verifies the real packaged app.
+
 After compilation the workflow runs the repository's native behavior and MV3
 extension harness against the real executable in three modes: master feature
 disabled for the built-browser baseline, native defaults, and optional native

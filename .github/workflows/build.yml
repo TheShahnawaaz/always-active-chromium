@@ -135,6 +135,14 @@ jobs:
         id: package
         if: ${{ steps.compile.outputs.status == 'complete' }}
         run: python ci/build.py package --platform ${{ matrix.platform }}
+      - name: Retain finite Mac signing diagnostics before the large checkpoint
+        if: ${{ !cancelled() && matrix.platform == 'mac-arm64' && steps.package.outcome != 'skipped' && steps.package.outcome != '' && hashFiles('ci/mac_package.py') != '' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        run: python .github/scripts/publish-build-diagnostics.py
+        env:
+          AA_DIAGNOSTIC_PHASE: package
+          AA_PACKAGE_OUTCOME: ${{ steps.package.outcome }}
       - name: Verify native behavior, MV3 extensions, and zero-debugger operation
         id: tests
         if: ${{ steps.package.outcome == 'success' }}
@@ -142,7 +150,7 @@ jobs:
         timeout-minutes: 20
         shell: bash
         env:
-          AA_BROWSER: ${{ steps.prepare.outputs.browser }}
+          AA_BROWSER: ${{ steps.package.outputs.browser || steps.prepare.outputs.browser }}
         run: python ci/verify.py --browser "$AA_BROWSER" --output "reports/${{ matrix.platform }}"
       - name: Upload packages, checksums, and selected evidence to a draft
         if: ${{ always() && steps.package.outcome == 'success' }}

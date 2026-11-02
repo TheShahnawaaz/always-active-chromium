@@ -205,6 +205,42 @@ class CompileDiagnosticsTests(unittest.TestCase):
             self.assertTrue(all('PRIVATE_RAW_ENV' not in item.read_text() and
                                 'secret.invalid' not in item.read_text() for item in selected))
 
+    def test_package_metadata_is_retained_without_raw_logs_or_bundle_files(self):
+        collect = runpy.run_path(str(Path(__file__).resolve().parents[1] /
+                                    '.github/scripts/publish-build-diagnostics.py'))['collect']
+        env = {'AA_DIAGNOSTIC_PHASE': 'package', 'AA_PLATFORM': 'mac-arm64',
+               'GITHUB_REPOSITORY': 'owner/repo', 'GITHUB_RUN_ID': '123',
+               'AA_SOURCE_COMMIT': '1' * 40, 'GITHUB_SHA': '1' * 40, 'AA_PACKAGE_OUTCOME': 'failure'}
+        report = {'schema': 1, 'platform': 'mac-arm64', 'status': 'failed', 'stage': 'inventory',
+            'code': 'stronger_baseline_refused', 'scope': 'Staged signing diagnostics only.',
+            'counts': {'files': 1, 'macho': 1, 'bundles': 1, 'planned': 1, 'signed': 0, 'verified': 0},
+            'parts': [{'path': '.', 'kind': 'bundle', 'identifier': 'org.chromium.Chromium',
+                'baseline': {'signature': 'adhoc', 'flags': 0x10002, 'enforcement_flags': 0x10000,
+                             'entitlements_sha256': 'a' * 64}}], 'source_unchanged': True}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / 'reports/mac-arm64/package-diagnostics.json'
+            diagnostic.write_report(path, report)
+            (path.parent / 'raw.log').write_text('PRIVATE_RAW_LOG')
+            tag, _, selected = collect(root, env)
+            self.assertEqual(tag, 'build-package-mac-arm64-123-1')
+            self.assertEqual({item.name for item in selected}, {'mac-arm64-package-diagnostics.json',
+                'mac-arm64-package-status.json', 'mac-arm64-package-SHA256SUMS.txt'})
+            status = json.loads((root / 'packages/build-diagnostics/mac-arm64-package-status.json').read_text())
+            self.assertEqual(status['package_step_outcome'], 'failure')
+            self.assertEqual(status['package_report_status'], 'failed')
+            self.assertTrue(all('PRIVATE_RAW_LOG' not in item.read_text() for item in selected))
+            for mutation in ['raw', 'absolute', 'nested', 'count', 'many']:
+                changed = json.loads(json.dumps(report))
+                if mutation == 'raw':changed['raw_log'] = 'PRIVATE_RAW_LOG'
+                elif mutation == 'absolute':changed['parts'][0]['path'] = '/private/foreign'
+                elif mutation == 'nested':changed['parts'][0]['baseline']['raw_command'] = 'PRIVATE_RAW_LOG'
+                elif mutation == 'count':changed['counts']['signed'] = True
+                else:changed['parts'] *= 49
+                diagnostic.write_report(path, changed)
+                with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                    collect(root, env)
+
 
 if __name__ == '__main__':
     unittest.main()

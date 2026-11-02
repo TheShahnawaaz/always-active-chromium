@@ -63,6 +63,15 @@ Signing status must be stated for each artifact. No Developer ID certificate,
 Apple notarization credential, or Windows signing certificate has been provided
 to the project. No signing identity may be purchased or uploaded implicitly.
 
+The Mac packager seals a fresh staged copy with an ad-hoc identity after
+inspecting the real compiled signatures. It preserves existing entitlements and
+refuses unsupported enforcement flags or non-ad-hoc identities. It signs nested
+code before the containing framework/app, then requires strict verification.
+It leaves the compiler outputs unchanged and archives the sealed copy. This is
+development-package sealing, without Developer ID or notarization; it does not
+change Gatekeeper, TCC, quarantine or other OS settings. The complete delivered
+archive must still pass fresh extraction and browser/extension/runtime checks.
+
 ## Verify the delivered package
 
 After a real package draft exists, run **Actions → Verify real browser delivery**

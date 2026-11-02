@@ -6,13 +6,13 @@ There is no finished custom browser package yet. The exact-source **15-file**
 native16 patch targets Chromium `156.0.8078.80`. It includes
 visibility/focus/event/animation behavior, detached-document safety and optional
 fullscreen/background-navigation controls and the pinned KURL method correction. Application/reversal/digest checks
-pass; two corrected Mac native objects have compiled, while complete native
-builds and runtime verification remain pending. The standard
+pass; the complete Mac Ninja build has succeeded, while packaging and native
+runtime verification remain pending. The standard
 interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | Native16 source `b3237eac7f70` passed migration and input audit, and corrected `document.o` plus `scripted_animation_controller.o` compiled successfully. Three pending stages completed at their normal budgets; the latest verified checkpoint is **8,962,434,131 bytes**. [Current stage 41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189) is compiling from 18:13:46 UTC, with **2,841 scheduled actions** at the last checkpoint before graph changes. | Preserve the live continuation; inspect the real link/package/runtime results. Remaining actions are not an ETA. |
+| macOS arm64 | Native16 source `b3237eac7f70` completed Ninja successfully at 19:27:00 UTC in [41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189): exit 0, complete capture, no structured errors. Its package step failed at the first strict signature check; tests/publication were skipped. The complete build is being checkpointed. | Preserve the save; confirm its complete manifest and exact packaging stderr, then retry staged sealing from the compiled cache. |
 | Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. [Retry 41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408), source `81735e8f2ce2`, restored the verified **7,741,978,948-byte** native16 checkpoint, passed mandatory clean CPython/default GN-desc/RC preparation at 19:13:02 UTC and audited all **75,790** scoped leaves with zero missing. Compilation began at 19:13:47 UTC. | Preserve the live compilation and inspect its actual next result. |
 
 The 18:53 UTC official version check still identifies `156.0.8078.80` as
@@ -34,9 +34,25 @@ pass; root independently passed 16 migration/checkpoint-selection checks,
 including both real native15 source sets and actual Ninja selective rebuilding.
 The migration permits only Mac source `9f6d9a79aef2` / fingerprint `3ea184…` and
 Windows source `697512488fc8` / `bc48a0…`; unchanged source/object bytes and mtimes
-are preserved. There is no native14 or cold fallback. Native16 compilation and
-runtime behavior are still unverified. Mac can resume independently while the
-Windows tool repair is reviewed.
+are preserved. There is no native14 or cold fallback. Windows native16 compilation
+and both platforms' native runtime behavior remain unverified. The complete Mac
+compile does not establish a finished or launchable package.
+
+Mac packaging now prepares a fresh independent app copy, inventories actual
+Mach-O/signature metadata, and signs inside-out using an ad-hoc identity only
+for the accepted unsigned/linker-ad-hoc baseline. Existing entitlements and
+enforcement flags must remain equal; stronger flags or non-ad-hoc identities
+are refused rather than downgraded. Compiled bytes and file/directory/symlink
+mtimes must remain unchanged. No development entitlement, new signing option,
+private certificate, notarization or OS security change is introduced.
+Strict verification remains required for each part and the complete app.
+Core browser checks use the same staged executable that is archived. Seven
+real tiny C/app/framework fixture tests pass at root, including the production
+packaging/extraction path and unchanged executable hash after the ZIP roundtrip;
+these are not Chromium runtime tests. Seven bounded diagnostic guards and 15
+existing build checks pass (one Windows-only check skipped locally). Fixed
+bounded signing JSON is published before a long checkpoint so future packaging
+failures can be inspected promptly. Actual Chromium signing/runtime remains pending.
 
 The Windows RC repair restores the exact DEPS `rc_win` hook: the missing
 603,648-byte AMD64 compiler at `build/toolchain/win/rc/win/rc.exe`, verified against
