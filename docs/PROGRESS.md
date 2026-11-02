@@ -12,7 +12,7 @@ interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | Native16 source `b3237eac7f70` completed Ninja successfully at 19:27:00 UTC in [41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189): exit 0, complete capture, no structured errors. Its package step failed at the first strict signature check; tests/publication were skipped. The complete build is being checkpointed. | Preserve the save; confirm its complete manifest and exact packaging stderr, then retry staged sealing from the compiled cache. |
+| macOS arm64 | Native16 source `b3237eac7f70` completed Ninja successfully at 19:27:00 UTC in [41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189): exit 0, complete capture, no structured errors. Packaging reported `code has no resources but signature indicates they must be present`; tests/publication were skipped. Its six-part **9,900,397,712-byte** complete native16 cache is verified. [Retry 41515581981](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41515581981), source `706479414249`, is restoring that cache with the staged sealing fix. | Inspect actual signature metadata, packaging, browser/runtime results and final assets. No native source or compiler pins changed. |
 | Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. [Retry 41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408), source `81735e8f2ce2`, restored the verified **7,741,978,948-byte** native16 checkpoint, passed mandatory clean CPython/default GN-desc/RC preparation at 19:13:02 UTC and audited all **75,790** scoped leaves with zero missing. Compilation began at 19:13:47 UTC. | Preserve the live compilation and inspect its actual next result. |
 
 The 18:53 UTC official version check still identifies `156.0.8078.80` as
@@ -22,7 +22,9 @@ and [Windows x64](https://versionhistory.googleapis.com/v1/chrome/platforms/win6
 The higher `157.0.8103.26` entry is a non-pinnable 0.005 rollout, not the selected
 full Stable release. Source pins and the native16 fingerprints remain unchanged.
 
-Measured complete checkpoint saves took 19m12s–25m33s. Future source raises the
+The initial measured complete checkpoint saves took 19m12s–25m33s. The final
+9.90 GB Mac cache subsequently took **31m34s** and remains the observed maximum.
+Future source raises the
 absolute compile budget from 220 to 270 minutes, retaining a 90-minute tail
 inside the same six-hour standard-runner limit. Live immutable campaigns keep
 their existing budget and completed work; they are not restarted for this change.
