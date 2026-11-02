@@ -109,6 +109,19 @@ request a Mac image. The continuation adds a guarded, permission-preflighted
 Mac window capture to the existing verifier for that remaining evidence.
 Windows 41503529408 remains in its existing compilation; preserve it.
 
+**Windows update at 03:57 IST November 3 (22:27 UTC November 2):** run
+41503529408 reached its configured compile budget and is saving a checkpoint.
+Actual compiler diagnostics say `status=pending`, `exit_code=2`, complete
+capture, no events, `normal_failure=false`, `logging_error=false`; the compile
+step outcome is success. Its valid pinned-Ninja log grew from 5,339,384 to
+8,121,013 bytes, so completed work must be retained. All three diagnostic assets,
+server sizes/digests and two checksum entries were independently verified.
+The new draft is **432035409**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41503529408-1`; it had no ready marker
+at that observation and must not yet be selected as a complete cache. Preserve
+the save and the configured automatic continuation. Do not dispatch a competing
+Windows job or cancel the chain to change its immutable source.
+
 The capture-enabled fresh delivery **41531565373**, controller `308e8c6fe592`,
 also passed acquisition, all behavior modes and Store compatibility. Its five
 assets and four checksum entries were independently verified. Both existing

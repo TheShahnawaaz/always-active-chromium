@@ -2,6 +2,14 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows budget transition, 03:57 IST:** 41503529408 is now saving completed
+work after its normal stage cutoff. Hash-verified diagnostics record `pending`,
+exit 2, no events, complete capture and a successful compile step; the valid
+Ninja log grew from 5,339,384 to 8,121,013 bytes. This is a pending continuation,
+not a compiler-error result or a finished browser. Draft checkpoint 432035409 is
+incomplete until its ready marker appears. Preserve its save and configured
+automatic next stage; no competing dispatch is needed.
+
 **Mac verified development delivery is ready. Windows is still compiling.**
 [41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385)
 passed fresh extraction, all behavior modes and 20/20 normal Store phases, then
