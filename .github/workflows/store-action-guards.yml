@@ -1,0 +1,49 @@
+name: Validate Store native action refusal guards
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-guards:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check Windows PowerShell 5 parsing and refusal before UI access
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $helper = Join-Path $env:GITHUB_WORKSPACE 'tests/ui/store-action.ps1'
+          $tokens = $null
+          $parseErrors = $null
+          [void][Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -ne 0) { throw 'Native action helper has parse errors' }
+          $guardRoot = Join-Path $env:RUNNER_TEMP ('store-action-guard-' + [guid]::NewGuid().ToString('N'))
+          [void](New-Item -ItemType Directory -Path $guardRoot)
+          $selected = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $PID)
+          $started = $selected.CreationDate.ToUniversalTime().ToString('o')
+          $cases = @(
+            @{ name = 'invalid_pid'; processId = '0'; target = 'ubol'; operation = 'accept-install'; started = $started; expected = 'invalid_pid' },
+            @{ name = 'unknown_target'; processId = '0'; target = 'not-allowlisted'; operation = 'accept-install'; started = $started; expected = 'action_target_or_operation_not_allowlisted' },
+            @{ name = 'unknown_operation'; processId = '0'; target = 'ubol'; operation = 'unreviewed'; started = $started; expected = 'action_target_or_operation_not_allowlisted' },
+            @{ name = 'wrong_creation'; processId = [string]$PID; target = 'ubol'; operation = 'accept-install'; started = '2000-01-01T00:00:00.0000000Z'; expected = 'owned_process_creation_mismatch' },
+            @{ name = 'wrong_profile'; processId = [string]$PID; target = 'ubol'; operation = 'confirm-remove'; started = $started; expected = 'owned_profile_mismatch' }
+          )
+          foreach ($case in $cases) {
+            $raw = & powershell.exe -NoProfile -NonInteractive -File $helper -PidValue $case.processId -Profile $guardRoot -Executable $selected.ExecutablePath -ExpectedStarted $case.started -Target $case.target -Operation $case.operation
+            if ($LASTEXITCODE -ne 0) { throw ('Refusal helper failed: ' + $case.name) }
+            $result = $raw | ConvertFrom-Json
+            if ($result.schema -ne 1 -or $result.status -cne 'refused' -or
+                $result.actionAttempted -ne $false -or $result.actionPerformed -ne $false -or
+                $result.identity.verified -ne $false -or @($result.errors).Count -ne 1 -or
+                $result.errors[0] -cne $case.expected -or $result.visitedNodes -ne 0) {
+              throw ('Refusal guard did not reject before UI access: ' + $case.name)
+            }
+            Write-Output ($case.name + ': refused before UI access')
+          }
+          Remove-Item -LiteralPath $guardRoot
