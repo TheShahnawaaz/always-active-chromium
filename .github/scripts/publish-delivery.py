@@ -14,7 +14,7 @@ def validate_appearance_capture(receipt, png, expected_executable=None, expected
                                 allow_startup_diagnostic=False):
     """Validate finite owned-window capture evidence, never visual equivalence."""
     if (not isinstance(receipt, dict) or receipt.get('schema') != 1 or receipt.get('purpose') != 'owned-normal-browser-window-capture' or
-            receipt.get('platform') != 'win32' or receipt.get('status') != 'captured' or receipt.get('method') != 'PrintWindow-full-window-flags-0' or
+            receipt.get('platform') != 'win32' or receipt.get('status') != 'captured' or receipt.get('method') != 'PrintWindow-full-window-flags-2' or
             receipt.get('captureAttempted') is not True or receipt.get('captureSucceeded') is not True or receipt.get('captureOutcomeUncertain') is not False or
             receipt.get('manualReview') != 'pending' or receipt.get('uiEquivalenceVerified') is not False or receipt.get('visualCompletenessVerified') is not False or
             receipt.get('nativeUiAccessed') is not True or receipt.get('errors') != []):

@@ -31,7 +31,7 @@ def fixture():
         'started': '2026-11-02T00:00:00.0000000Z', 'verified': True, 'immediatelyRevalidated': True,
         'afterCaptureRevalidated': True, 'ownerVerified': True, 'sessionVerified': True}
     receipt = {'schema': 1, 'purpose': 'owned-normal-browser-window-capture', 'platform': 'win32', 'status': 'captured',
-        'method': 'PrintWindow-full-window-flags-0', 'captureAttempted': True, 'captureSucceeded': True,
+        'method': 'PrintWindow-full-window-flags-2', 'captureAttempted': True, 'captureSucceeded': True,
         'captureOutcomeUncertain': False, 'nativeUiAccessed': True, 'visitedWindows': 1,
         'manualReview': 'pending', 'uiEquivalenceVerified': False, 'visualCompletenessVerified': False,
         'identity': identity, 'errors': [], 'window': {'handle': 'abc', 'ownerPID': 1234, 'width': width, 'height': height,

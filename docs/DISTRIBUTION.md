@@ -110,6 +110,14 @@ and keeps behavior/equivalence unverified. The reference publisher can retain
 those pixels while the test and workflow remain failed. This mode is rejected
 for native or paired runs; ordinary delivery image validation stays fixture-only.
 
+The initial flags-0 capture returned a solid image on the verified hosted CFT
+window and was rejected. The next implementation uses full-window flag
+[`PW_RENDERFULLCONTENT = 2`](https://microsoft.github.io/windows-docs-rs/doc/windows/Win32/UI/WindowsAndMessaging/constant.PW_RENDERFULLCONTENT.html),
+also used by [WebRTC's window capturer](https://webrtc.googlesource.com/src/+/7f509e13139a9683b2fd548a2e5270e9da057763/modules/desktop_capture/win/window_capturer_win_gdi.cc)
+for DirectComposition windows. It still makes one window-only API attempt;
+there is no desktop fallback or relaxation of the blank-image/ownership checks.
+Actual image quality and completeness require observed pixels and manual review.
+
 ## Updates
 
 This project does not distribute official Google Chrome or enroll its builds

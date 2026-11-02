@@ -104,7 +104,7 @@ namespace OwnedWindowCapture {
    var previous=SetThreadDpiAwarenessContext(new IntPtr(-4));if(previous==IntPtr.Zero)throw new InvalidOperationException("physical_dpi_context_unavailable");
    try {var before=Snapshot(handle,pid);
     using(var bitmap=new Bitmap((int)before[2],(int)before[3],PixelFormat.Format32bppRgb)) {
-     using(var graphics=Graphics.FromImage(bitmap)){var dc=graphics.GetHdc();try{if(!PrintWindow(new IntPtr(handle),dc,0))throw new InvalidOperationException("printwindow_failed");}finally{graphics.ReleaseHdc(dc);}}
+     using(var graphics=Graphics.FromImage(bitmap)){var dc=graphics.GetHdc();try{if(!PrintWindow(new IntPtr(handle),dc,2))throw new InvalidOperationException("printwindow_failed");}finally{graphics.ReleaseHdc(dc);}}
      var after=Snapshot(handle,pid);for(int i=0;i<before.Length;i++)if(before[i]!=after[i])throw new InvalidOperationException("window_changed_during_capture");
      var colors=new Dictionary<int,bool>();for(int y=0;y<24;y++)for(int x=0;x<32;x++)colors[bitmap.GetPixel((x*bitmap.Width)/32,(y*bitmap.Height)/24).ToArgb()]=true;
      if(colors.Count<2)throw new InvalidOperationException("solid_capture_refused");
@@ -166,7 +166,7 @@ namespace OwnedWindowCapture {
         x=$after[0];y=$after[1];width=$after[2];height=$after[3];dpi=$after[4];unchangedAfterCapture=$true}
     $script:Report.png=@{file='browser-window.png';width=$after[2];height=$after[3];bytes=$file.Length;sha256=(Get-FileHash -LiteralPath $OutputFile -Algorithm SHA256).Hash.ToLowerInvariant()}
     $script:Report.contentCheck=@{sampleCount=768;uniqueSampleColors=$colors;nonUniform=$true;visualCompletenessVerified=$false}
-    $script:Report.method='PrintWindow-full-window-flags-0'
+    $script:Report.method='PrintWindow-full-window-flags-2'
     $script:Report.captureSucceeded=$true;$script:Report.captureOutcomeUncertain=$false;$script:Report.status='captured'
 }catch{
     if ($script:Report.captureAttempted) { $script:Report.status='error' }
