@@ -13,6 +13,7 @@ let maxWindows = 8
 let maxStringBytes = 240
 let maxOutputBytes = 65_536
 let maxAncestorDepth = 16
+let maxNativeSheetDepth = 16
 let deadline = ProcessInfo.processInfo.systemUptime + 8
 var truncated = false
 var visited = 0
@@ -276,8 +277,15 @@ func inspectOwnedVisibleWindows(_ application: AXUIElement, pid: pid_t,
         "containers": [[String: Any]](), "notes": focusNotes,
         "promptIdentityVerified": false, "truncated": false,
         "maxAncestorDepth": maxAncestorDepth, "applicationHidden": false,
+        "windowDepthLimit": maxDepth, "nativeSheetDepthLimit": maxNativeSheetDepth,
         "observationScope": "owned_visible_window_subtree_only_not_verified_install_prompt"
     ]
+    var truncationReasons = Set<String>()
+    var sheetNodes = 0
+    var sheetRoots = 0
+    var deepestSheetNode = 0
+    var windowDepthBoundaries = 0
+    var sheetDepthBoundaries = 0
     do {
         guard NSRunningApplication(processIdentifier: pid)?.isHidden == false else {
             result["notes"] = focusNotes + ["owned_application_visibility_not_known_visible"]
@@ -316,35 +324,89 @@ func inspectOwnedVisibleWindows(_ application: AXUIElement, pid: pid_t,
             record["selectionReason"] = "owned_visible_window_subtree"
             record["owningWindow"] = windowRecord
             var controls: [[String: Any]] = []
-            var pending: [(AXUIElement, Int, Int)] = [(window, 0, 0)]
+            var nativeSheets: [Int: [String: Any]] = [:]
+            var nativeSheetControls: [Int: [[String: Any]]] = [:]
+            var pending: [(element: AXUIElement, depth: Int, priority: Int, sheetDepth: Int?, sheetID: Int?)] = [(window, 0, 0, nil, nil)]
             var seen: [AXUIElement] = [window]
             do {
                 while !pending.isEmpty, visited < maxNodes {
-                    // Prefer native sheets/dialogs/groups over toolbars and web
-                    // areas without relaxing the shared depth/node bounds.
-                    let next = pending.indices.min { pending[$0].2 < pending[$1].2 }!
-                    let (parent, depth, _) = pending.remove(at: next)
-                    if depth >= maxDepth { truncated = true; continue }
+                    // Only an observed owned AXSheet extends the depth bound;
+                    // its same-PID descendants retain priority over browser UI.
+                    let next = pending.indices.min { pending[$0].priority < pending[$1].priority }!
+                    let (parent, depth, _, sheetDepth, sheetID) = pending.remove(at: next)
+                    if (sheetDepth ?? depth) >= (sheetDepth == nil ? maxDepth : maxNativeSheetDepth) {
+                        truncated = true
+                        if sheetDepth == nil {
+                            windowDepthBoundaries += 1
+                            truncationReasons.insert("window_depth_boundary_reached")
+                        } else {
+                            sheetDepthBoundaries += 1
+                            truncationReasons.insert("native_sheet_depth_boundary_reached")
+                        }
+                        continue
+                    }
                     for child in try elements(parent, kAXChildrenAttribute as CFString, cap: maxNodes - visited) {
                         if seen.contains(where: { CFEqual($0, child) }) { continue }
                         guard var childRecord = try snapshot(child, pid: pid, depth: depth + 1, detailed: true) else { continue }
                         seen.append(child)
                         childRecord["ownWindowSubtreeVerified"] = true
-                        controls.append(childRecord)
                         let role = childRecord["role"] as? String ?? ""
                         let subrole = childRecord["subrole"] as? String ?? ""
+                        let childSheetDepth: Int?
+                        let childSheetID: Int?
+                        if let sheetDepth {
+                            childSheetDepth = sheetDepth + 1
+                            childSheetID = sheetID
+                        } else if role == "AXSheet" {
+                            childSheetDepth = 0
+                            childSheetID = sheetRoots
+                            sheetRoots += 1
+                        } else { childSheetDepth = nil; childSheetID = nil }
+                        if let childSheetDepth {
+                            childRecord["nativeSheetAncestryVerified"] = true
+                            childRecord["nativeSheetDepth"] = childSheetDepth
+                            sheetNodes += 1
+                            deepestSheetNode = max(deepestSheetNode, childSheetDepth)
+                        }
+                        if let childSheetID, let childSheetDepth {
+                            var sheetRecord = childRecord
+                            sheetRecord["windowRelativeDepth"] = depth + 1
+                            sheetRecord["depth"] = childSheetDepth
+                            if childSheetDepth == 0 {
+                                sheetRecord["selectionReason"] = "owned_native_sheet_subtree"
+                                sheetRecord["nativeSheetRoleVerified"] = true
+                                sheetRecord["owningWindow"] = windowRecord
+                                nativeSheets[childSheetID] = sheetRecord
+                                nativeSheetControls[childSheetID] = []
+                            } else { nativeSheetControls[childSheetID, default: []].append(sheetRecord) }
+                        }
+                        controls.append(childRecord)
                         let semantic = ["AXSheet", "AXDialog", "AXAlert"].contains(role) || subrole.localizedCaseInsensitiveContains("dialog")
                         let broad = ["AXWebArea", "AXToolbar", "AXMenuBar", "AXTabGroup"].contains(role)
-                        pending.append((child, depth + 1, semantic ? 0 : (broad ? 20 : 5)))
+                        pending.append((child, depth + 1, childSheetDepth != nil || semantic ? 0 : (broad ? 20 : 5), childSheetDepth, childSheetID))
                     }
                 }
-                if !pending.isEmpty { truncated = true }
+                if !pending.isEmpty {
+                    truncated = true
+                    if visited >= maxNodes { truncationReasons.insert("shared_node_limit_reached") }
+                }
             } catch {
                 truncated = true
-                result["notes"] = focusNotes + [bounded((error as? ProbeError)?.message ?? "owned_window_traversal_error")]
+                let reason = (error as? ProbeError)?.message ?? "owned_window_traversal_error"
+                truncationReasons.insert(reason == "traversal_deadline" ? "shared_deadline_reached" : "accessibility_query_error")
+                result["notes"] = focusNotes + [bounded(reason)]
             }
-            record["controls"] = controls
-            containers.append(record)
+            // Preserve finite native-sheet observations ahead of the aggregate;
+            // matching and any later action must still verify their own content.
+            for sheetID in nativeSheets.keys.sorted() {
+                guard containers.count < 4, var sheet = nativeSheets[sheetID] else { truncated = true; break }
+                sheet["controls"] = nativeSheetControls[sheetID] ?? []
+                containers.append(sheet)
+            }
+            if containers.count < 4 {
+                record["controls"] = controls
+                containers.append(record)
+            } else { truncated = true; truncationReasons.insert("container_limit_reached") }
             result["containers"] = containers
             result["status"] = "observed"
             if containers.count >= 4 || visited >= maxNodes || ProcessInfo.processInfo.systemUptime >= deadline { break }
@@ -354,6 +416,13 @@ func inspectOwnedVisibleWindows(_ application: AXUIElement, pid: pid_t,
         result["status"] = "error"
         result["notes"] = focusNotes + [bounded((error as? ProbeError)?.message ?? "owned_window_inspection_error")]
     }
+    result["nativeSheetTraversal"] = [
+        "rootsObserved": sheetRoots, "nodesObserved": sheetNodes,
+        "maxRelativeDepthObserved": deepestSheetNode,
+        "depthBoundaryVisits": sheetDepthBoundaries
+    ]
+    result["windowDepthBoundaryVisits"] = windowDepthBoundaries
+    result["truncationReasons"] = truncationReasons.sorted()
     result["truncated"] = truncated
     return result
 }
