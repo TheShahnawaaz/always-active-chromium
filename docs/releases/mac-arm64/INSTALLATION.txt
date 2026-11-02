@@ -20,6 +20,8 @@ Extract the ZIP with Archive Utility. Move the complete Chromium.app into
 Applications, optionally inside a new Always Active Chromium folder. Do not
 replace Google Chrome or an existing standalone Chromium app/profile. Open the
 app normally. This is arm64 for Apple Silicon, not an Intel Mac package.
+The bundle declares macOS 13.0 as its minimum; runtime verification ran on
+the standard macOS 26 Apple Silicon runner.
 
 The app is ad-hoc signed, without Apple Developer ID or notarization. macOS
 may require ordinary per-app approval for a downloaded app. Browser-download

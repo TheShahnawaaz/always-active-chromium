@@ -171,7 +171,8 @@ Compare the entire 64-character result with the ZIP entry in the manifest.
 Extract the ZIP with Archive Utility, then move `Chromium.app` into Applications.
 If an existing Chromium app is present, keep it and choose a separate folder;
 do not replace it or Google Chrome. Open the extracted application normally.
-This is an arm64 app for Apple Silicon, not an Intel Mac package.
+This is an arm64 app for Apple Silicon, not an Intel Mac package. Its bundle and
+main Mach-O declare macOS 13.0 minimum; runtime checks were performed on macOS 26.
 
 The app is ad-hoc signed, without Developer ID or notarization. A browser-downloaded
 ZIP may therefore receive Gatekeeper treatment that a hosted extraction test
