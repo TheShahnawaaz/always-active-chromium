@@ -243,3 +243,50 @@ profile and browser log. This is a dialog-inspection gate, not a successful
 installation, restart/update/removal test, or native-binary compatibility claim.
 Local CFT's disabled Add state is not used to attempt an Add click; initial real
 modal capture is intended for the hosted environments where readiness passed.
+
+## Full normal Store compatibility controller
+
+```sh
+node --test tests/test-store-compat.mjs
+node tests/store-compat.mjs --browser /path/to/browser --output reports/store-compat
+```
+
+The controller has a fixed uBlock Origin Lite target and is separate from the
+read-only inspection entrypoints. It requires reviewed `AA_STORE_UI_HELPER` and
+`AA_STORE_ACTION_HELPER` paths. A missing action helper fails before any browser
+or profile is created. Do not run installation until the native helpers and
+controller have been reviewed together. Current offline tests do not constitute
+an installed-extension or native-browser result.
+
+The controller uses the real Store Add button, verifies the captured native
+target heading and actual permission text, and delegates acceptance to the
+separate native action helper. After normal shutdown it requires the installed
+audited version, semantic manifest digest, matching inserted public key if
+present, and exact digests for four selected shipped JavaScript files. Raw
+manifest digest is recorded; formatting/key insertion may change it. No other
+semantic manifest change is accepted.
+
+It restarts only its created profile, reads the actual own-origin worker's
+`getEnabledRulesets` response, repeats that probe after another normal restart,
+and makes one ordinary own-extension update request. It then uses the visible
+Remove button on the selected real `chrome://extensions` item and a separate
+native confirmation. Removal must survive restart and normal close, with no
+target in the bounded persisted registry read. The ordinary update result and
+`versionTransitionVerified` are separate: `no_update` does not prove an upgrade
+or independently establish successful server transport.
+
+The action helper has an outer hard 15-second process deadline. Each action is
+invoked once. Timeouts, transport errors, incomplete receipts, or ambiguous
+action results are marked uncertain and never retried; acceptance/confirmation
+becomes `null`. Only a complete matching receipt explicitly reporting no attempt
+and no action can establish that no native action occurred. A bounded read-only
+registry query is attempted after an uncertain result, and final persisted state
+is retained when owned shutdown and remaining cleanup time permit.
+
+Main work has a 12-minute budget, plus at most 18 seconds for final cleanup.
+Publish only the bounded `results.json`; exclude owned profiles, all restart
+logs, extension source/package files, and full native trees. The report's
+coverage fields preserve unverified genuine-version-transition evidence even
+if installation/execution/restart/update-check/removal phases pass. See the
+[phase plan](STORE-COMPATIBILITY-PLAN.md) and
+[native action contract](STORE-ACTION-CONTRACT.md).

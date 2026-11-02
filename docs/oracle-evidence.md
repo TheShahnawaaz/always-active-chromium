@@ -511,3 +511,23 @@ The downloaded report and manifest were verified under
 Both operating systems therefore have real original-target prompt-inspection
 evidence. uBOL-specific prompt capture, acceptance, and complete normal Store
 compatibility remain separate unverified gates.
+
+Read-only uBOL run **41371223903** subsequently passed **11/11** checks on each
+standard hosted platform. Both captured the exact `Add "uBlock Origin Lite"?`
+heading, enabled Add extension/Cancel controls, **It can:** and the actual
+all-websites permission text. Mac used a verified owned `AXSheet`; Windows used
+the native focused subtree within verified HWND ancestry. No acceptance action
+occurred; the target was absent before, during and after normal browser closure.
+All eight downloaded assets and manifests were verified under
+`.runtime/hosted-ubol-dialog`. Report SHA-256 values:
+
+- macOS: `01d2c9e1ee6d59a625a55f03b87c30082574850a1fe1c26431f22783ce6f5f4d`.
+- Windows: `2c98dae0d2157269dff48d89265664a980d16fc1329802d4c997dbf03b445284`.
+
+Finite derived records in `tests/fixtures/store-ubol-prompts.json` retain those
+source hashes and only the native fields needed for offline validator checks.
+They do not represent a new runtime result. The separate full compatibility
+controller is implemented with required native action-helper gates and offline
+tests; actual installation, worker execution, restart, update check and removal
+remain unverified until that reviewed controller is executed on the reference
+browser and, separately, actual native packages.

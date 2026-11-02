@@ -1,0 +1,295 @@
+{
+  "scope": "Finite derived native-UI records for offline validator regression only; not a new runtime result or install evidence. Source reports were independently digest-verified.",
+  "cases": [
+    {
+      "platform": "darwin",
+      "ownedPid": 2176,
+      "sourceReportSha256": "01d2c9e1ee6d59a625a55f03b87c30082574850a1fe1c26431f22783ce6f5f4d",
+      "sourceRun": "41371223903",
+      "probe": {
+        "status": "ready",
+        "identity": {
+          "pid": 2176,
+          "verified": true
+        },
+        "accessibility": {
+          "applicationHidden": false
+        },
+        "dialogInspection": {
+          "status": "observed",
+          "proofKind": "owned-visible-window",
+          "focused": null,
+          "ancestors": [],
+          "window": {
+            "role": "AXWindow",
+            "subrole": "AXStandardWindow",
+            "title": "uBlock Origin Lite - Chrome Web Store - Google Chrome for Testing",
+            "description": "",
+            "value": null,
+            "enabled": null,
+            "ownWindowSubtreeVerified": true,
+            "windowRoleVerified": true,
+            "minimized": false,
+            "ownerPID": 2176,
+            "applicationHidden": false
+          },
+          "containers": [
+            {
+              "role": "AXSheet",
+              "subrole": "",
+              "title": "Add \"uBlock Origin Lite\"?",
+              "description": "",
+              "value": null,
+              "enabled": null,
+              "ownWindowSubtreeVerified": true,
+              "nativeSheetRoleVerified": true,
+              "selectionReason": "owned_native_sheet_subtree",
+              "owningWindow": {
+                "role": "AXWindow",
+                "subrole": "AXStandardWindow",
+                "title": "uBlock Origin Lite - Chrome Web Store - Google Chrome for Testing",
+                "description": "",
+                "value": null,
+                "enabled": null,
+                "ownWindowSubtreeVerified": true,
+                "windowRoleVerified": true,
+                "minimized": false,
+                "ownerPID": 2176,
+                "applicationHidden": false
+              },
+              "controls": [
+                {
+                  "role": "AXGroup",
+                  "subrole": "AXApplicationAlertDialog",
+                  "title": "Add \"uBlock Origin Lite\"?",
+                  "description": "",
+                  "value": "",
+                  "enabled": true,
+                  "ownWindowSubtreeVerified": true
+                },
+                {
+                  "role": "AXButton",
+                  "subrole": "",
+                  "title": "Cancel",
+                  "description": "Cancel",
+                  "value": "",
+                  "enabled": true,
+                  "ownWindowSubtreeVerified": true
+                },
+                {
+                  "role": "AXButton",
+                  "subrole": "",
+                  "title": "Add extension",
+                  "description": "Add extension",
+                  "value": "",
+                  "enabled": true,
+                  "ownWindowSubtreeVerified": true
+                },
+                {
+                  "role": "AXHeading",
+                  "subrole": "",
+                  "title": "Add \"uBlock Origin Lite\"?",
+                  "description": "Add \"uBlock Origin Lite\"?",
+                  "value": "",
+                  "enabled": true,
+                  "ownWindowSubtreeVerified": true
+                },
+                {
+                  "role": "AXStaticText",
+                  "subrole": "",
+                  "title": "",
+                  "description": "",
+                  "value": "It can:",
+                  "enabled": true,
+                  "ownWindowSubtreeVerified": true
+                },
+                {
+                  "role": "AXStaticText",
+                  "subrole": "",
+                  "title": "",
+                  "description": "",
+                  "value": "Read and change all your data on all websites",
+                  "enabled": true,
+                  "ownWindowSubtreeVerified": true
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "platform": "win32",
+      "ownedPid": 9300,
+      "sourceReportSha256": "2c98dae0d2157269dff48d89265664a980d16fc1329802d4c997dbf03b445284",
+      "sourceRun": "41371223903",
+      "probe": {
+        "status": "ready",
+        "identity": {
+          "pid": 9300,
+          "verified": true
+        },
+        "accessibility": {
+          "applicationHidden": null
+        },
+        "dialogInspection": {
+          "status": "observed",
+          "proofKind": null,
+          "focused": {
+            "role": "ControlType.Button",
+            "subrole": "button",
+            "title": "Cancel",
+            "description": "",
+            "value": null,
+            "enabled": true,
+            "windowOwnershipVerified": true
+          },
+          "ancestors": [
+            {
+              "role": "ControlType.Pane",
+              "subrole": "region",
+              "title": "",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Pane",
+              "subrole": "region",
+              "title": "",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Pane",
+              "subrole": "region",
+              "title": "",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Pane",
+              "subrole": "region",
+              "title": "",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Window",
+              "subrole": "alert",
+              "title": "Add \"uBlock Origin Lite\"?",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Pane",
+              "subrole": "pane",
+              "title": "",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Pane",
+              "subrole": "region",
+              "title": "uBlock Origin Lite - Chrome Web Store - Google Chrome for Testing",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true
+            },
+            {
+              "role": "ControlType.Window",
+              "subrole": "window",
+              "title": "uBlock Origin Lite - Chrome Web Store - Google Chrome for Testing",
+              "description": "",
+              "value": null,
+              "enabled": false,
+              "windowOwnershipVerified": true
+            }
+          ],
+          "window": {
+            "role": "ControlType.Window",
+            "subrole": "window",
+            "title": "uBlock Origin Lite - Chrome Web Store - Google Chrome for Testing",
+            "description": "",
+            "value": null,
+            "enabled": false,
+            "windowOwnershipVerified": true,
+            "windowRoleVerified": true,
+            "nativeWindowOwnershipVerified": true
+          },
+          "containers": [
+            {
+              "role": "ControlType.Pane",
+              "subrole": "region",
+              "title": "",
+              "description": "",
+              "value": null,
+              "enabled": true,
+              "windowOwnershipVerified": true,
+              "selectionReason": "near_focused_ancestor",
+              "controls": [
+                {
+                  "role": "ControlType.Button",
+                  "subrole": "button",
+                  "title": "Add extension",
+                  "description": "",
+                  "value": null,
+                  "enabled": true,
+                  "windowOwnershipVerified": true
+                },
+                {
+                  "role": "ControlType.Button",
+                  "subrole": "button",
+                  "title": "Cancel",
+                  "description": "",
+                  "value": null,
+                  "enabled": true,
+                  "windowOwnershipVerified": true
+                },
+                {
+                  "role": "ControlType.Text",
+                  "subrole": "heading",
+                  "title": "Add \"uBlock Origin Lite\"?",
+                  "description": "",
+                  "value": null,
+                  "enabled": true,
+                  "windowOwnershipVerified": true
+                },
+                {
+                  "role": "ControlType.Text",
+                  "subrole": "text",
+                  "title": "It can:",
+                  "description": "",
+                  "value": "It can:",
+                  "enabled": true,
+                  "windowOwnershipVerified": true
+                },
+                {
+                  "role": "ControlType.Text",
+                  "subrole": "text",
+                  "title": "Read and change all your data on all websites",
+                  "description": "",
+                  "value": "Read and change all your data on all websites",
+                  "enabled": true,
+                  "windowOwnershipVerified": true
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

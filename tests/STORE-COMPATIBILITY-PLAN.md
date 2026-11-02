@@ -1,7 +1,9 @@
 # Normal Store compatibility test preparation
 
-Status: design only. No uBlock Origin Lite installation, native permission
-action, update request, or removal has been performed. The separate
+Status: `store-compat.mjs` and offline boundary tests are implemented; actual
+installation execution remains pending joint controller/helper review. No
+uBlock Origin Lite installation, native permission action, update request, or
+removal has been performed. The separate
 `store-dialog.mjs` inspection contract remains read-only after clicking Store
 Add: it must never acquire an acceptance action.
 
@@ -204,16 +206,17 @@ proof. The ordinary toolbar Update path is separately source-backed at
 
 ## Remaining implementation/evidence gaps
 
-- Capture the actual uBOL install and removal prompts on both standard hosted
-  platforms before defining target-specific action logic. The completed
-  Windows Always Active prompt capture supplies mechanics, not uBOL identity.
-- Finish bounded macOS read-only prompt capture. It remains independent of this
-  plan and under the native helper owner's control.
-- Implement and review the separate native action helper and controller;
-  current read-only helpers must retain their contract.
-- Add safe owned-profile restart support and confirm own-extension-page probe
-  access without unsafe flags. No unpacked/private installation workaround is
-  permitted if those mechanics fail.
+- uBOL install prompts were captured read-only on both standard hosted platforms
+  in run 41371223903, with exact target heading, native controls and all-websites
+  permission text. Complete native removal capture and actual acceptance/removal
+  action execution remain pending. Finite derived prompt records are retained
+  for offline validator regression with source report hashes.
+- Jointly review and validate the separate native action helpers and controller;
+  current read-only helpers retain their contract. See STORE-ACTION-CONTRACT.md.
+- The owned launcher now supplies a fixed-profile restart boundary; actual
+  extension persistence and own-extension-page probe access without unsafe flags
+  still need a genuine-install mechanics run. No unpacked/private installation
+  workaround is permitted if those mechanics fail.
 - Obtain genuine older-Store/newer-release conditions for version-transition
   proof, or report that particular gate unverified with completed check results.
 - Run the complete test on actual built packages for both OS targets. Publish
