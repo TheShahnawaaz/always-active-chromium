@@ -1,5 +1,7 @@
 """Small archive-hydration regressions; no Chromium checkout or compilation."""
 import contextlib
+import base64
+import hashlib
 import io
 from pathlib import Path
 import json
@@ -127,6 +129,78 @@ class DawnGoTests(unittest.TestCase):
                         return_value=SimpleNamespace(stdout=output)):
                     with self.assertRaisesRegex(RuntimeError, 'version/host mismatch'):
                         build.hydrate_dawn_go(root, 'mac-arm64', mock.Mock())
+
+
+class WindowsGperfTests(unittest.TestCase):
+    def gperf_fixture(self):
+        contents = {'bin/gperf.exe': b'pinned Windows executable fixture',
+                    'README.chromium': b'License File: src/gperf/3.0.1/gperf-3.0.1-src/COPYING\n',
+                    'src/gperf/3.0.1/gperf-3.0.1-src/COPYING': b'pinned license fixture'}
+        pin = dict(build.WINDOWS_GPERF, files={relative: {
+            'size': len(content), 'sha256': hashlib.sha256(content).hexdigest(),
+            'blob': hashlib.sha1(b'blob ' + str(len(content)).encode() + b'\0' + content).hexdigest()}
+            for relative, content in contents.items()})
+        scope = {'deps': {'src/third_party/gperf': {
+            'url': f'{pin["repository"]}.git@{pin["revision"]}', 'condition': 'checkout_win'}}}
+        return contents, pin, scope
+
+    def test_exact_git_blob_is_verified_and_reused_without_touching_mtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            contents, pin, scope = self.gperf_fixture()
+            with mock.patch.object(build, 'WINDOWS_GPERF', pin), mock.patch.object(build, 'fetch') as fetch, \
+                    mock.patch.object(build, 'run', return_value=SimpleNamespace(stdout=pin['version'] + '\n')) as run:
+                def download(url, path, **_kwargs):
+                    relative = url.split(f'/{pin["revision"]}/', 1)[1].split('?', 1)[0]
+                    path.write_bytes(base64.b64encode(contents[relative]))
+                fetch.side_effect = download
+                records = build.hydrate_windows_gperf(root, scope, lambda _condition: True)
+                executable = root / 'third_party/gperf/bin/gperf.exe'
+                stamps = {}
+                for relative, content in contents.items():
+                    target = root / 'third_party/gperf' / relative
+                    self.assertEqual(target.read_bytes(), content)
+                    stamps[relative] = target.stat().st_mtime_ns
+                self.assertEqual(build.hydrate_windows_gperf(root, scope, lambda _condition: True), records)
+                for relative, stamp in stamps.items():
+                    self.assertEqual((root / 'third_party/gperf' / relative).stat().st_mtime_ns, stamp)
+                self.assertEqual(fetch.call_count, 3)
+                self.assertTrue(all(pin['revision'] in call.args[0] for call in fetch.call_args_list))
+                self.assertEqual(records[0]['sha256'], pin['files']['bin/gperf.exe']['sha256'])
+                self.assertEqual(records[0]['git_blob'], pin['files']['bin/gperf.exe']['blob'])
+                self.assertEqual(run.call_args.args[0], [executable, '--version'])
+
+    def test_wrong_git_revision_is_rejected_before_download(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            _content, pin, scope = self.gperf_fixture()
+            scope['deps']['src/third_party/gperf']['url'] += 'foreign'
+            with mock.patch.object(build, 'WINDOWS_GPERF', pin), mock.patch.object(build, 'fetch') as fetch:
+                with self.assertRaisesRegex(RuntimeError, 'pinned source DEPS'):
+                    build.hydrate_windows_gperf(Path(temporary), scope, lambda _condition: True)
+                fetch.assert_not_called()
+
+    def test_corrupt_download_cannot_install_executable(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _content, pin, scope = self.gperf_fixture()
+            with mock.patch.object(build, 'WINDOWS_GPERF', pin), mock.patch.object(build, 'fetch') as fetch:
+                fetch.side_effect = lambda _url, path, **_kwargs: path.write_bytes(base64.b64encode(b'foreign'))
+                with self.assertRaisesRegex(RuntimeError, 'Downloaded Windows gperf'):
+                    build.hydrate_windows_gperf(root, scope, lambda _condition: True)
+            self.assertEqual(list((root / 'third_party/gperf/bin').iterdir()), [])
+
+    def test_unknown_existing_binary_is_rejected_without_overwriting(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _content, pin, scope = self.gperf_fixture()
+            executable = root / 'third_party/gperf/bin/gperf.exe'
+            executable.parent.mkdir(parents=True)
+            executable.write_bytes(b'foreign')
+            with mock.patch.object(build, 'WINDOWS_GPERF', pin), mock.patch.object(build, 'fetch') as fetch:
+                with self.assertRaisesRegex(RuntimeError, 'Existing Windows gperf'):
+                    build.hydrate_windows_gperf(root, scope, lambda _condition: True)
+                fetch.assert_not_called()
+            self.assertEqual(executable.read_bytes(), b'foreign')
 
 
 class SourceRetentionTests(unittest.TestCase):

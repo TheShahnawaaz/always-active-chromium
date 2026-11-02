@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Archive-based, resumable Chromium build. Full source is hosted-runner only."""
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -26,6 +27,30 @@ DAWN_GO_VERSION = 'version:3@1.26.6'
 DAWN_GO_SHA256 = {
     'infra/3pp/tools/go/mac-arm64': '195ef9ddebdf0b7d3149f8a223ac9c07aea698d26ea410069e4709a3c17f9a7e',
     'infra/3pp/tools/go/windows-amd64': 'a058eacbccbd7d700ae8a1d8559ea8240871a73585ee1f260098158b13da88f9',
+}
+# The Windows source archive omits this prebuilt executable from its git DEPS.
+# Keep the exact pinned legacy host tool, not Linux's newer gperf CIPD package.
+WINDOWS_GPERF = {
+    'repository': 'https://chromium.googlesource.com/chromium/deps/gperf',
+    'revision': 'e9eeea862a18e77b945d98eff7e1bf065d3daf8e',
+    'version': 'GNU gperf 3.0.1',
+    'files': {
+        'bin/gperf.exe': {
+            'blob': 'f71b09cb1952f377aa40438c54b28205dc99b4a3',
+            'sha256': '3f9266ea2d2bd19a503b5d2ec613e983c6ed9ea45ff6b5820b0681fd1b778d12',
+            'size': 103424,
+        },
+        'README.chromium': {
+            'blob': '7fa77f94db0cc81bfa5c83b66be4a5e68543ed53',
+            'sha256': '84444366b8ee66e723ca5dc16f8d5110cfcb10533e3cc11af16d2a2af6064ca0',
+            'size': 368,
+        },
+        'src/gperf/3.0.1/gperf-3.0.1-src/COPYING': {
+            'blob': 'bab08afad347b1eefe226c4adfb5e4aa45deefd9',
+            'sha256': 'a0f5b31f86a3b397bc3b35bb79b7bae6060bd0fe3ade7aa492a2e5bb8e8505d5',
+            'size': 18149,
+        },
+    },
 }
 
 
@@ -227,6 +252,48 @@ def load_deps(path, platform):
     return scope, variables, enabled
 
 
+def hydrate_windows_gperf(src, scope, enabled):
+    """Recover Windows' exact git-pinned gperf, its README and license."""
+    pin = WINDOWS_GPERF
+    dependency = scope['deps'].get('src/third_party/gperf')
+    if (not isinstance(dependency, dict) or
+            dependency.get('url') != f'{pin["repository"]}.git@{pin["revision"]}' or
+            not enabled(dependency.get('condition', True))):
+        raise RuntimeError('Windows gperf dependency differs from the pinned source DEPS')
+    target = src / 'third_party/gperf'
+    records = []
+    for relative, artifact in pin['files'].items():
+        destination = target / relative
+        url = f'{pin["repository"]}/+/{pin["revision"]}/{relative}?format=TEXT'
+        if destination.is_file():
+            if destination.stat().st_size != artifact['size'] or sha256(destination) != artifact['sha256']:
+                raise RuntimeError(f'Existing Windows gperf file differs from the pinned blob: {relative}')
+        else:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            encoded = destination.parent / '.aacc-gperf.base64'
+            pending = destination.parent / '.aacc-gperf.tmp'
+            try:
+                fetch(url, encoded, expected_size=((artifact['size'] + 2) // 3) * 4)
+                content = base64.b64decode(encoded.read_bytes(), validate=True)
+                blob = hashlib.sha1(b'blob ' + str(len(content)).encode() + b'\0' + content).hexdigest()
+                if (len(content) != artifact['size'] or hashlib.sha256(content).hexdigest() != artifact['sha256'] or
+                        blob != artifact['blob']):
+                    raise RuntimeError(f'Downloaded Windows gperf differs from the pinned blob: {relative}')
+                pending.write_bytes(content)
+                os.replace(pending, destination)
+            finally:
+                encoded.unlink(missing_ok=True)
+                pending.unlink(missing_ok=True)
+        records.append({'url': url, 'sha256': artifact['sha256'], 'git_blob': artifact['blob'],
+                        'git_revision': pin['revision'], 'size': artifact['size']})
+    executable = target / 'bin/gperf.exe'
+    result = run([executable, '--version'], cwd=src, capture_output=True, text=True)
+    if not result.stdout.splitlines() or result.stdout.splitlines()[0] != pin['version']:
+        raise RuntimeError(f'Windows gperf executable version mismatch: {result.stdout!r}')
+    print(result.stdout.splitlines()[0], flush=True)
+    return records
+
+
 def hydrate_dawn_go(src, platform, hydrate_entries):
     """Install the exact Go that Dawn's source generator calls, never PATH Go."""
     dawn = src / 'third_party/dawn'
@@ -321,6 +388,8 @@ def hydrate(src, platform):
             marker.write_text(json.dumps({'plan_sha256': plan, 'records': records[start:]}, indent=2) + '\n')
 
     hydrate_entries(scope['deps'], src.parent, selected, enabled)
+    if platform == 'win-x64':
+        records.extend(hydrate_windows_gperf(src, scope, enabled))
     devtools = src / 'third_party/devtools-frontend/src'
     nested, _, nested_enabled = load_deps(devtools / 'DEPS', platform)
     hydrate_entries(nested['deps'], devtools, {'third_party/esbuild', 'node_modules'}, nested_enabled)

@@ -17,7 +17,16 @@ The archive contains the source dependencies. `build.py` hydrates the selected
 host Clang, Rust/libclang, GN's CPython interpreter, Ninja, Node, TypeScript and DevTools build
 dependencies using the **archive's own pinned DEPS**, not moving upstream main.
 It also hydrates Windows WTL/WebView2/7z, Mac ANGLE Metal libraries, and the
-subresource-filter ruleset data. Dawn's source generator uses its own nested
+subresource-filter ruleset data. Windows gperf is the single 103,424-byte
+`bin/gperf.exe` from the archive DEPS's exact
+[gperf commit](https://chromium.googlesource.com/chromium/deps/gperf/+/e9eeea862a18e77b945d98eff7e1bf065d3daf8e/):
+its Git blob ID, size and SHA-256 are checked before atomic installation. The
+same checks hydrate the pinned `README.chromium` and its referenced GPL-2.0
+`COPYING` file when absent, preserving credits-generation inputs. Then
+the executable must report GNU gperf 3.0.1. Resumes verify and reuse the same
+binary without changing its mtime. This preserves the actual Windows pin;
+the separate Linux CIPD gperf dependency is not substituted.
+Dawn's source generator uses its own nested
 [DEPS-pinned Go 1.26.6](https://dawn.googlesource.com/dawn/+/8114a24a35eed1db88d1d897e8bd193a8c334712/DEPS):
 the host Mac arm64 or Windows amd64 CIPD package is SHA-256 checked against
 the immutable ZIP digest in `build.py`, then its absolute executable must report
