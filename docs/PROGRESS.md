@@ -36,11 +36,23 @@ window; four focused tests reject fullscreen, minimized, unknown or wrong-window
 results. CSS state, binding snapshots, event suppression and focus checks remain.
 
 The user requested laptop-independent work. GitHub jobs and their configured
-bounded continuations already run remotely. Codex Cloud had no published
-environment; connecting GitHub reached an OpenAI authentication rate-limit
-error. No independent cloud coding task has been created. See
+bounded continuations already run remotely. The initial Cloud sign-in rate limit
+was resolved by the user. Project-only environment onboarding validated the
+e146 checkout (147 Python passes, 13 skips; 67 Node passes, one skip) and prepared
+a private environment. Publication is in progress; GitHub API permissions still
+need rechecking after its network configuration is applied. See
 [the continuation handoff](CONTINUE.md); do not claim autonomous cloud debugging
-is running until a real hosted task is started and verified.
+is running until a real hosted continuation task is started and verified.
+
+The metadata/window-state fix is pushed at `e146fe41bca3`, with source and both
+final package tags. [Mac retry 41524595935](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935)
+is running since 21:01:59 UTC. The prior Mac run is terminal and its newest
+complete six-part checkpoint totals **9,900,445,822 bytes**; ready asset
+703165989 has SHA-256
+`00c430daf2ecfbda592033547b82fa3f395a36755f1628e014a891ecdd890463`.
+Its manifest and all server part sizes/digests were verified. The new run uses
+exact restoration with `migrate_native=false`; no full rebuild or native/config
+repin is intended.
 
 The initial measured complete checkpoint saves took 19m12s–25m33s. The final
 9.90 GB Mac cache subsequently took **31m34s** and remains the observed maximum.

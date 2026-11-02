@@ -54,13 +54,24 @@ tag `build-156.0.8078.80-mac-arm64-c9ac6366f39a-706479414249`, ZIP asset
 `5d3e2f23fca62e07c4d2ea26e69ce467ffd8ddc3d0ea8dab82b36b9ed2392252`.
 Its five published checksum entries and server digests were checked.
 
-At 20:56 UTC on November 2, Mac run 41515581981 was still saving its checkpoint
-(started 20:33:22 UTC). Draft 431940572 had partial parts and no ready marker.
+Mac run 41515581981 is now terminal, with a complete checkpoint in draft
+431940572, tag `checkpoint-mac-arm64-c9ac6366f39a2bdd17c3-41515581981-1`.
+Ready asset 703165989 has SHA-256
+`00c430daf2ecfbda592033547b82fa3f395a36755f1628e014a891ecdd890463`;
+six parts total 9,900,445,822 bytes, all server sizes/digests verified.
+State is build-ready/complete, source `706479414249`, native16 Mac fingerprint.
 Do not use partial drafts. The older complete fallback is draft 431878746,
 ready asset 702999464, ready SHA-256
 `530781afd71ec2711e0164dff62594c696f01d45dc2893816cb85ce4cb2f03ad`,
 six parts totaling 9,900,397,712 bytes, source `b3237eac7f70`, build-ready/complete.
-Prefer the newer complete exact-fingerprint cache once its ready marker exists.
+Prefer the newer complete exact-fingerprint cache.
+
+The revision/fullscreen correction was committed and pushed as
+`e146fe41bca31d079f7af03e1f1c7a28a1e57863`, with immutable
+`ci-source-e146fe41bca3` and both corresponding final package tags. Mac retry
+**41524595935** was dispatched at 21:01:59 UTC and is already running. Do not
+dispatch a duplicate Mac build. Its eventual successful package source is the
+e146 tag, even if later documentation-only commits exist on main.
 
 Windows run **41503529408**, source `ci-source-81735e8f2ce2`, was still compiling
 at 20:56 UTC, since 19:13:47 UTC. Mandatory clean exact Python, default GN-desc,
