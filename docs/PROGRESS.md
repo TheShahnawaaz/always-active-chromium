@@ -13,7 +13,7 @@ have not yet passed on a custom binary.
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
 | macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: restored the prior compiler checkpoint, migrated native14 to native15, validated Dawn's exact Go toolchain and generated GN successfully. Ninja compilation began at 23:57:56 UTC on November 1 and remains in progress. | Preserve the live build and its retained objects; inspect its actual terminal result. |
-| Windows x64 | [Run 41374312612](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41374312612), immutable source and workflow `9e31a68f748c`: restoring the complete native15 checkpoint with the streamed input audit. | Inspect the complete bounded input audit; compile only if declared scoped leaf inputs exist. |
+| Windows x64 | [Run 41374312612](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41374312612), immutable source and workflow `9e31a68f748c`: completed the streamed audit of 75,790 scoped declared leaves and found exactly two missing inputs. Compilation was skipped and the complete source checkpoint retained. | Hydrate both complete exact-pinned dependency roots, including headers and licenses, then retry the audit/build. |
 
 The earlier Mac run
 [41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
@@ -43,6 +43,14 @@ zero leaves checked, not zero missing dependencies. Compilation and redundant
 checkpoint saving were correctly skipped. The streamed retry now uses a
 512 MiB temporary graph file, bounded incremental parsing, separate raw-leaf
 memory limits and actual output-byte counts; every limit still fails incomplete.
+That streamed audit completed in **23.875 seconds**: 144,611,224 graph bytes,
+85,739,961 leaf-list bytes, 247,053 file nodes and 90,338 rule nodes. It checked
+**75,790** scoped declared leaves and reported a complete two-path missing list:
+`third_party/microsoft_dxheaders/src/src/dxguids.cpp` and
+`third_party/microsoft_multimedia_redirection/src/api/Mmr_i.c`. Both audit/status
+asset hashes were verified. The source checkpoint remains intact; no C++ work
+or redundant checkpoint upload occurred. Compiler-discovered headers remain
+outside this audit, so each repair must hydrate the required dependency closure.
 
 Both original seed campaigns predate the detached-document fix. Their undelivered
 final release tags were removed after verifying that no corresponding release
@@ -126,6 +134,14 @@ removal-window path, corrected Windows array handling and bounded focus/HWND
 diagnostics; no generic window acceptance or uncertain action retry is used.
 Full normal Store removal on Mac and the Windows installation/restart/update/
 removal sequence still remain, followed by both actual custom packages.
+Windows guard run
+[41376006086](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41376006086)
+subsequently passed the exact production shutdown script's nine PS5 JSON/
+creation/disappearance cases with a finite stub CIM provider, plus all five
+native refusal guards. It queried no real browser/process inventory or UI.
+The Mac helper now permits only the exact-title native uninstall AXWindow,
+retaining complete non-web subtree, heading, visible controls and unchecked
+abuse-report requirements. Both fixes still require the next real Store trial.
 
 An earlier local disabled Store button did not establish a general compatibility
 failure: a local brand-only counterfactual did not enable it, hosted reference

@@ -32,6 +32,12 @@ AXSize bounds for both buttons inside the active, nonhidden, nonminimized owning
 window. They must also fit inside the native sheet when its bounds are exposed.
 Missing mandatory or partially exposed bounds refuse the action; no coordinate
 input fallback is used.
+Installation requires an actual AXSheet. Removal may also use a standalone
+native AXWindow whose own title is exactly `Remove "uBlock Origin Lite"?`;
+its complete subtree must contain no web area, one native heading, the unique
+enabled visible Remove/Cancel buttons and the checked-state proof below.
+The browser-window aggregate does not qualify. Receipts retain the actual
+native dialog role and title.
 
 Before acting, prove the exact PID/executable/profile, process owner/session,
 and creation identity. Reacquire the entire target-specific native dialog after

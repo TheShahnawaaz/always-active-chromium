@@ -196,7 +196,8 @@ func rectangleReceipt(_ rectangle: CGRect) -> [String: Double] {
 
 struct Prompt {
     let window: AXUIElement
-    let sheet: AXUIElement
+    let dialog: AXUIElement
+    let dialogRole: String
     let heading: AXUIElement
     let affirmative: AXUIElement
     let cancel: AXUIElement
@@ -210,18 +211,24 @@ func verifyButtonVisibility(_ prompt: Prompt, pid: pid_t) throws -> [String: Any
           let affirmative = try nativeRectangle(prompt.affirmative, pid: pid, label: "affirmative"),
           let cancel = try nativeRectangle(prompt.cancel, pid: pid, label: "cancel"),
           window.contains(affirmative), window.contains(cancel) else { try refuse("native_buttons_outside_owned_window") }
-    let sheet = try nativeRectangle(prompt.sheet, pid: pid, label: "native_sheet", optional: true)
-    if let sheet {
-        guard sheet.contains(affirmative), sheet.contains(cancel) else { try refuse("native_buttons_outside_owned_sheet") }
+    let dialog: CGRect?
+    if prompt.dialogRole == "AXWindow" { dialog = window }
+    else { dialog = try nativeRectangle(prompt.dialog, pid: pid, label: "native_sheet", optional: true) }
+    if let dialog {
+        guard dialog.contains(affirmative), dialog.contains(cancel) else { try refuse("native_buttons_outside_owned_dialog") }
     }
     guard try enabled(prompt.affirmative, pid: pid), try enabled(prompt.cancel, pid: pid) else { try refuse("native_buttons_no_longer_enabled") }
     var result: [String: Any] = [
         "method": "native_AXPosition_AXSize_containment",
         "owningWindow": rectangleReceipt(window),
         "affirmative": rectangleReceipt(affirmative), "cancel": rectangleReceipt(cancel),
-        "insideOwningWindow": true, "sheetBoundsAvailable": sheet != nil
+        "insideOwningWindow": true, "nativeDialogRole": prompt.dialogRole,
+        "sheetBoundsAvailable": prompt.dialogRole == "AXSheet" && dialog != nil
     ]
-    if let sheet { result["sheet"] = rectangleReceipt(sheet); result["insideSheet"] = true }
+    if let dialog {
+        result["dialog"] = rectangleReceipt(dialog); result["insideDialog"] = true
+        if prompt.dialogRole == "AXSheet" { result["sheet"] = rectangleReceipt(dialog); result["insideSheet"] = true }
+    }
     return result
 }
 
@@ -236,15 +243,32 @@ func findPrompt(_ application: AXUIElement, pid: pid_t, operation: String) throw
     let heading = operation == "accept-install" ? "Add \"\(targetName)\"?" : "Remove \"\(targetName)\"?"
     let affirmativeLabel = operation == "accept-install" ? "Add extension" : "Remove"
     var matches: [Prompt] = []
+    var targetWindowTitles: [[String: String]] = []
+    func diagnose(_ detail: [String: Any]) {
+        var diagnostics = receipt["refusalDiagnostics"] as? [[String: Any]] ?? []
+        if diagnostics.count < 4 { diagnostics.append(detail) }
+        receipt["refusalDiagnostics"] = diagnostics
+    }
     for window in try children(application, key: kAXWindowsAttribute as CFString, cap: 8, pid: pid) {
         guard try role(window, pid: pid) == "AXWindow" else { try refuse("application_root_is_not_native_window") }
         if (try attribute(window, kAXMinimizedAttribute as CFString, pid: pid) as? NSNumber)?.boolValue != false { continue }
-        for sheet in try children(window, cap: 32, pid: pid) where try role(sheet, pid: pid) == "AXSheet" {
-            guard try text(sheet, kAXTitleAttribute as CFString, pid: pid) == heading else { continue }
-            var pending: [(AXUIElement, Int)] = [(sheet, 0)]
+        let windowTitle = try text(window, kAXTitleAttribute as CFString, pid: pid)
+        if windowTitle.contains(targetName), targetWindowTitles.count < 8 {
+            targetWindowTitles.append(["role": "AXWindow", "title": String(windowTitle.prefix(240))])
+        }
+        var roots: [(AXUIElement, String)] = []
+        // Only removal may use a standalone native dialog window, and its OWN
+        // title must match exactly. A browser-window aggregate never qualifies.
+        if operation == "confirm-remove", windowTitle == heading { roots.append((window, "AXWindow")) }
+        for child in try children(window, cap: 32, pid: pid) where try role(child, pid: pid) == "AXSheet" {
+            if try text(child, kAXTitleAttribute as CFString, pid: pid) == heading { roots.append((child, "AXSheet")) }
+        }
+        for (dialog, dialogRole) in roots {
+            var pending: [(AXUIElement, Int)] = [(dialog, 0)]
             var seen: [AXUIElement] = []
             var headings: [AXUIElement] = [], affirmative: [AXUIElement] = [], cancel: [AXUIElement] = []
             var permissions: [AXUIElement] = [], checkboxes: [AXUIElement] = []
+            var exactHeadingRoles = Set<String>()
             while !pending.isEmpty {
                 let (element, depth) = pending.removeLast()
                 if seen.contains(where: { CFEqual($0, element) }) { continue }
@@ -254,14 +278,23 @@ func findPrompt(_ application: AXUIElement, pid: pid_t, operation: String) throw
                 let subrole = try text(element, kAXSubroleAttribute as CFString, pid: pid)
                 guard elementRole != "AXWebArea", subrole != "AXSecureTextField" else { try refuse("web_or_password_subtree_refused") }
                 let values = try strings(element, pid: pid)
+                if values.contains(heading) { exactHeadingRoles.insert(elementRole) }
                 if elementRole == "AXHeading", values.contains(heading) { headings.append(element) }
                 if elementRole == "AXButton", values.contains(affirmativeLabel) { affirmative.append(element) }
                 if elementRole == "AXButton", values.contains("Cancel") { cancel.append(element) }
                 if elementRole == "AXStaticText", values.contains(expectedPermission) { permissions.append(element) }
                 if elementRole == "AXCheckBox" { checkboxes.append(element) }
                 let descendants = try children(element, cap: maxNodes - visitedNodes, pid: pid)
-                guard depth < maxDepth || descendants.isEmpty else { try refuse("native_sheet_depth_limit_exceeded") }
+                guard depth < maxDepth || descendants.isEmpty else { try refuse("native_dialog_depth_limit_exceeded") }
                 for child in descendants { pending.append((child, depth + 1)) }
+            }
+            if headings.count != 1 {
+                diagnose(["reason": "expected_native_heading_role_missing_or_ambiguous",
+                          "nativeDialogRole": dialogRole, "nativeDialogTitle": heading,
+                          "expectedHeadingRole": "AXHeading", "headingMatchCount": headings.count,
+                          "rolesWithExactHeadingText": exactHeadingRoles.sorted(),
+                          "affirmativeCount": affirmative.count, "cancelCount": cancel.count,
+                          "checkboxCount": checkboxes.count, "nodesInDialog": seen.count])
             }
             guard headings.count == 1, affirmative.count == 1, cancel.count == 1,
                   try enabled(affirmative[0], pid: pid), try enabled(cancel[0], pid: pid) else { try refuse("native_prompt_controls_missing_disabled_or_ambiguous") }
@@ -271,12 +304,17 @@ func findPrompt(_ application: AXUIElement, pid: pid_t, operation: String) throw
                 guard checkboxes.count <= 1 else { try refuse("remove_checkbox_ambiguous") }
                 if let checkbox = checkboxes.first, try !unchecked(checkbox, pid: pid) { try refuse("report_abuse_must_be_unchecked") }
             }
-            matches.append(Prompt(window: window, sheet: sheet, heading: headings[0],
+            matches.append(Prompt(window: window, dialog: dialog, dialogRole: dialogRole, heading: headings[0],
                                   affirmative: affirmative[0], cancel: cancel[0],
                                   permission: permissions.first, checkbox: checkboxes.first))
         }
     }
-    guard matches.count == 1 else { try refuse("native_target_sheet_not_unique") }
+    guard matches.count == 1 else {
+        diagnose(["reason": "native_target_dialog_not_unique", "matchingCount": matches.count,
+                  "expectedHeading": heading, "expectedHeadingRole": "AXHeading",
+                  "targetWindowTitles": targetWindowTitles])
+        try refuse("native_target_dialog_not_unique")
+    }
     try activeVisible(matches[0].window, pid: pid)
     return matches[0]
 }
@@ -324,15 +362,22 @@ do {
     // Full uniqueness, permission and checkbox-Off/absence validation follows
     // the potentially slow native/ps identity checks, rather than preceding them.
     let fresh = try findPrompt(application, pid: pid, operation: operation)
-    guard CFEqual(selected.window, fresh.window), CFEqual(selected.sheet, fresh.sheet),
+    guard CFEqual(selected.window, fresh.window), CFEqual(selected.dialog, fresh.dialog),
+          selected.dialogRole == fresh.dialogRole,
           CFEqual(selected.affirmative, fresh.affirmative), CFEqual(selected.cancel, fresh.cancel) else { try refuse("native_prompt_changed_during_validation") }
     try activeVisible(fresh.window, pid: pid)
     let expectedHeading = operation == "accept-install" ? "Add \"\(targetName)\"?" : "Remove \"\(targetName)\"?"
     let expectedAffirmative = operation == "accept-install" ? "Add extension" : "Remove"
+    let rootRegistered: Bool
+    if fresh.dialogRole == "AXWindow" {
+        rootRegistered = operation == "confirm-remove" && CFEqual(fresh.window, fresh.dialog)
+    } else {
+        rootRegistered = try children(fresh.window, cap: 32, pid: pid).contains(where: { CFEqual($0, fresh.dialog) })
+    }
     guard try children(application, key: kAXWindowsAttribute as CFString, cap: 8, pid: pid).contains(where: { CFEqual($0, fresh.window) }),
-          try children(fresh.window, cap: 32, pid: pid).contains(where: { CFEqual($0, fresh.sheet) }),
-          try role(fresh.sheet, pid: pid) == "AXSheet",
-          try text(fresh.sheet, kAXTitleAttribute as CFString, pid: pid) == expectedHeading,
+          rootRegistered, try role(fresh.dialog, pid: pid) == fresh.dialogRole,
+          operation != "accept-install" || fresh.dialogRole == "AXSheet",
+          try text(fresh.dialog, kAXTitleAttribute as CFString, pid: pid) == expectedHeading,
           try role(fresh.heading, pid: pid) == "AXHeading",
           try strings(fresh.heading, pid: pid).contains(expectedHeading),
           try role(fresh.affirmative, pid: pid) == "AXButton",
@@ -351,7 +396,10 @@ do {
     identityReceipt["immediatelyRevalidated"] = true
     receipt["identity"] = identityReceipt
     var promptReceipt: [String: Any] = [
-        "nativeDialogVerified": true, "nativeSheetRoleVerified": true,
+        "nativeDialogVerified": true, "nativeDialogRole": fresh.dialogRole,
+        "nativeDialogTitle": expectedHeading,
+        "nativeSheetRoleVerified": fresh.dialogRole == "AXSheet",
+        "nativeWindowDialogRoleVerified": fresh.dialogRole == "AXWindow",
         "targetMatched": true, "targetID": targetID,
         "affirmativeLabel": operation == "accept-install" ? "Add extension" : "Remove",
         "affirmativeEnabled": true, "affirmativeUnique": true, "cancelEnabled": true,
