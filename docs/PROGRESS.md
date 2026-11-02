@@ -7,7 +7,11 @@ and core checks: baseline **32/32**, native **38/38**, optional **55/55**, paire
 no-debug **7/7 each**. Its e146 ZIP is **252,685,495 bytes**, SHA-256
 `7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8`.
 All six build assets and five checksum entries were independently verified.
-The checkpoint save continues and is preserved.
+The entire build is now green: **271/271** incremental actions completed, and
+the six-part **9,901,553,400-byte** e146 compiler checkpoint is complete. Ready
+asset 703318165 has SHA-256
+`8da87fdafdc63eb430ddaa65fbe89ff2ab3687e6514b1a5fdef574ca515d7e83`;
+its bytes, identity and every server part size/digest were checked.
 
 Fresh-delivery [41529944500](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41529944500)
 passed real extraction/signature/architecture/identity checks, all behavior
@@ -26,6 +30,13 @@ pending. [41532536741](https://github.com/TheShahnawaaz/always-active-chromium/a
 now collects bounded metadata for that owned fixture window; helper compilation
 and the invalid-PID refusal guard passed. This is a UI-evidence diagnostic on
 the same real package, not another compiler build or a reference-Chrome trial.
+
+That diagnostic run passed and identified one owned normal fixture window with
+identical AX/CG bounds; only the full title strings differed between APIs.
+Commit `68a55d8` checks both fixture titles independently and preserves both
+strings in exact before/after state equality. Capture verification
+[41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385)
+is now running; visual success remains pending actual pixels and manual review.
 
 The continuation is running in the published cloud project environment.
 Actual API checks at 02:46 IST (21:16 UTC November 2) show Mac

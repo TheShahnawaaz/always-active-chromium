@@ -58,8 +58,15 @@ reported. Its complete draft is **431995111**, tag
 ZIP asset **703257988** is **252,685,495 bytes**, SHA-256
 `7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8`.
 All six downloaded assets match server sizes/digests and all five manifest
-entries. The new compiler checkpoint save is still running; do not interrupt it
-or select its draft before a complete ready marker appears.
+entries. The entire build run is now green. Its incremental rebuild completed
+**271/271 actions**, then saved a complete six-part **9,901,553,400-byte**
+checkpoint in draft **431995372**, tag
+`checkpoint-mac-arm64-c9ac6366f39a2bdd17c3-41524595935-1`.
+Ready asset **703318165** is 5,942 bytes, SHA-256
+`8da87fdafdc63eb430ddaa65fbe89ff2ab3687e6514b1a5fdef574ca515d7e83`.
+Its bytes, source/native/revision identity and all server part digests/sizes
+were verified. This newest complete e146 cache supersedes the older caches;
+normal checkpoint cleanup may have removed earlier drafts.
 
 Fresh actual-package delivery **41529944500** also passed, controller
 `0728fb141cee`, source still e146. Draft **431998425**, tag
@@ -88,6 +95,14 @@ invalid-PID refusal guard passed; its bounded owned-PID-only metadata receipt
 will identify which title/bounds/layer comparison failed. Inspect that actual
 receipt before changing the match; no permission, desktop capture or security
 setting workaround is needed or authorized.
+
+The diagnostic **41532536741** passed all delivery/Store checks and its assets
+were hash verified. Its receipt shows one owned layer-0/alpha-1 window, exactly
+matching AX bounds (22,31,1000,677). Both API titles identify the fixture, but
+the full strings differ. Commit `68a55d8132e9` validates each fixture title
+independently, retaining both full strings plus exact ID/bounds in before/after
+state equality. Actual capture verification **41533441385** is running against
+the same e146 ZIP. No browser source, compiler pins or native fingerprint changed.
 
 Chromium is pinned to `156.0.8078.80`, upstream
 `fb096c0011f9d50f0a264a9376420cdea9c421e3`. The native16 patch has not changed.
