@@ -49,7 +49,7 @@ jobs:
       group: native-chromium-${{ matrix.platform }}
       cancel-in-progress: false
     permissions:
-      contents: write # Only draft checkpoints and final draft browser packages.
+      contents: write # Draft diagnostics/checkpoints and final draft browser packages.
       actions: write # workflow_dispatch is the GITHUB_TOKEN recursion exception.
     env:
       GH_TOKEN: ${{ github.token }}
@@ -95,13 +95,27 @@ jobs:
         id: prepare
         timeout-minutes: 180
         run: python ci/build.py prepare --platform ${{ matrix.platform }}
+      - name: Audit declared leaf inputs without executing build commands
+        id: audit
+        continue-on-error: true
+        timeout-minutes: 3
+        shell: bash
+        run: python ci/audit_inputs.py --source "$AA_BUILD_ROOT/src" --platform "${{ matrix.platform }}" --output "reports/${{ matrix.platform }}/input-audit.json"
+      - name: Retain finite input diagnostics before the large checkpoint
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        run: python .github/scripts/publish-build-diagnostics.py
+        env:
+          AA_AUDIT_OUTCOME: ${{ steps.audit.outcome }}
       - name: Compile until the checkpoint deadline
         id: compile
+        if: ${{ steps.audit.outcome == 'success' }}
         continue-on-error: true
         run: python ci/build.py compile --platform ${{ matrix.platform }} ${{ inputs.bootstrap_only && '--bootstrap-only' || '' }}
       - name: Save a complete resumable checkpoint
         id: checkpoint
-        if: ${{ !cancelled() && steps.prepare.outputs.source_checkpointable == 'true' }}
+        if: ${{ !cancelled() && steps.prepare.outputs.source_checkpointable == 'true' && !(steps.audit.outcome == 'failure' && steps.restore.outputs.restored == 'true' && steps.restore.outputs.native_migration_from == '' && steps.compile.outcome == 'skipped') }}
         timeout-minutes: 120
         run: python ci/checkpoint.py save --platform ${{ matrix.platform }}
       - name: Package the real browser
@@ -124,8 +138,8 @@ jobs:
         if: ${{ inputs.auto_resume && !inputs.bootstrap_only && steps.compile.outputs.status == 'pending' && steps.checkpoint.outcome == 'success' }}
         run: python ci/continue.py
       - name: Report unresolved build or browser test failure
-        if: ${{ always() && (steps.compile.outcome == 'failure' || steps.tests.outcome == 'failure') }}
+        if: ${{ always() && (steps.audit.outcome == 'failure' || steps.compile.outcome == 'failure' || steps.tests.outcome == 'failure') }}
         shell: bash
         run: |
-          echo 'The build or browser tests failed; inspect the logs and any retained compiler checkpoint.' >&2
+          echo 'The input audit, build or browser tests failed; inspect finite diagnostics, logs and any retained compiler checkpoint.' >&2
           exit 1

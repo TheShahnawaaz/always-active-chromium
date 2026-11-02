@@ -1,6 +1,6 @@
 # Progress ledger
 
-## Current state — 2026-11-01
+## Current state — 2026-11-02
 
 There is no finished custom browser package yet. The current implementation is
 the exact-source **15-file** patch at `6cea97a`, on Chromium `156.0.8078.80`.
@@ -12,69 +12,75 @@ have not yet passed on a custom binary.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Run 41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689), immutable source `67dea4dbe7e2`: completed 10,753 of 57,570 Ninja actions, then Dawn's source generator failed because its nested pinned Go executable was missing. The complete source/compiler checkpoint was saved. | Hydrate the exact nested-DEPS Go toolchain, migrate native14 to native15, regenerate GN and resume the retained objects. |
-| Windows x64 | [Run 41360825174](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41360825174), immutable source `f11cc000794d`: corrected 29-test suite passed, approved source checkpoint restored, native15 migration/verification and GN preparation passed. Compilation ended shortly afterward; the job is saving its checkpoint, with detailed compiler logs pending. | Let checkpoint saving finish, inspect the actual diagnostic, then resume with the measured tool fixes. |
+| macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: restored the prior compiler checkpoint, migrated native14 to native15, validated Dawn's exact Go toolchain and generated GN successfully. Ninja compilation began at 23:57:56 UTC on November 1 and remains in progress. | Preserve the live build and its retained objects; inspect its actual terminal result. |
+| Windows x64 | [Run 41365869868](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41365869868), immutable source `0963bca534ac`: restored the native15 checkpoint and passed exact Go/gperf tool and GN checks. The compile step ended after nine seconds; the job is saving its checkpoint, with detailed build logs pending. | Let checkpoint saving finish, inspect the actual diagnostic, then make only measured dependency repairs. |
 
-The complete Mac draft checkpoint is
-`checkpoint-mac-arm64-7e08baa8b9ce4a8216f8-41353967689-1`: five SHA-256 checked
-chunks totaling **7,566,257,986 bytes**, with `ready.json` uploaded last before
-the job ended at 23:26:17 UTC. It records `build-ready/failed`, not a finished
-browser. The Go repair uses Dawn's exact `version:3@1.26.6` host package with
-fixed immutable CIPD ZIP hashes and an absolute executable version/host check;
-it leaves the original build pins, compiler arguments and native fingerprints
-unchanged.
+The earlier Mac run
+[41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
+completed **10,753 of 57,570 Ninja actions** before a missing nested Dawn Go
+executable stopped its source generator. Its five-chunk checkpoint totals
+**7,566,257,986 bytes**. The current Mac campaign restored that checkpoint,
+applied the approved native15 migration, hydrated Dawn's exact
+`version:3@1.26.6` host package, and passed its absolute executable version/host
+check. This proves resumed preparation, not a completed browser.
 
-The complete Windows draft checkpoint is
-`checkpoint-win-x64-1e3461dc246407d5a3bc-41355069621-1`: five SHA-256 checked
-chunks totaling **7,667,423,246 bytes**, with `ready.json` uploaded last at
-22:49:47 UTC. Its state is explicitly `source-ready/bootstrap-incomplete`; it
-contains no completed browser or compiled C++ objects.
+The earlier Windows native15 run
+[41360825174](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41360825174)
+passed preparation but Ninja rejected a missing `third_party/gperf/bin/gperf.exe`
+before executing C++ build actions. Its complete five-chunk checkpoint totals
+**7,705,525,026 bytes**. The current campaign restores it and hydrates the exact
+upstream gperf Git revision, executable, README and license with fixed hashes.
+Those checks passed on the hosted Windows runner at 00:37:15 UTC. The latest
+compile diagnostic is still unknown while checkpoint saving continues.
 
-Both seed campaigns predate the detached-document fix. Their undelivered final
-release tags were removed after checking that no corresponding release existed,
-so they cannot publish an obsolete browser. Source refs and draft compiler
-checkpoints are preserved. Migration is opt-in, allows only these two exact
-seed commits with identical build pins, validates original/patched source
-hashes, preserves unchanged outputs/timestamps, and requires a fresh real build.
+Both original seed campaigns predate the detached-document fix. Their undelivered
+final release tags were removed after verifying that no corresponding release
+existed, so they cannot publish an obsolete browser. Source refs and draft
+compiler checkpoints remain available. Migration is opt-in, allows only the two
+exact approved seed commits with identical build pins, validates original and
+patched source hashes, preserves unchanged outputs/timestamps, and requires a
+fresh real build. CI-only tool repairs leave the native fingerprints unchanged.
 
-Local CI tests currently pass: 32 tests, including exact nested-Go selection and
-rejection checks, bounded no-debugger cleanup, real Ninja
-incremental reuse and the real selected-file native14-to-native15 transition;
-the Windows-only extraction integration is skipped locally and has passed on
-the hosted Windows image. These tests establish CI mechanics, not native
-browser behavior. The passive no-debugger control passed 7/7 on original CFT,
-and its native expectation correctly rejected that unmodified browser. Actual
-native paired checks remain required on both packages. A temporary hosted
-final-release authorization probe
+Local CI tests currently pass: **42 tests**, including exact nested-Go and gperf
+selection/rejection, bounded no-debugger cleanup, real Ninja incremental reuse,
+the selected-file native14-to-native15 transition, and the read-only declared
+input audit against the pinned Ninja. The Windows-only GNU tar
+integration is skipped locally and has passed on the hosted Windows image.
+These tests establish CI mechanics, not native browser behavior. The passive
+no-debugger control passed 7/7 on original CFT, and its native expectation
+correctly rejected that unmodified browser. Actual native paired checks remain
+required on both packages. Hosted final-release authorization probe
 [41355439888](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41355439888)
-also passed create/upload/download/hash/delete using only the workflow token
-and an exact pre-created source tag; it did not publish a browser.
-
-The first native15 Windows migration dispatch,
-[41360489459](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41360489459),
-stopped before source restoration: two POSIX cleanup unit tests tried to mock
-`os.killpg`, which does not exist on Windows. Those two tests are now explicitly
-POSIX-only; two Windows process-tree cleanup cases exercise bounded taskkill
-and failure reporting on every host. Production cleanup code is unchanged.
-The retained source checkpoint is unaffected; the corrected 29-test suite
-passes locally and still needs its next hosted Windows execution.
-
-That corrected suite subsequently passed on hosted Windows in run
-`41360825174`; source restoration, native migration and GN preparation also
-passed there. This establishes preparation, not a completed native binary.
+also passed draft creation, upload, download, hash verification and deletion
+using the workflow token and an exact pre-created source tag; it published no
+browser.
 
 Hosted normal Store prerequisite inspection
 [41362212167](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41362212167)
 passed both platforms: six finite capture checks per OS, actual HTTP 200 listing,
-**enabled** Add-to-Chrome DOM/AX buttons, and owned visible native window access
-through the strict platform helpers. All four report/provenance/status/checksum
-assets per OS were downloaded and their asset and manifest hashes verified.
-No Add click, permission acceptance or extension installation occurred. The
-earlier local disabled Add button does not establish a general compatibility
-failure; a local brand-only counterfactual did not enable it. No production
-user-agent/branding patch is justified by those observations. Actual Store
-permission-dialog, install/restart/update/removal checks remain required on
-the custom binaries.
+**enabled** Add-to-Chrome DOM/AX buttons, and owned visible native window access.
+All report/provenance/status/checksum asset hashes were independently verified.
+A later normal Add click and unaccepted permission-dialog inspection
+[41365872867](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41365872867)
+passed **11/11 on Windows**: the real owned native dialog named the audited
+extension, showed enabled Add extension/Cancel controls and its all-websites
+permission text. Normal browser close cancelled the prompt; the extension
+remained absent from the persisted registry.
+
+The latest Mac-only dialog inspection
+[41368323159](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41368323159)
+passed **10/11**. Its verified owned native window contained the correct prompt
+heading and enabled Add extension/Cancel controls, but the bounded accessibility
+capture omitted substantive permission text. This is an incomplete inspection,
+not a successful permission check. No permission was accepted or extension
+installed in any of these Store trials. Actual Store installation, execution,
+restart, update and removal checks still remain on both custom packages.
+
+An earlier local disabled Store button did not establish a general compatibility
+failure: a local brand-only counterfactual did not enable it, hosted reference
+browsers showed an enabled button on both OSes, and a later fresh local reference
+also showed it enabled. No production user-agent/branding patch is justified by
+those observations.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.

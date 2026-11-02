@@ -105,6 +105,23 @@ interpreter and is preserved in Ninja's regeneration command. This fixes the
 measured Windows interpreter-launch failure without editing upstream `.gn` or
 changing compiler arguments.
 
+After GN, a bounded read-only audit asks the pinned Ninja for the selected
+target graph and its raw leaf-input paths. It checks declared source leaves,
+including leaves reached only through phony aliases, while excluding generated
+outputs. It executes no build commands and downloads nothing. Missing paths,
+format ambiguity, tool warnings or exceeded limits stop compilation; a finite
+JSON report is uploaded to a separate draft before the larger checkpoint save.
+Only that fixed JSON file, status metadata and checksums are retained, never raw
+tool output or environment values. Passing establishes declared input existence;
+validation-only inputs, headers discovered through dependency logs, undeclared
+inputs and runtime dependencies remain outside its scope. A real build is still
+required.
+If this audit fails immediately after restoring an exact current-fingerprint
+checkpoint, with no native migration or compile attempt, the workflow keeps that
+complete checkpoint and skips an identical large upload. A corrected retry can
+repeat hydration and GN generation from it. Fresh source, native migration and
+actual compile attempts still save their checkpoint normally.
+
 Release-optimized, noncomponent Chromium is built without PGO, ThinLTO, or debug
 symbols. This reduces memory, disk and build time; it sacrifices some official
 Chrome performance and crash-debugging detail. Mac uses Apple's supported linker
