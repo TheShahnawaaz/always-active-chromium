@@ -187,11 +187,21 @@ try {
     observe('oracleTabTopology',await cdp.evaluate(oracle.sessionId,'chrome.tabs.query({})'));
     observe('oracleWindowTopology',{main:await cdp.send('Browser.getWindowForTarget',{targetId:p.targetId}),cover:await cdp.send('Browser.getWindowForTarget',{targetId:other.targetId})});
   }
-  const background=await cdp.evaluate(p.sessionId,'({current:readProbe(),events:probeEvents.slice(),preexistingRaf:stopRaf()})');
+  // Measure this chain only after tab deactivation has settled. Its visible
+  // callbacks accumulated earlier cannot establish continued hidden scheduling.
+  const visibleStartedRafHiddenCount=await cdp.evaluate(p.sessionId,'raf.count');
+  await delay(1300);
+  const background=await cdp.evaluate(p.sessionId,'({current:readProbe(),cachedHasFocus:nativeHasFocus.call(document),events:probeEvents.slice(),preexistingRaf:stopRaf()})');
   observe('background',background);
+  observe('visibleStartedRafHiddenProgress',{before:visibleStartedRafHiddenCount,after:background.preexistingRaf.count});
   const protectedMode=args.mode!=='baseline';
   check('background website visibility matches mode',background.current.hidden===!protectedMode && background.current.visibilityState===(protectedMode?'visible':'hidden'),background.current);
   check('background document focus matches mode',background.current.hasFocus===protectedMode,background.current);
+  check('background prefixed visibility aliases match mode',background.current.webkitHidden===!protectedMode&&background.current.webkitVisibilityState===(protectedMode?'visible':'hidden'),background.current);
+  const nativeBindings=args.mode==='native';
+  check('cached prototype visibility getters match mode',background.current.prototypeHidden===!nativeBindings&&background.current.prototypeVisibilityState===(nativeBindings?'visible':'hidden'),background.current);
+  check('cached document focus method matches mode',background.cachedHasFocus===protectedMode,{cachedHasFocus:background.cachedHasFocus});
+  check('visible-started animation chain hidden progress matches mode',nativeBindings?background.preexistingRaf.count>visibleStartedRafHiddenCount:background.preexistingRaf.count===visibleStartedRafHiddenCount,{before:visibleStartedRafHiddenCount,after:background.preexistingRaf.count});
   if(args.mode==='oracle') check('oracle genuinely runs in a native hidden document',background.current.prototypeHidden===true,background.current);
   if(args.mode==='native') check('native tab loss does not deliver page blur/visibilitychange',!background.events.some(e=>['blur','visibilitychange','webkitvisibilitychange'].includes(e.type)&&e.trusted),background.events);
   else if(args.mode==='oracle') check('oracle blocks document listener visibility notifications',!background.events.some(e=>['visibilitychange','webkitvisibilitychange'].includes(e.type)&&e.trusted&&e.listener==='document'),background.events);
