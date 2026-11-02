@@ -595,8 +595,9 @@ def compile_browser(platform, bootstrap_only):
     version = False
     process = None
     if not bootstrap_only:
-        # Leaves more than two hours for checkpoint compression/upload before 6h.
-        deadline = float(os.environ['AA_JOB_STARTED']) + 220 * 60
+        # Absolute job age includes preparation/restore. Recent complete saves
+        # took 19–26 minutes; retain 90 minutes for final tests/publication/save.
+        deadline = float(os.environ['AA_JOB_STARTED']) + 270 * 60
         executable = src / ('third_party/ninja/ninja.exe' if platform == 'win-x64' else 'third_party/ninja/ninja')
         command = [str(executable), '-C', 'out/AlwaysActive', '-j', '3' if platform == 'win-x64' else '2', 'chrome']
         if platform == 'win-x64':

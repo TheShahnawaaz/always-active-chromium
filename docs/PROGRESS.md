@@ -13,7 +13,19 @@ interface and ordinary extension platform are retained in source.
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
 | macOS arm64 | Native16 source `b3237eac7f70` passed migration and input audit, and corrected `document.o` plus `scripted_animation_controller.o` compiled successfully. Three pending stages completed at their normal budgets; the latest verified checkpoint is **8,962,434,131 bytes**. [Current stage 41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189) is compiling from 18:13:46 UTC, with **2,841 scheduled actions** at the last checkpoint before graph changes. | Preserve the live continuation; inspect the real link/package/runtime results. Remaining actions are not an ETA. |
-| Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. The verified complete native16 checkpoint is **7,741,978,948 bytes**. | Repair and prove the exact default Windows interpreter/GN-desc path, then restore the same fingerprint cache. |
+| Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. The verified complete native16 checkpoint is **7,741,978,948 bytes**. [Retry 41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408), source `81735e8f2ce2`, is restoring that same fingerprint from 18:48:39 UTC. | Prove the clean default Windows interpreter and exact standalone GN-desc preflight, then continue compilation. |
+
+The 18:53 UTC official version check still identifies `156.0.8078.80` as
+Chrome for Testing Stable and the pinnable, fraction-1 Stable release on both
+[Mac arm64](https://versionhistory.googleapis.com/v1/chrome/platforms/mac_arm64/channels/stable/versions/all/releases?filter=endtime%3Dnone)
+and [Windows x64](https://versionhistory.googleapis.com/v1/chrome/platforms/win64/channels/stable/versions/all/releases?filter=endtime%3Dnone).
+The higher `157.0.8103.26` entry is a non-pinnable 0.005 rollout, not the selected
+full Stable release. Source pins and the native16 fingerprints remain unchanged.
+
+Measured complete checkpoint saves took 19m12s–25m33s. Future source raises the
+absolute compile budget from 220 to 270 minutes, retaining a 90-minute tail
+inside the same six-hour standard-runner limit. Live immutable campaigns keep
+their existing budget and completed work; they are not restarted for this change.
 
 The native16 correction changes exactly one source line to the pinned API
 `ProtocolIsInHttpFamily()`, also used by upstream `document.cc`. The other 14
@@ -227,6 +239,20 @@ is excluded from observation counters; later connections remain explicitly
 unattributed. Fourteen guards pass, including real local HTTP/TCP cases. Browser
 flags and acceptance checks remain unchanged; actual Windows startup/capture
 cause is still unresolved.
+
+The fourth reference trial
+[41503536129](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503536129),
+source `81735e8f2ce2`, measured a successful dedicated controller health GET:
+HTTP 204 in 11 ms, source-port matched, one accepted/closed socket and one
+request, excluded from observations. Prelaunch and post-launch unattributed
+buckets both had **zero accepted TCP connections, bytes and requests**, with
+complete unsaturated tracking. This establishes a working listener/self-request
+but does not prove whether Chrome attempted a connection blocked before
+acceptance. The owned foreground window remained Untitled at the expected
+loopback address; nine verified children, no allowlisted UI error tags, and
+cleanup passed. All four finite assets and three checksum entries were verified.
+No capture was reached, so no PNG or capture receipt exists. This is still a
+failed reference test and supplies no native-package proof.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.

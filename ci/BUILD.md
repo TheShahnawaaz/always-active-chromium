@@ -71,6 +71,14 @@ documentation and authoring caches are excluded from that fingerprint.
 Each resumed prepare checks hydration again: per-dependency plan markers skip
 unchanged packages and preserve their mtimes, while newly selected tools are
 hydrated. `hydration_revision` in the pins versions the hydration semantics.
+Windows CPython is replaced as a clean, immutable DEPS-pinned package rather
+than overlaid onto a foreign-host directory. Its ZIP SHA-256, complete installed
+file inventory, AMD64 PE binaries and DLLs, interpreter version/identity and
+native stdlib imports are checked. Both `python3.exe` and the extensionless
+invocation must execute correctly before GN. After generation, the exact V8
+`gn desc` query runs without a script-executable override, with the pinned
+dotfile and expected Windows toolchain checked. Prior interpreter headers are
+retained as bounded provenance; no foreign-host residue is assumed without it.
 After complete archive extraction and the native source/version check, a
 `source-ready` / `bootstrap-incomplete` state can be checkpointed even if a
 later tool download or GN generation fails. That failed run still skips
@@ -223,12 +231,22 @@ git push origin "refs/tags/$aacc_source_tag"
 gh workflow run build.yml --ref main -f build_ref="$aacc_source_tag" -f platform=both -f bootstrap_only=true -f auto_resume=false
 ```
 
-Each job has GitHub's six-hour limit. Compilation stops at **220 minutes from
+Each job has GitHub's six-hour limit. Future-source compilation stops at **270 minutes from
 the initial budget step**, with a graceful interrupt and a forced termination
 fallback. Completed Ninja objects and dependency databases survive. SDK setup,
 restoration and source preparation consume that same budget. A disk monitor
 stops compilation below 8 GiB free and reports a failure rather than dispatching
 an endless chain with the same capacity problem.
+
+The 90-minute tail is based on completed hosted stages: Mac checkpoint saves
+were 25m33s ([41395325741](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395325741)),
+21m00s ([41423419315](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41423419315))
+and 25m13s ([41456146080](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41456146080));
+the Windows save was 19m12s ([41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784)).
+This adds up to 50 compile minutes per stage compared with the previous budget.
+It retains time for finite diagnostics, the bounded browser checks, package
+publication and the save. Network slowdowns remain possible. Already-running
+immutable sources keep their original 220-minute budget and are not restarted.
 
 Saving uses a streamed, level-1 zstd/PAX archive. A single upload chunk on disk is
 at most **1,800,000,000 bytes**; source and outputs are never duplicated into one
