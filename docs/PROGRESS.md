@@ -3,16 +3,27 @@
 ## Current state — 2026-11-02
 
 There is no finished custom browser package yet. The exact-source **15-file**
-native patch at `6cea97a` targets Chromium `156.0.8078.80`. It includes
+native16 patch targets Chromium `156.0.8078.80`. It includes
 visibility/focus/event/animation behavior, detached-document safety and optional
-fullscreen/background-navigation controls. Application/reversal/digest checks
+fullscreen/background-navigation controls and the pinned KURL method correction. Application/reversal/digest checks
 pass; actual native C++ and runtime verification remain pending. The standard
 interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455), immutable source `9f6d9a79aef2`, restored the verified checkpoint and compiled from 03:56:20 to 05:04:00 UTC. Its checkpoint save is live; actual build status and action count are not yet available. REST step success is inconclusive under continue-on-error. | Preserve the save; inspect the ready manifest and real terminal logs without inferring success or failure. |
-| Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984), immutable source and workflow `697512488fc8`: restored native15, passed real clean Windows Rust execution and GN at 04:01:52 UTC, passed the complete declared-input audit, and began compilation at 04:02:29 UTC. | Preserve the live build; inspect any concrete compiler diagnostic or its completed checkpoint. |
+| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455) failed after **2,945/34,130** actions in that invocation: `document.cc:2382` called the nonexistent KURL method `ProtocolIsInHTTPFamily`. Its complete **8,104,577,408-byte** native15 checkpoint is verified. | Resume the reviewed native16 spelling correction from that exact cache, preserving compiled work. |
+| Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984) passed real clean Rust/GN and the complete input audit, then failed compiling `swiftshader_libvulkan/Vulkan.res`: pinned `rc.py` could not find `build/toolchain/win/rc/win/rc.exe`. Early diagnostics and progress were verified; its checkpoint save remains live. | Preserve the save; review the exact pinned RC-hook repair, then resume with native16 and the repaired tool. |
+
+The native16 correction changes exactly one source line to the pinned API
+`ProtocolIsInHttpFamily()`, also used by upstream `document.cc`. The other 14
+patched source records and all compiler pins remain identical. Ten patch checks
+pass; root independently passed 16 migration/checkpoint-selection checks,
+including both real native15 source sets and actual Ninja selective rebuilding.
+The migration permits only Mac source `9f6d9a79aef2` / fingerprint `3ea184…` and
+Windows source `697512488fc8` / `bc48a0…`; unchanged source/object bytes and mtimes
+are preserved. There is no native14 or cold fallback. Native16 compilation and
+runtime behavior are still unverified. Mac can resume independently while the
+Windows tool repair is reviewed.
 
 The previous Windows retry
 [41377808648](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41377808648)

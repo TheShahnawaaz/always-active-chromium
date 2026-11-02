@@ -264,10 +264,14 @@ Native runtime corrections do not justify silently accepting arbitrary older
 source trees. `migrate_native` is **off by default**. When explicitly enabled,
 restore still prefers an exact current-fingerprint checkpoint. Its only fallback
 is the corresponding approved immutable seed: Mac
-`ci-source-67dea4dbe7e2`, Windows `ci-source-f2f4e1335f61`. These seeds contain a
-known native constructor defect and are compiler caches, never deliverable
-browsers. Their undelivered final build tags are quarantined separately by the
-repository owner; immutable source refs and seed checkpoints remain available.
+`ci-source-9f6d9a79aef2` (native15 fingerprint `3ea1842140c21caf1dca…`), Windows
+`ci-source-697512488fc8` (`bc48a05d11339f14ef8f…`). The latest complete checkpoint
+from each exact source/fingerprint is used. This approved native15→16 correction
+changes only `document.cc` to call the pinned `ProtocolIsInHttpFamily()` API;
+the other 14 patched source files and compiler configuration stay identical.
+These native15 caches contain the failed API call and are never deliverable
+browsers. Older native14 seeds are not a fallback for this retry. Historical
+immutable source refs/checkpoints remain available to their frozen campaigns.
 
 Migration reads four small Git blobs at the seed state's exact repository
 commit: pins, provenance, applicator and patch. It verifies the immutable ref,
@@ -302,8 +306,8 @@ native source and regenerates GN. Only a successful real Ninja build can mark
 the new state complete, package it, and run browser verification. New checkpoints
 use the new fingerprint; seed drafts are retained. Focused tests cover rejection,
 rollback, partial states, unchanged mtimes, the 100 ms margin and actual Ninja
-selective rebuilds. The local selected-file test migrates the real 14-file seed
-to the current manifest and verifies every current native source digest without
+selective rebuilds. The local selected-file test migrates both real native15
+platform seeds to native16 and verifies every current source digest without
 downloading or compiling full Chromium locally.
 
 ## Packages and verification

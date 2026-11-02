@@ -276,7 +276,7 @@ diff --git a/third_party/blink/renderer/core/dom/document.cc b/third_party/blink
 +      !GetFrame() || !GetPage() || !IsActive() || IsPrerendering()) {
 +    return false;
 +  }
-+  if (Url().ProtocolIsInHTTPFamily()) {
++  if (Url().ProtocolIsInHttpFamily()) {
 +    return true;
 +  }
 +  // Include web-origin inherited/opaque frames, but never browser UI or

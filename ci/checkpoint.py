@@ -294,13 +294,14 @@ def restore(platform, migrate_native=False):
         output('checkpoint_tag', release['tag_name'])
         return
     if migrate_native:
-        from migrate import APPROVED_SEEDS, migrate_source, prove_seed
+        from migrate import APPROVED_SEEDS, APPROVED_FINGERPRINTS, migrate_source, prove_seed
         _, allowed_commit = APPROVED_SEEDS[platform]
         for release in available:
             if not release['draft'] or not release['tag_name'].startswith(f'checkpoint-{platform}-'):
                 continue
             manifest, files = ready_manifest(release)
-            if manifest is None or manifest['state'].get('repository_commit') != allowed_commit:
+            if (manifest is None or manifest['state'].get('repository_commit') != allowed_commit or
+                    manifest['state'].get('fingerprint') != APPROVED_FINGERPRINTS[platform]):
                 continue
             proof = prove_seed(manifest['state'], platform, root, release['tag_name'])
             maximum = restore_candidate(root, release, manifest, files)

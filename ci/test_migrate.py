@@ -190,6 +190,14 @@ class MigrationTests(unittest.TestCase):
                 migrate.prove_seed(state, self.platform, root, proof.seed_tag,
                     fetch_blob=lambda _commit, path, _limit: blobs[path], verify_ref=lambda *args: None)
 
+    def test_prior_native14_source_refs_are_not_fallback_seeds(self):
+        for platform, old_commit in [('mac-arm64', '67dea4dbe7e2df2f21394efbe8f0346fee3af2f4'),
+                                     ('win-x64', 'f2f4e1335f61d63f7b9abc4d44dbcfa5e0a9034d')]:
+            with self.subTest(platform=platform), self.assertRaisesRegex(RuntimeError, 'allowlist'):
+                migrate.prove_seed({'repository_commit': old_commit}, platform, Path('/fixture'),
+                    'checkpoint-old', fetch_blob=lambda *args: self.fail('unapproved metadata fetch'),
+                    verify_ref=lambda *args: self.fail('unapproved source ref'))
+
     @unittest.skipUnless(shutil.which('ninja'), 'Ninja not available')
     def test_ninja_rebuilds_only_changed_source_then_is_clean(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -213,10 +221,15 @@ class MigrationTests(unittest.TestCase):
             self.assertIn('no work to do', subprocess.check_output(['ninja', '-C', str(out)], text=True))
 
     def test_selected_real_seed_to_current_native_sources(self):
+        for platform in ('mac-arm64', 'win-x64'):
+            with self.subTest(platform=platform):
+                self.check_selected_real_seed_to_current_native_sources(platform)
+
+    def check_selected_real_seed_to_current_native_sources(self, platform):
         cache = build.PROJECT / 'native/.cache/upstream'
         if not cache.is_dir():
             self.skipTest('Selected-file authoring snapshot is local only; no full source download')
-        old_ref, old_commit = migrate.APPROVED_SEEDS['mac-arm64']
+        old_ref, old_commit = migrate.APPROVED_SEEDS[platform]
         def git_blob(commit, relative, _limit):
             return subprocess.check_output(['git', '-C', str(build.PROJECT), 'show', commit + ':' + relative])
         old_provenance = git_blob(old_commit, 'native/provenance.json', 0)
@@ -225,8 +238,9 @@ class MigrationTests(unittest.TestCase):
         old_pins = git_blob(old_commit, 'ci/pins.json', 0)
         if old_pins != (build.PROJECT / 'ci/pins.json').read_bytes():
             self.skipTest('The approved seed does not have the current build configuration')
-        old_fp = migrate.fingerprint_blobs('mac-arm64', old_pins, old_provenance,
+        old_fp = migrate.fingerprint_blobs(platform, old_pins, old_provenance,
             git_blob(old_commit, 'native/apply_patches.py', 0), old_patch, relative)
+        self.assertEqual(old_fp, migrate.APPROVED_FINGERPRINTS[platform])
         current = json.loads((build.PROJECT / 'native/provenance.json').read_text())
         old_manifest = json.loads(old_provenance)
         union = {item['path'] for item in current['files']} | {item['path'] for item in old_manifest['files']}
@@ -249,16 +263,16 @@ class MigrationTests(unittest.TestCase):
             (source / 'chrome/VERSION').write_text('MAJOR=156\nMINOR=0\nBUILD=8078\nPATCH=80\n')
             out = source / 'out/AlwaysActive'
             out.mkdir(parents=True)
-            (out / 'args.gn').write_text(build.rendered_gn_args('mac-arm64'))
+            (out / 'args.gn').write_text(build.rendered_gn_args(platform))
             object_file = out / 'seed.o'
             object_file.write_bytes(b'unchanged seed object')
             object_mtime = object_file.stat().st_mtime_ns
-            state = {'schema': 1, 'platform': 'mac-arm64', 'root': str(root), 'version': build.PINS['version'],
+            state = {'schema': 1, 'platform': platform, 'root': str(root), 'version': build.PINS['version'],
                 'revision': build.PINS['revision'], 'repository_commit': old_commit, 'fingerprint': old_fp,
-                'phase': 'build-ready', 'status': 'pending'}
+                'phase': 'build-ready', 'status': 'failed'}
             (root / 'state.json').write_text(json.dumps(state))
-            tag = f'checkpoint-mac-arm64-{old_fp[:20]}-real-fixture'
-            proof = migrate.prove_seed(state, 'mac-arm64', root, tag, fetch_blob=git_blob, verify_ref=lambda *args: None)
+            tag = f'checkpoint-{platform}-{old_fp[:20]}-real-fixture'
+            proof = migrate.prove_seed(state, platform, root, tag, fetch_blob=git_blob, verify_ref=lambda *args: None)
             before = {path: ((source / path).read_bytes(), (source / path).stat().st_mtime_ns) for path in union}
             migrated = migrate.migrate_source(root, proof, object_mtime)
             for path, record in proof.new['records'].items():
@@ -267,7 +281,9 @@ class MigrationTests(unittest.TestCase):
                     self.assertEqual((source / path).stat().st_mtime_ns, before[path][1])
             self.assertEqual(object_file.read_bytes(), b'unchanged seed object')
             self.assertEqual(object_file.stat().st_mtime_ns, object_mtime)
-            self.assertEqual(migrated['fingerprint'], build.fingerprint('mac-arm64'))
+            self.assertEqual(migrated['fingerprint'], build.fingerprint(platform))
+            self.assertEqual(migrated['native_migrations'][-1]['changed_paths'],
+                             ['third_party/blink/renderer/core/dom/document.cc'])
 
 
 if __name__ == '__main__':

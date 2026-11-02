@@ -23,8 +23,14 @@ from build import (PROJECT, PINS, fingerprint, rendered_gn_args, require_tag,
                    source_commit)
 
 APPROVED_SEEDS = {
-    'mac-arm64': ('ci-source-67dea4dbe7e2', '67dea4dbe7e2df2f21394efbe8f0346fee3af2f4'),
-    'win-x64': ('ci-source-f2f4e1335f61', 'f2f4e1335f61d63f7b9abc4d44dbcfa5e0a9034d'),
+    'mac-arm64': ('ci-source-9f6d9a79aef2', '9f6d9a79aef2a6d2098d64598ce383cfb33561e6'),
+    'win-x64': ('ci-source-697512488fc8', '697512488fc8020b641f6f98927d8610dcceccff'),
+}
+# This retry accepts native15 only. Frozen older campaigns keep their own
+# historical allowlists; there is no native14/cold fallback in this campaign.
+APPROVED_FINGERPRINTS = {
+    'mac-arm64': '3ea1842140c21caf1dca16e5b74a83dc444640f537623006e2164b4118b8d828',
+    'win-x64': 'bc48a05d11339f14ef8f988c5e09b7744f4dc4a2f4626d5bd54c0563ca316099',
 }
 MAX_FILES = 64
 MAX_FILE_BYTES = 16 << 20
@@ -136,7 +142,8 @@ def prove_seed(state, platform, root, seed_tag, fetch_blob=github_blob, verify_r
     patch = fetch_blob(old_commit, relative, 2 << 20)
     old = bundle(provenance, patch, 'Old')
     old_fingerprint = fingerprint_blobs(platform, old_pins, provenance, applicator, patch, relative)
-    if old_fingerprint != state['fingerprint'] or not seed_tag.startswith(f'checkpoint-{platform}-{old_fingerprint[:20]}-'):
+    if (old_fingerprint != state['fingerprint'] or old_fingerprint != APPROVED_FINGERPRINTS[platform] or
+            not seed_tag.startswith(f'checkpoint-{platform}-{old_fingerprint[:20]}-')):
         raise RuntimeError('Seed fingerprint/tag failed independent Git-blob proof')
     current_provenance = (PROJECT / 'native/provenance.json').read_bytes()
     current_relative = json.loads(current_provenance)['patch']
