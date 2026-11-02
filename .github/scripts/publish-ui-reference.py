@@ -44,19 +44,15 @@ def collect(project, env):
         selected.append(copied)
     result, capture, provenance = (records.get(key, {}) for key in ['results', 'capture', 'provenance'])
     expected = env.get('AA_REFERENCE_BROWSER', '')
-    normal_control, image_integrity, image_metadata = False, False, None
+    normal_control, diagnostic_capture, image_integrity, image_metadata = False, False, False, None
     try:
         runs = result.get('runs', [])
         run = runs[0] if len(runs) == 1 else {}
         names = {item.get('name') for item in run.get('tests', [])}
-        normal_control = (result.get('mode') == 'control' and result.get('status') == 'passed' and
+        owned_control = (result.get('mode') == 'control' and
             result.get('interrupted', 'missing') is None and result.get('platform') == 'win32' and
             result.get('architecture') == 'x64' and result.get('expectedVersion') == '156.0.8078.80' and
-            run.get('mode') == 'control' and run.get('status') == 'passed' and
-            policy['passed_checks'](run.get('tests')) and
-            {'at least one control website is genuinely hidden and unfocused',
-             'normal launch has no debugging, automation, extension, or emulation flags',
-             'verified owned browser process cleanup completes'}.issubset(names) and
+            run.get('mode') == 'control' and
             policy['same_executable'](run.get('command', {}).get('executable'), expected, 'win-x64') and
             type(run.get('ownedPid')) is int and run['ownedPid'] > 1 and
             run.get('processIdentity', {}).get('pid') == run['ownedPid'] and
@@ -64,13 +60,26 @@ def collect(project, env):
             provenance.get('platform') == 'win64' and provenance.get('version') == '156.0.8078.80' and
             provenance.get('expected_revision') == 'fb096c0011f9d50f0a264a9376420cdea9c421e3' and
             provenance.get('cft', {}).get('sha256') == '16edb57d6107bf1c48a7c149b8d78b155fe614410093796dd72441fd6640540f')
+        guard_names = {'owned profile exposes no remote debugging port file',
+            'normal launch has no debugging, automation, extension, or emulation flags',
+            'verified owned browser process cleanup completes'}
+        guards_passed = all(len(matches := [item for item in run.get('tests', []) if item.get('name') == name]) == 1 and
+                            matches[0].get('status') == 'passed' for name in guard_names)
+        normal_control = (owned_control and result.get('status') == 'passed' and run.get('status') == 'passed' and
+            policy['passed_checks'](run.get('tests')) and guards_passed and
+            'at least one control website is genuinely hidden and unfocused' in names)
+        diagnostic_capture = (owned_control and guards_passed and env.get('AA_FAILED_STARTUP_CAPTURE') == '1' and
+            result.get('status') == 'failed' and run.get('status') == 'failed' and
+            any(item.get('status') == 'failed' for item in run.get('tests', [])) and
+            capture.get('captureContext') == 'startup-diagnostic')
         png = project / 'reports/ui-reference/browser-window.png'
-        if normal_control:
+        if normal_control or diagnostic_capture:
             if run.get('appearance', {}).get('status') != 'captured' or run.get('appearance', {}).get('receipt') != capture:
                 raise ValueError('Capture is not the selected normal-launch receipt')
             image_metadata = policy['validate_appearance_capture'](capture, png, expected_executable=expected,
                 expected_pid=run['ownedPid'], expected_started=run.get('processIdentity', {}).get('started'),
-                expected_profile=str((project / 'reports/ui-reference/profile-control').resolve()))
+                expected_profile=str((project / 'reports/ui-reference/profile-control').resolve()),
+                allow_startup_diagnostic=diagnostic_capture)
             identity = capture.get('identity', {})
             if (identity.get('pid') != run.get('ownedPid') or
                     identity.get('started') != run.get('processIdentity', {}).get('started')):
@@ -87,6 +96,8 @@ def collect(project, env):
         'browser_kind': 'official-chrome-for-testing-reference',
         'status': 'retained-for-manual-review' if verified else 'failed',
         'normal_launch_observation_verified': bool(normal_control),
+        'capture_context': 'startup-diagnostic' if diagnostic_capture and image_integrity else 'fixture' if image_integrity else None,
+        'failed_startup_diagnostic_retained': bool(diagnostic_capture and image_integrity),
         'capture_file_and_identity_verified': bool(image_integrity), 'capture_metadata': image_metadata,
         'custom_native_browser_verified': False, 'appearance_equivalence_verified': False,
         'manual_review': 'pending' if image_integrity else 'unavailable', 'errors': errors,

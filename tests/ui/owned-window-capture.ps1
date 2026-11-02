@@ -1,17 +1,28 @@
 # Capture one verified owned normal window. No input, permission or desktop APIs.
 param([string]$PidValue, [string]$Profile, [string]$Executable,
-      [string]$ExpectedStarted, [string]$OutputFile)
+      [string]$ExpectedStarted, [string]$OutputFile, [string]$CaptureContext='fixture')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $script:Clock = [Diagnostics.Stopwatch]::StartNew()
 $script:OwnedPid = 0
 $script:Report = [ordered]@{ schema=1; purpose='owned-normal-browser-window-capture'; platform='win32'; status='refused'
+    captureContext=$CaptureContext; behaviorVerified=$false
     captureAttempted=$false; captureSucceeded=$false; captureOutcomeUncertain=$false; nativeUiAccessed=$false; visitedWindows=0
     manualReview='pending'; uiEquivalenceVerified=$false; visualCompletenessVerified=$false
     identity=@{verified=$false}; window=@{}; png=@{}; errors=@()
     limits=@{maxWidth=2048;maxHeight=1536;maxPixels=3145728;maxPngBytes=3145728;maxWindows=8;internalMs=10000;externalMs=15000} }
 function Assert-Budget { if ($script:Clock.ElapsedMilliseconds -ge 10000) { throw 'capture_budget_exceeded' } }
+function Title-Kind([string]$Title) {
+    if ($null -eq $Title -or $Title.Length -gt 512) { return $null }
+    if ($Title.StartsWith('Native visibility observation',[StringComparison]::Ordinal)) { return 'fixture' }
+    if ($CaptureContext -ceq 'startup-diagnostic' -and (@('Untitled - Google Chrome for Testing','Untitled - Chromium','Untitled - Google Chrome') -ccontains $Title)) { return 'untitled' }
+    return $null
+}
+function Assert-WindowTitle($Chosen) {
+    $current=$Chosen.element.Current
+    if ($current.ProcessId -ne $script:OwnedPid -or [long]$current.NativeWindowHandle -ne $Chosen.handle -or $current.IsOffscreen -or $current.Name -cne $Chosen.title -or (Title-Kind $current.Name) -cne $Chosen.titleKind) { throw 'owned_window_title_changed' }
+}
 function Canonical([string]$Value, [bool]$Directory) {
     if ([string]::IsNullOrEmpty($Value) -or $Value.Length -gt 4096 -or -not [IO.Path]::IsPathRooted($Value) -or [IO.Path]::GetPathRoot($Value).Length -lt 3) { throw 'absolute_path_required' }
     $item = Get-Item -LiteralPath $Value -Force
@@ -40,6 +51,7 @@ function Identity {
 }
 try {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { $script:Report.status='unsupported';throw 'windows_required' }
+    if ($CaptureContext -cnotin @('fixture','startup-diagnostic')) { throw 'capture_context_invalid' }
     if ($args.Count -ne 0 -or -not [int]::TryParse($PidValue,[ref]$script:OwnedPid) -or $script:OwnedPid -le 1) { throw 'invalid_pid' }
     if ($ExpectedStarted -cnotmatch '^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{7}Z$') { throw 'exact_creation_identity_required' }
     $script:ExpectedProfile=Canonical $Profile $true
@@ -120,11 +132,12 @@ namespace OwnedWindowCapture {
         Assert-Budget
         $script:Report.visitedWindows++
         $current=$window.Current
-        if ($current.ProcessId -ne $script:OwnedPid -or $current.IsOffscreen -or -not $current.Name.StartsWith('Native visibility observation',[StringComparison]::Ordinal)) { continue }
+        $kind=Title-Kind $current.Name
+        if ($current.ProcessId -ne $script:OwnedPid -or $current.IsOffscreen -or $null -eq $kind) { continue }
         $pattern=$null
         if (-not $window.TryGetCurrentPattern([Windows.Automation.WindowPattern]::Pattern,[ref]$pattern) -or $pattern.Current.IsModal) { continue }
         try {$bounds=[OwnedWindowCapture.Native]::Snapshot([long]$current.NativeWindowHandle,$script:OwnedPid)}catch{continue}
-        $selected.Add(@{handle=[long]$current.NativeWindowHandle;bounds=$bounds})
+        $selected.Add(@{handle=[long]$current.NativeWindowHandle;bounds=$bounds;element=$window;title=$current.Name;titleKind=$kind})
     }
     if ($selected.Count -ne 1) { $script:Report.status='unsupported';throw 'unique_owned_normal_window_unavailable' }
     $fresh=Identity
@@ -133,8 +146,9 @@ namespace OwnedWindowCapture {
     $script:Report.identity=$fresh
     Assert-Budget
     $chosen=$selected[0]
+    Assert-WindowTitle $chosen
     $before=[OwnedWindowCapture.Native]::Snapshot($chosen.handle,$script:OwnedPid)
-    $script:Report.window=@{handle=$chosen.handle.ToString('x');ownerPID=$script:OwnedPid;foregroundVerified=$true;visible=$true;minimized=$false;cloaked=$false;normalTopLevelVerified=$true;fixtureTitleVerified=$true
+    $script:Report.window=@{handle=$chosen.handle.ToString('x');ownerPID=$script:OwnedPid;foregroundVerified=$true;visible=$true;minimized=$false;cloaked=$false;normalTopLevelVerified=$true;fixtureTitleVerified=($chosen.titleKind -ceq 'fixture');titleKind=$chosen.titleKind;titleContextVerified=$true;titleUnchangedAfterCapture=$false
         x=$before[0];y=$before[1];width=$before[2];height=$before[3];dpi=$before[4];unchangedAfterCapture=$false}
     $script:Report.captureAttempted=$true
     $script:Report.captureSucceeded=$null
@@ -142,12 +156,13 @@ namespace OwnedWindowCapture {
     $colors=[OwnedWindowCapture.Native]::Capture($chosen.handle,$script:OwnedPid,$OutputFile)
     $final=Identity
     $after=[OwnedWindowCapture.Native]::Snapshot($chosen.handle,$script:OwnedPid)
+    Assert-WindowTitle $chosen
     if ($final.started -cne $original.started -or ($before -join ',') -cne ($after -join ',')) { throw 'identity_or_window_changed_after_capture' }
     $final.immediatelyRevalidated=$true;$final.afterCaptureRevalidated=$true
     $script:Report.identity=$final
     $file=Get-Item -LiteralPath $OutputFile -Force
     if ($file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 3145728) { throw 'created_png_type_or_size_invalid' }
-    $script:Report.window=@{handle=$chosen.handle.ToString('x');ownerPID=$script:OwnedPid;foregroundVerified=$true;visible=$true;minimized=$false;cloaked=$false;normalTopLevelVerified=$true;fixtureTitleVerified=$true
+    $script:Report.window=@{handle=$chosen.handle.ToString('x');ownerPID=$script:OwnedPid;foregroundVerified=$true;visible=$true;minimized=$false;cloaked=$false;normalTopLevelVerified=$true;fixtureTitleVerified=($chosen.titleKind -ceq 'fixture');titleKind=$chosen.titleKind;titleContextVerified=$true;titleUnchangedAfterCapture=$true
         x=$after[0];y=$after[1];width=$after[2];height=$after[3];dpi=$after[4];unchangedAfterCapture=$true}
     $script:Report.png=@{file='browser-window.png';width=$after[2];height=$after[3];bytes=$file.Length;sha256=(Get-FileHash -LiteralPath $OutputFile -Algorithm SHA256).Hash.ToLowerInvariant()}
     $script:Report.contentCheck=@{sampleCount=768;uniqueSampleColors=$colors;nonUniform=$true;visualCompletenessVerified=$false}

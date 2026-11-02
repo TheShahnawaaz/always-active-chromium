@@ -75,6 +75,7 @@ jobs:
           AA_BROWSER: ${{ steps.acquire.outputs.browser }}
           AA_WINDOW_CAPTURE_HELPER: ${{ github.workspace }}/tests/ui/owned-window-capture.ps1
           AA_WINDOW_CAPTURE_MODE: control
+          AA_FAILED_STARTUP_CAPTURE: '1'
         run: node tests/no-debug.mjs --browser "$AA_BROWSER" --mode control --output reports/ui-reference
       - name: Retain reference-only window evidence for visual review
         if: ${{ always() && steps.acquire.outcome == 'success' }}
@@ -82,6 +83,7 @@ jobs:
         env:
           AA_REFERENCE_BROWSER: ${{ steps.acquire.outputs.browser }}
           AA_INSPECTION_OUTCOME: ${{ steps.inspect.outcome }}
+          AA_FAILED_STARTUP_CAPTURE: '1'
         run: python .github/scripts/publish-ui-reference.py
       - name: Fail incomplete normal-launch observation
         if: ${{ always() && steps.inspect.outcome != 'success' }}

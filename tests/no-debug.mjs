@@ -9,7 +9,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import {captureOwnedWindow} from './lib/window-capture.mjs';
+import {captureOwnedWindow,failedStartupCaptureEnabled} from './lib/window-capture.mjs';
 import {parseFailedWindowDiagnostic} from './lib/failed-window-diagnostic.mjs';
 import {fileURLToPath} from 'node:url';
 import {observePassiveTransport,controllerHealthGet} from './lib/passive-transport.mjs';
@@ -26,6 +26,7 @@ for(let i=2;i<process.argv.length;i++) {
   options[key]=process.argv[++i];
 }
 if(!options.browser||!['paired','control','native'].includes(options.mode))throw Error('Usage: node tests/no-debug.mjs --browser PATH --output NEW_DIR [--mode paired|control|native]');
+const failedStartupCapture=failedStartupCaptureEnabled({optIn:process.env.AA_FAILED_STARTUP_CAPTURE,platform:process.platform,optionsMode:options.mode,captureMode,helper:captureHelper});
 for(const key of ['timeout-ms','settle-ms','stable-ms']) {
   options[key]=Number(options[key]);
   if(!Number.isInteger(options[key])||options[key]<1000||options[key]>120000)throw Error(`Invalid ${key}`);
@@ -184,7 +185,7 @@ async function runMode(mode) {
   const token=randomUUID();
   const profile=path.join(options.output,`profile-${mode}`);
   await mkdir(profile,{mode:0o700});
-  let child,identity,server,transport;
+  let child,identity,server,transport,appearanceAttempted=false;
   try {
     server=http.createServer(async(req,res)=>{
       if(transport.handlePrelaunchRequest(req,res))return;
@@ -280,13 +281,20 @@ async function runMode(mode) {
       if(run.tests.every(test=>test.status==='passed')){
         try{
           const current=await processIdentity(child,profile);
-          if(current?.owned&&current.started===identity.started)run.appearance=await captureOwnedWindow({helper:captureHelper,pid:child.pid,profile,executable:options.browser,started:identity.started,output:options.output});
+          if(current?.owned&&current.started===identity.started){appearanceAttempted=true;run.appearance=await captureOwnedWindow({helper:captureHelper,pid:child.pid,profile,executable:options.browser,started:identity.started,output:options.output});}
         }catch{run.appearance.error='capture_evidence_unavailable';}
       }
     }
   } catch(error) {
     addCheck(run,'normal-launch observation completes',false,error.stack);
   } finally {
+    if(failedStartupCapture&&!appearanceAttempted&&child?.pid&&identity?.owned&&run.tests.some(test=>test.status==='failed')){
+      run.appearance={status:'not-captured',captureContext:'startup-diagnostic',behaviorVerified:false,manualReview:'pending',uiEquivalenceVerified:false};
+      try{
+        const current=await processIdentity(child,profile,{timeoutMs:2000,windowsHide:true});
+        if(current?.owned&&current.started===identity.started){appearanceAttempted=true;run.appearance=await captureOwnedWindow({helper:captureHelper,pid:child.pid,profile,executable:options.browser,started:identity.started,output:options.output,captureContext:'startup-diagnostic'});}
+      }catch{run.appearance.error='capture_evidence_unavailable';}
+    }
     if(process.platform==='win32'&&child?.pid&&run.tests.some(test=>test.status==='failed'))run.failedObservationWindow=await failedWindowsWindowDiagnostic(child,profile,identity,run.command?.args);
     if(child?.pid) {
       try {

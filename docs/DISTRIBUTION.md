@@ -102,6 +102,14 @@ controller accepts `AA_WINDOW_CAPTURE_HELPER` and `AA_WINDOW_CAPTURE_MODE=contro
 with `--mode control`. That produces reference capture mechanics evidence only;
 it cannot establish custom-package or native-feature success.
 
+The reference workflow also explicitly opts into failed-startup diagnostics.
+After failed observations it may capture the same freshly reverified owned
+foreground window, accepting only the fixture title or a finite known Untitled
+title. Its receipt labels `startup-diagnostic`, records title/identity rechecks,
+and keeps behavior/equivalence unverified. The reference publisher can retain
+those pixels while the test and workflow remain failed. This mode is rejected
+for native or paired runs; ordinary delivery image validation stays fixture-only.
+
 ## Updates
 
 This project does not distribute official Google Chrome or enroll its builds

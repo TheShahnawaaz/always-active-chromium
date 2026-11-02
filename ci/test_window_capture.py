@@ -57,7 +57,33 @@ class CaptureEvidenceTests(unittest.TestCase):
             expected_executable=kwargs.get('expected_executable', self.receipt['identity']['executable']),
             expected_pid=kwargs.get('expected_pid', 1234),
             expected_started=kwargs.get('expected_started', self.receipt['identity']['started']),
-            expected_profile=kwargs.get('expected_profile', self.receipt['identity']['profile']))
+            expected_profile=kwargs.get('expected_profile', self.receipt['identity']['profile']),
+            allow_startup_diagnostic=kwargs.get('allow_startup_diagnostic', False))
+
+    def test_failed_startup_image_requires_explicit_context_and_cannot_be_behavior_proof(self):
+        receipt = copy.deepcopy(self.receipt)
+        receipt.update(captureContext='startup-diagnostic', behaviorVerified=False)
+        receipt['window'].update(titleKind='untitled', fixtureTitleVerified=False,
+                                 titleContextVerified=True, titleUnchangedAfterCapture=True)
+        with self.assertRaises(ValueError):
+            self.validate(receipt)
+        result = self.validate(receipt, allow_startup_diagnostic=True)
+        self.assertEqual(result['captureContext'], 'startup-diagnostic')
+        self.assertIs(result['behaviorVerified'], False)
+        self.assertEqual(result['window']['titleKind'], 'untitled')
+        for change in [{'behaviorVerified': True}, {'captureContext': 'other'}]:
+            with self.assertRaises(ValueError):
+                self.validate(dict(receipt, **change), allow_startup_diagnostic=True)
+        for title, verified in [('other', False), ('untitled', True), ('fixture', False)]:
+            bad = copy.deepcopy(receipt)
+            bad['window'].update(titleKind=title, fixtureTitleVerified=verified)
+            with self.assertRaises(ValueError):
+                self.validate(bad, allow_startup_diagnostic=True)
+        for field in ['titleKind', 'titleContextVerified', 'titleUnchangedAfterCapture']:
+            bad = copy.deepcopy(receipt)
+            del bad['window'][field]
+            with self.assertRaises(ValueError):
+                self.validate(bad, allow_startup_diagnostic=True)
 
     def test_schema_fixture_remains_pending_manual_review_and_sanitized(self):
         self.receipt['identity']['unknown_private_field'] = 'excluded fixture text'

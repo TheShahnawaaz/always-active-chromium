@@ -10,7 +10,8 @@ import zlib
 
 
 def validate_appearance_capture(receipt, png, expected_executable=None, expected_pid=None,
-                                expected_started=None, expected_profile=None):
+                                expected_started=None, expected_profile=None,
+                                allow_startup_diagnostic=False):
     """Validate finite owned-window capture evidence, never visual equivalence."""
     if (not isinstance(receipt, dict) or receipt.get('schema') != 1 or receipt.get('purpose') != 'owned-normal-browser-window-capture' or
             receipt.get('platform') != 'win32' or receipt.get('status') != 'captured' or receipt.get('method') != 'PrintWindow-full-window-flags-0' or
@@ -19,6 +20,18 @@ def validate_appearance_capture(receipt, png, expected_executable=None, expected
             receipt.get('nativeUiAccessed') is not True or receipt.get('errors') != []):
         raise ValueError('Unverified appearance receipt')
     identity, window, image = receipt.get('identity', {}), receipt.get('window', {}), receipt.get('png', {})
+    context = receipt.get('captureContext', 'fixture')
+    if context not in ['fixture', 'startup-diagnostic'] or (context == 'startup-diagnostic' and
+            (allow_startup_diagnostic is not True or receipt.get('behaviorVerified') is not False)):
+        raise ValueError('Capture context is not authorized')
+    if context == 'startup-diagnostic' and (not isinstance(window, dict) or
+            window.get('titleKind') not in ['fixture', 'untitled'] or
+            window.get('titleContextVerified') is not True or window.get('titleUnchangedAfterCapture') is not True):
+        raise ValueError('Diagnostic title was not reverified')
+    title_kind = window.get('titleKind', 'fixture') if isinstance(window, dict) else None
+    title_verified = (isinstance(window, dict) and
+        (title_kind == 'fixture' and window.get('fixtureTitleVerified') is True or
+         context == 'startup-diagnostic' and title_kind == 'untitled' and window.get('fixtureTitleVerified') is False))
     if (not isinstance(identity, dict) or not all(identity.get(key) is True for key in ['verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified']) or
             type(identity.get('pid')) is not int or identity['pid'] <= 1 or
             not isinstance(identity.get('started'), str) or not re.fullmatch(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{7}Z', identity['started']) or
@@ -31,7 +44,7 @@ def validate_appearance_capture(receipt, png, expected_executable=None, expected
         raise ValueError('Capture PID/start mismatch')
     if (not isinstance(window, dict) or window.get('ownerPID') != identity['pid'] or
             not isinstance(window.get('handle'), str) or not re.fullmatch(r'[0-9a-f]{1,16}', window['handle']) or int(window['handle'], 16) == 0 or
-            not all(window.get(key) is True for key in ['foregroundVerified', 'visible', 'normalTopLevelVerified', 'fixtureTitleVerified', 'unchangedAfterCapture']) or
+            not all(window.get(key) is True for key in ['foregroundVerified', 'visible', 'normalTopLevelVerified', 'unchangedAfterCapture']) or not title_verified or
             window.get('minimized') is not False or window.get('cloaked') is not False or type(window.get('dpi')) is not int or not 48 <= window['dpi'] <= 768 or
             type(receipt.get('visitedWindows')) is not int or not 1 <= receipt['visitedWindows'] <= 8):
         raise ValueError('Unverified capture window')
@@ -88,8 +101,9 @@ def validate_appearance_capture(receipt, png, expected_executable=None, expected
         raise ValueError('PNG/receipt binding mismatch')
     return {'status': 'captured', 'method': receipt['method'], 'manualReview': 'pending',
         'uiEquivalenceVerified': False, 'visualCompletenessVerified': False,
+        'captureContext': context, 'behaviorVerified': False,
         'identity': {key: identity[key] for key in ['pid', 'executable', 'profile', 'started', 'verified', 'immediatelyRevalidated', 'afterCaptureRevalidated', 'ownerVerified', 'sessionVerified']},
-        'window': {key: window[key] for key in ['handle', 'ownerPID', 'width', 'height', 'dpi']},
+        'window': {**{key: window[key] for key in ['handle', 'ownerPID', 'width', 'height', 'dpi']}, 'titleKind': title_kind},
         'png': {'width': width, 'height': height, 'bytes': len(data), 'sha256': digest}}
 
 
