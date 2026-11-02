@@ -22,7 +22,7 @@ process.once('SIGINT',()=>{interrupted='SIGINT';abort.abort();});
 process.once('SIGTERM',()=>{interrupted='SIGTERM';abort.abort();});
 const report={schema:1,stage:'normal-store-dialog-inspection-NO-INSTALL-ACCEPTANCE',started:new Date().toISOString(),platform:process.platform,architecture:process.arch,target,
   tests:[],observations:{},inputEvents:[],installation:{addClickAttempted:false,addClicked:false,accepted:false,acceptInteractionPerformed:false,successfulInstallVerified:false,targetInstalledObserved:null},
-  limits:{actionBudgetMs:180000,cleanupBudgetMs:18000,listingMs:60000,dialogMs:45000,nativeUiProbeMs:15000,maxDialogProbes:4,maxNativeUiBytes:65536,maxProfilePreferenceBytes:8388608,maxCandidateRecords:8,maxTextLength:240},
+  limits:{actionBudgetMs:180000,cleanupBudgetMs:18000,listingMs:60000,scrollAttemptMs:7000,maxScrollAttempts:1,dialogMs:45000,nativeUiProbeMs:15000,maxDialogProbes:4,maxNativeUiBytes:65536,maxProfilePreferenceBytes:8388608,maxCandidateRecords:8,maxTextLength:240},
   limitations:[
     'This is an inspection of the real permission UI, not a completed extension install/restart/update/removal gate.',
     'Only CDP Input mouse events may click the actual enabled Store Add button; no element.click, private install API, auto-confirm, security bypass, extension load, or emulation is used.',
@@ -37,17 +37,21 @@ const operate=(action,until,label,maxMs=5000)=>storeOperation(action,until,label
 
 function readAddButton() {
   const short=v=>String(v??'').trim().replace(/\s+/g,' ').slice(0,240);
-  const candidates=[...document.querySelectorAll('button,[role="button"]')].filter(element=>/^add to (chrome|chromium)$/i.test(short(element.getAttribute('aria-label')||element.innerText||element.textContent))).map(element=>{
+  const candidates=[...document.querySelectorAll('button,[role="button"]')].filter(element=>/^add to (chrome|chromium)$/i.test(short(element.getAttribute('aria-label')||element.innerText||element.textContent))).map((element,index)=>{
     const rect=element.getBoundingClientRect(),style=getComputedStyle(element),x=rect.x+rect.width/2,y=rect.y+rect.height/2;
     const hit=document.elementFromPoint(x,y);
-    return {label:short(element.getAttribute('aria-label')||element.innerText||element.textContent),disabled:element.matches(':disabled')||element.hasAttribute('disabled')||element.getAttribute('aria-disabled')==='true',
+    return {index,label:short(element.getAttribute('aria-label')||element.innerText||element.textContent),disabled:element.matches(':disabled')||element.hasAttribute('disabled')||element.getAttribute('aria-disabled')==='true',
       visible:rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)>0,
       pointerEvents:style.pointerEvents,hitTargetMatches:hit===element||element.contains(hit),x,y,
       rect:{x:rect.x,y:rect.y,top:rect.top,left:rect.left,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height},
       insideViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight};
   }).slice(0,8);
   return {url:location.href.slice(0,1600),title:short(document.title),readyState:document.readyState,webdriver:navigator.webdriver,
-    viewport:{innerWidth,innerHeight,devicePixelRatio},candidates};
+    viewport:{innerWidth,innerHeight,devicePixelRatio},
+    scroll:{x:scrollX,y:scrollY,scrollingElement:{left:document.scrollingElement?.scrollLeft??null,top:document.scrollingElement?.scrollTop??null,
+      width:document.scrollingElement?.scrollWidth??null,height:document.scrollingElement?.scrollHeight??null,
+      clientWidth:document.scrollingElement?.clientWidth??null,clientHeight:document.scrollingElement?.clientHeight??null},
+      body:{width:document.body?.scrollWidth??null,height:document.body?.scrollHeight??null}},candidates};
 }
 
 async function queryTargetInstalled(until) {
@@ -131,7 +135,31 @@ try {
   const listingLoaded=add?.url?.startsWith('https://chromewebstore.google.com/detail/')&&add.url.includes(target.id)&&add.title.toLowerCase().includes(target.name.toLowerCase())&&
     report.observations.documentResponses.some(response=>response.status===200&&response.url.includes(target.id));
   if(!check('actual audited Store listing loaded',Boolean(listingLoaded),report.observations.documentResponses))throw Error('Required actual listing is unavailable');
-  const candidate=add.candidates.find(button=>!button.disabled&&button.visible&&button.pointerEvents!=='none'&&button.hitTargetMatches&&button.insideViewport);
+  let candidate=add.candidates.find(button=>!button.disabled&&button.visible&&button.pointerEvents!=='none'&&button.hitTargetMatches&&button.insideViewport);
+  if(!candidate) {
+    const observed=add.candidates.find(button=>!button.disabled&&button.visible&&button.pointerEvents!=='none');
+    if(observed) {
+      const scrollUntil=deadline(7000);
+      report.observations.addScrollAttempt={attempted:true,method:'DOM.scrollIntoViewIfNeeded',before:add,targetIndex:observed.index};
+      try {
+        await operate(()=>browser.cdp.send('DOM.enable',{},sessionId),scrollUntil,'Enable DOM target observation');
+        const element=await operate(()=>browser.cdp.send('Runtime.evaluate',{
+          expression:`[...document.querySelectorAll('button,[role="button"]')].filter(element=>/^add to (chrome|chromium)$/i.test(String(element.getAttribute('aria-label')||element.innerText||element.textContent||'').trim().replace(/\\s+/g,' ')))[${observed.index}]??null`,
+          returnByValue:false,objectGroup:'store-add-scroll-target'
+        },sessionId),scrollUntil,'Resolve exact observed Add element');
+        if(!element.result?.objectId||element.result.subtype!=='node')throw Error('Observed Add node is no longer available');
+        const described=await operate(()=>browser.cdp.send('DOM.describeNode',{objectId:element.result.objectId},sessionId),scrollUntil,'Identify observed Add node');
+        report.observations.addScrollAttempt.target={backendNodeId:described.node.backendNodeId,nodeName:described.node.nodeName};
+        await operate(()=>browser.cdp.send('DOM.scrollIntoViewIfNeeded',{objectId:element.result.objectId},sessionId),scrollUntil,'One ordinary Add target scroll');
+        await delay(250);
+        add=await operate(()=>browser.cdp.evaluate(sessionId,`(${readAddButton.toString()})()`),scrollUntil,'Fresh Add geometry after scrolling');
+        report.observations.addScrollAttempt.after=add;
+      }catch(error){report.observations.addScrollAttempt.error=error.message;}
+      finally {await operate(()=>browser.cdp.send('Runtime.releaseObjectGroup',{objectGroup:'store-add-scroll-target'},sessionId),deadline(2000),'Release observed Add reference',2000).catch(()=>{});}
+      report.observations.addAfterScroll=add;
+      candidate=add.candidates.find(button=>!button.disabled&&button.visible&&button.pointerEvents!=='none'&&button.hitTargetMatches&&button.insideViewport);
+    }
+  }
   if(!check('actual Add button is enabled and unobscured',Boolean(candidate),add.candidates))throw Error('Add button not safely clickable; no input dispatched');
   const prerequisites=await probeOwnedStoreUi(browser,{mode:'preflight',deadline:deadline(15000),signal:abort.signal});
   report.observations.nativeUiPrerequisites=prerequisites;
@@ -140,6 +168,7 @@ try {
   if(report.observations.targetRegistryBefore.completed&&!check('target absent before install request',report.observations.targetRegistryBefore.targetCount===0,report.observations.targetRegistryBefore))throw Error('Target already installed in fresh profile');
   await operate(()=>browser.cdp.send('Target.activateTarget',{targetId:page.targetId}),deadline(5000),'Activate owned Store tab');
   const clickState=await operate(()=>browser.cdp.evaluate(sessionId,`(${readAddButton.toString()})()`),deadline(5000),'Recheck Add button before input');
+  report.observations.addRecheckBeforeInput=clickState;
   const clickTarget=clickState.candidates.find(button=>!button.disabled&&button.visible&&button.pointerEvents!=='none'&&button.hitTargetMatches&&button.insideViewport);
   if(!clickTarget)throw Error('Add became disabled or obscured; no input dispatched');
   report.observations.addAtClick=clickTarget;

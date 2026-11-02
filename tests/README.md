@@ -199,6 +199,11 @@ This separate stage uses the same fixed audited listing and a fresh minimal
 browser profile. The normal browser window is requested at 1280 by 900 pixels
 so the Store's desktop layout fits; no viewport/device emulation is used.
 Actual viewport dimensions and button rectangles are retained for diagnostics.
+If an enabled Add button is clipped or obscured, one bounded ordinary target
+scroll is attempted with `DOM.scrollIntoViewIfNeeded` on that observed element.
+Document scroll position/extents and fresh button geometry are recorded. Every
+enabled/visible/viewport/hit-test gate must still pass afterward; scrolling never
+forces the button or substitutes coordinates for a failed gate.
 It requires an enabled, visible, unobscured Add button and
 strict owned-PID native UI prerequisites before dispatching normal CDP mouse
 move/press/release input to that button. It never calls `element.click` or an
