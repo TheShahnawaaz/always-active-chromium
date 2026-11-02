@@ -39,6 +39,73 @@ async function boundedFile(root,relative,maxBytes){
   if(await realpath(current)!==current)throw Error('Owned source path changed');
   return readFile(current);
 }
+function publicRegistrationString(value,kind){
+  if(typeof value!=='string')return null;
+  if(kind==='version')return value.length<=80&&/^\d+(?:\.\d+){0,3}$/.test(value)?value:null;
+  const basename=path.win32.basename(path.posix.basename(value));return Buffer.byteLength(basename)<=160?basename:null;
+}
+function targetPreferenceShape(entry){
+  const limits={maxBytes:16384,maxTopLevelKeys:64,maxNestedKeys:16,maxArrayItems:16,maxDepth:2,maxNodes:128,maxKeyBytes:128};
+  const reasons=new Set();let inspectedNodes=0;
+  const type=value=>value===null?'null':Array.isArray(value)?'array':typeof value;
+  const stringMetadata=value=>({utf16Length:value.length,utf8Bytes:Buffer.byteLength(value),sha256Utf8:sha256(value)});
+  const describe=(value,depth,route)=>{
+    const result={type:type(value)};
+    if(inspectedNodes>=limits.maxNodes){result.status='unknown-node-budget';reasons.add('node-budget');return result;}inspectedNodes++;
+    if(typeof value==='boolean'){result.value=value;return result;}
+    if(typeof value==='number'){result.finite=Number.isFinite(value);if(result.finite)result.value=value;else{result.status='unknown-nonfinite-number';reasons.add('nonfinite-number');}return result;}
+    if(typeof value==='string'){
+      Object.assign(result,stringMetadata(value));
+      if(route==='path'||route==='manifest.version'){
+        const publicValue=publicRegistrationString(value,route==='path'?'path':'version');
+        if(publicValue!==null)result.publicValue=publicValue;else result.publicValueStatus='unknown-or-oversized-public-field';
+      }
+      return result;
+    }
+    if(value===null)return result;
+    if(!value||typeof value!=='object'){result.status='unknown-json-type';reasons.add('unknown-json-type');return result;}
+    if(Array.isArray(value)){
+      result.length=value.length;result.items=[];
+      if(depth<limits.maxDepth)for(let index=0;index<Math.min(value.length,limits.maxArrayItems);index++)result.items.push({index,...describe(value[index],depth+1,route+'[]')});
+      result.omittedItems=value.length-result.items.length;if(result.omittedItems)reasons.add(depth>=limits.maxDepth?'depth-budget':'array-item-budget');return result;
+    }
+    const keys=Object.keys(value),selected=[],maximum=depth===0?limits.maxTopLevelKeys:limits.maxNestedKeys;
+    // Preserve reader-relevant registration fields even when an unknown entry
+    // has more keys than the finite evidence budget permits. No classification.
+    for(const key of ['location','path','manifest','idle_install_info','version'])if(Object.hasOwn(value,key)&&selected.length<maximum)selected.push(key);
+    for(const key of keys){if(selected.length>=maximum)break;if(!selected.includes(key))selected.push(key);}
+    result.keyCount=keys.length;result.fields=[];
+    if(depth<limits.maxDepth)for(const key of selected){
+      const keyBytes=Buffer.byteLength(key);
+      if(keyBytes>limits.maxKeyBytes||depth>0&&!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)){
+        result.fields.push({key:null,keyUtf8Bytes:keyBytes,keySha256Utf8:sha256(key),type:type(value[key]),status:keyBytes>limits.maxKeyBytes?'unknown-oversized-key':'unknown-nonschema-nested-key'});
+        reasons.add(keyBytes>limits.maxKeyBytes?'key-byte-budget':'nonschema-nested-key');continue;
+      }
+      result.fields.push({key,...describe(value[key],depth+1,route?route+'.'+key:key)});
+    }
+    result.omittedKeys=keys.length-result.fields.length;result.keySetComplete=result.omittedKeys===0&&result.fields.every(field=>field.key!==null);
+    if(result.omittedKeys)reasons.add(depth>=limits.maxDepth?'depth-budget':'key-count-budget');return result;
+  };
+  const shape=describe(entry,0,'');
+  shape.schema=1;shape.limits=limits;
+  const rootObject=entry!==null&&typeof entry==='object'&&!Array.isArray(entry);
+  const size=()=>Buffer.byteLength(JSON.stringify({report:{observations:{installedAudit:{preferences:{entries:[{shape}]}}}}},null,2));
+  const finish=()=>{shape.inspectedNodes=inspectedNodes;shape.truncated=reasons.size>0;shape.status=rootObject?(shape.truncated?'bounded':'complete'):'unknown-entry-type';shape.unknownReasons=[...reasons].slice(0,12);};
+  finish();
+  while(size()>limits.maxBytes){
+    let selected=null;
+    const visit=(record,depth)=>{
+      if(depth>0&&(record.fields?.length||record.items?.length)&&(!selected||depth>selected.depth))selected={record,depth};
+      for(const field of record.fields??[])visit(field,depth+1);for(const item of record.items??[])visit(item,depth+1);
+    };
+    visit(shape,0);const record=selected?.record??shape;
+    if(record.fields?.length){record.fields.pop();record.omittedKeys++;record.keySetComplete=false;}
+    else if(record.items?.length){record.items.pop();record.omittedItems++;}
+    else throw Error('Target preference shape exceeds fixed metadata budget');
+    reasons.add('serialized-byte-budget');finish();
+  }
+  return shape;
+}
 export async function inspectTargetPreferences(profile,target=COMPAT_TARGET){
   const parsedFiles=[],entries=[],errors=[];
   for(const name of ['Preferences','Secure Preferences']){
@@ -47,13 +114,18 @@ export async function inspectTargetPreferences(profile,target=COMPAT_TARGET){
       parsedFiles.push(name);const settings=data.extensions?.settings??{};
       if(Object.hasOwn(settings,target.id)){
         const entry=settings[target.id];
-        entries.push({file:name,path:typeof entry.path==='string'?entry.path:null,version:entry.manifest?.version??null,state:entry.state??null});
+        const record={file:name,version:publicRegistrationString(entry?.manifest?.version,'version'),
+          state:typeof entry?.state==='boolean'||typeof entry?.state==='number'&&Number.isFinite(entry.state)?entry.state:null,shape:targetPreferenceShape(entry)};
+        // Source verification still needs the full active path internally. It
+        // must not leak if this diagnostic object is serialized before summary.
+        Object.defineProperty(record,'path',{value:typeof entry?.path==='string'?entry.path:null,enumerable:false});entries.push(record);
+        if(entry===null)throw Error('Target preference entry has an unknown null shape');
       }
     }catch(error){if(error.code!=='ENOENT')errors.push({file:name,error:error.message.slice(0,500)});}
   }
   return {parsedFiles,entries,errors,targetAbsent:parsedFiles.length>0&&entries.length===0&&errors.length===0};
 }
-export function summarizePreferences(result){return {...result,entries:result.entries.map(entry=>({...entry,path:entry.path?path.basename(entry.path):null}))};}
+export function summarizePreferences(result){return {...result,entries:result.entries.map(entry=>({...entry,path:publicRegistrationString(entry.path,'path')}))};}
 export async function verifyInstalledSources(profile,{target=COMPAT_TARGET,audit=UBOL_AUDIT}={}){
   const preferences=await inspectTargetPreferences(profile,target);
   if(preferences.errors.length||!preferences.entries.length)throw Error('Persisted installed target path is unavailable');
