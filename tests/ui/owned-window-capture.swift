@@ -161,6 +161,22 @@ func windowState(_ pid: pid_t) throws -> WindowState {
     guard let all = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { throw ProbeError(message: "window_server_metadata_unavailable") }
     let owned = all.filter { ($0[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid }
     guard owned.count <= 8 else { throw ProbeError(message: "owned_window_limit") }
+    report["visitedWindows"] = owned.count
+    func finiteRect(_ rect: CGRect) -> [String: Double] {
+        ["x": Double(rect.origin.x), "y": Double(rect.origin.y), "width": Double(rect.width), "height": Double(rect.height)]
+    }
+    report["windowDiagnostic"] = ["scope": "owned-pid-window-metadata-only", "axFixtureTitleVerified": true,
+        "axBounds": finiteRect(rect), "candidates": owned.map { item -> [String: Any] in
+            let name = item[kCGWindowName as String] as? String
+            var value: [String: Any] = ["handle": (item[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0,
+                "layer": (item[kCGWindowLayer as String] as? NSNumber)?.intValue ?? -999,
+                "alpha": (item[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? -1,
+                "nameAvailable": name != nil, "titleMatchesAX": name == title,
+                "fixtureTitleVerified": name?.hasPrefix("Native visibility observation") == true]
+            if let bounds = item[kCGWindowBounds as String] as? [String: Any],
+               let frame = CGRect(dictionaryRepresentation: bounds as CFDictionary) { value["bounds"] = finiteRect(frame); value["boundsMatchAX"] = frame == rect }
+            return value
+        }]
     let candidates = owned.filter { item in
         guard (item[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
               (item[kCGWindowAlpha as String] as? NSNumber)?.doubleValue == 1,
@@ -240,6 +256,7 @@ do {
         "sha256": SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()]
     report["contentCheck"] = ["sampleCount": 768, "uniqueSampleColors": colors.count, "nonUniform": true, "visualCompletenessVerified": false]
     report["method"] = "screencapture-owned-window-no-shadow"
+    report.removeValue(forKey: "windowDiagnostic")
     report["captureSucceeded"] = true; report["captureOutcomeUncertain"] = false; report["status"] = "captured"
 } catch {
     if report["captureAttempted"] as? Bool == true { report["status"] = "error" }
