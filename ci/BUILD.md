@@ -253,7 +253,7 @@ and 25m13s ([41456146080](https://github.com/TheShahnawaaz/always-active-chromiu
 the Windows save was 19m12s ([41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784)).
 The later Windows stage
 [41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408)
-saved a complete 7.94 GB checkpoint in **30m51s**. The subsequent complete
+saved a complete 7.94 GB checkpoint in **30m51s**. The measured complete
 9.90 GB Mac save took 31m34s
 ([41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189));
 the 90-minute tail still leaves approximately 58 minutes beyond that observed save.
