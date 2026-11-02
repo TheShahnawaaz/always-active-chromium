@@ -13,7 +13,7 @@ interface and ordinary extension platform are retained in source.
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
 | macOS arm64 | Native16 source `b3237eac7f70` passed migration and input audit, and corrected `document.o` plus `scripted_animation_controller.o` compiled successfully. Three pending stages completed at their normal budgets; the latest verified checkpoint is **8,962,434,131 bytes**. [Current stage 41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189) is compiling from 18:13:46 UTC, with **2,841 scheduled actions** at the last checkpoint before graph changes. | Preserve the live continuation; inspect the real link/package/runtime results. Remaining actions are not an ETA. |
-| Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. The verified complete native16 checkpoint is **7,741,978,948 bytes**. [Retry 41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408), source `81735e8f2ce2`, is restoring that same fingerprint from 18:48:39 UTC. | Prove the clean default Windows interpreter and exact standalone GN-desc preflight, then continue compilation. |
+| Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. [Retry 41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408), source `81735e8f2ce2`, restored the verified **7,741,978,948-byte** native16 checkpoint, passed mandatory clean CPython/default GN-desc/RC preparation at 19:13:02 UTC and audited all **75,790** scoped leaves with zero missing. Compilation began at 19:13:47 UTC. | Preserve the live compilation and inspect its actual next result. |
 
 The 18:53 UTC official version check still identifies `156.0.8078.80` as
 Chrome for Testing Stable and the pinnable, fraction-1 Stable release on both
@@ -59,7 +59,11 @@ existing build checks pass at root (one Windows-only integration skipped).
 The GN JSON validator accepts its exact qualified or default-toolchain label
 only with the expected Windows toolchain. Its native16 fingerprint stays
 unchanged so the completed Windows objects remain reusable. Actual host
-execution must still prove the repair.
+execution has now passed that mandatory preparation and the input audit in
+run 41503529408. Its six bounded assets, all server digests and four checksum
+entries were verified against exact source/workflow `81735e8f2ce2`. This does
+not prove compilation or browser behavior. Prior CPython headers remain
+unobserved until the live job's console logs are available.
 
 Real Windows Rust pre-clean evidence is now available from the prepare step,
 separately from unit fixtures: extensionless `rustc` was a 315,608-byte ELF,
@@ -253,6 +257,27 @@ loopback address; nine verified children, no allowlisted UI error tags, and
 cleanup passed. All four finite assets and three checksum entries were verified.
 No capture was reached, so no PNG or capture receipt exists. This is still a
 failed reference test and supplies no native-package proof.
+
+The fifth reference trial
+[41506801324](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41506801324)
+reached one read-only capture on the freshly reverified owned foreground Untitled
+window. Flags-0 `PrintWindow` produced a solid image, correctly refused before
+PNG publication. All five finite assets/four checksum entries were verified.
+
+The sixth trial
+[41507767490](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41507767490),
+source `32a2b2891343`, changed only the capture method to full-content flag 2.
+It retained a validated **1044×788, 20,858-byte** diagnostic PNG, SHA-256
+`f3065774b567851170799d8576c987f515906f60eea6c5b103bc56bfd256880d`.
+All six assets/five checksum entries and embedded PID/executable/profile/start,
+owner/session, foreground HWND and before/after title/geometry proof were
+verified. Root inspected the actual pixels: Chrome controls and the CFT notice
+are visible, both tabs say Untitled, the expected test URL is displayed, and
+the page body is white with no visible error page/dialog. No complete-rendering
+or UI-equivalence claim follows from that image. Health passed again while all
+post-launch TCP/HTTP counts remained zero. The run and behavior remain failed;
+the image is explicitly `startup-diagnostic`, `behaviorVerified=false` and no
+native browser package is established.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.
