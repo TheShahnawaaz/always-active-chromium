@@ -11,8 +11,8 @@ interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455), immutable source `9f6d9a79aef2`, is restoring the verified completed stage-0 checkpoint. Stage 0 ended at **12,688/46,818** actions in that resumed invocation, then stopped at its controller deadline with status **pending**. | Preserve the live continuation and inspect its real compilation result. |
-| Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984), immutable source and workflow `697512488fc8`: fresh retry using the complete native15 checkpoint from run 41377808648, with clean exact-pinned Windows Rust hydration and early finite diagnostics. | Verify actual Windows Rust execution and the declared-input audit, then compilation. |
+| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455), immutable source `9f6d9a79aef2`, restored the verified completed stage-0 checkpoint, passed preparation/GN and resumed compilation at 03:56:20 UTC. Stage 0 ended at **12,688/46,818** actions in that resumed invocation, then stopped at its deadline with status **pending**. | Preserve the live continuation and inspect its real compilation result. |
+| Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984), immutable source and workflow `697512488fc8`: restored native15, passed real clean Windows Rust execution and GN at 04:01:52 UTC, passed the complete declared-input audit, and began compilation at 04:02:29 UTC. | Preserve the live build; inspect any concrete compiler diagnostic or its completed checkpoint. |
 
 The previous Windows retry
 [41377808648](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41377808648)
@@ -35,6 +35,15 @@ package, verify AMD64 PE and exact release/commit/host, execute both rustc.exe a
 the exact extensionless standard-library query through pinned CPython, then
 atomically swap with rollback. Revalidated clean packages preserve file mtimes.
 It does not patch Chromium's upstream Rust build scripts or native behavior.
+
+The corrected Windows run has now passed that mandatory real-host Rust
+preflight, including PE/release/host/commit and the exact extensionless
+standard-library query. Its early prepare report is complete with no events;
+the next audit again checked **75,790 leaves, zero missing**, complete=true,
+in **24.235 seconds**. Both phases' six assets, four JSON checksums and exact
+source/workflow identities were verified. Compilation continued beyond the
+former nine-second failure. The actual old binary headers remain unverified
+until console logs are available; ELF-shadowing is still a hypothesis.
 
 The Mac campaign restored the previous complete **7,566,257,986-byte** checkpoint,
 which had completed **10,753 of 57,570** actions before discovering Dawn's
@@ -104,6 +113,20 @@ new assertions. All 14 assets, hashes/manifests and controller identity were
 verified. The controls were genuinely hidden, and their existing animation
 chains remained frozen after settling. Native mode must separately prove its
 intended binding and continued-animation differences on actual packages.
+
+The reviewed delivery workflow is now implemented for actual future package
+drafts. It verifies exact source/final refs, source pins/native fingerprint,
+package and build-manifest hashes, then extracts the Mac ZIP with `ditto` or
+runs the real Windows per-user mini-installer on a fresh hosted runner. The
+existing four behavior modes and full normal Store controller receive that
+installed/extracted executable. Canonical executable path, size and SHA-256 bind
+the reports to acquisition, with an unchanged-executable check after behavior
+tests. Failed, partial, timed-out or uncertain evidence cannot produce verified
+status, and a failed verification returns a failed workflow after retaining its
+bounded JSON receipt. No profiles/raw logs are published by this verifier.
+All **20 focused delivery tests** and the existing **four cleanup tests** passed
+at root, together with Python/workflow syntax and unchanged native fingerprints.
+Actual delivery execution remains pending until the real packages exist.
 
 Both real launchable packages, native behavior/no-debug evidence, installation
 checks and actual-package Store compatibility are still required for completion.

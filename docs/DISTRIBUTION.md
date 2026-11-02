@@ -63,6 +63,29 @@ Signing status must be stated for each artifact. No Developer ID certificate,
 Apple notarization credential, or Windows signing certificate has been provided
 to the project. No signing identity may be purchased or uploaded implicitly.
 
+## Verify the delivered package
+
+After a real package draft exists, run **Actions → Verify real browser delivery**
+with its exact `ci-source-<commit12>` tag and one platform. This uses a fresh
+standard GitHub-hosted runner. It verifies the source/final tags, package/build
+checksums, exact pins and native fingerprint before opening the package.
+
+macOS tests the ZIP after `ditto` extraction, code-signature structure,
+architecture and bundle-identity checks. Windows requires no existing Chromium
+installation or registration, runs the real default per-user installer with
+`--do-not-launch-chrome`, and tests its installed
+`%LOCALAPPDATA%\Chromium\Application\chrome.exe`. It never substitutes the build
+output or a reference browser. Both routes create separate owned test profiles.
+
+The delivered executable runs the existing master-off, native-default,
+optional-feature and paired no-debug checks, followed by the reviewed normal
+Store install/execution/restart/update-check/removal flow. Reports bind the
+acquired executable to its canonical path, size and SHA-256. Only bounded JSON
+and checksums go to a separate `delivery-verification-*` draft; profiles, browser
+logs, packages and extension source are excluded. Missing or partial evidence
+cannot produce a verified result. Signing/notarization and a genuine Store
+version upgrade remain separate from these checks.
+
 ## Updates
 
 This project does not distribute official Google Chrome or enroll its builds

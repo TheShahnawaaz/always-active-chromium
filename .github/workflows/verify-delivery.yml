@@ -1,0 +1,116 @@
+name: Verify real browser delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: Exact ci-source-<commit12> tag of the real draft package
+        type: string
+        required: true
+      platform:
+        description: One real delivered platform
+        type: choice
+        options: [mac-arm64, win-x64]
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  delivery:
+    runs-on: ${{ inputs.platform == 'mac-arm64' && 'macos-26' || 'windows-2025-vs2026' }}
+    timeout-minutes: 60
+    concurrency:
+      group: verify-delivery-${{ inputs.platform }}
+      cancel-in-progress: false
+    permissions:
+      contents: write # Finite JSON/checksum evidence in a separate draft only.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      AA_PLATFORM: ${{ inputs.platform }}
+      AA_PACKAGE_SOURCE_TAG: ${{ inputs.source_tag }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Validate exact source tag and local rejection policies
+        shell: bash
+        run: |
+          python -c 'import os,re; assert re.fullmatch(r"ci-source-[0-9a-f]{12}",os.environ["AA_PACKAGE_SOURCE_TAG"])'
+          python -m unittest discover -s ci -p test_acquire_delivery.py
+          node --test tests/test-store-compat.mjs
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_tag }}
+          path: delivery-source
+          persist-credentials: false
+      - name: Compile and refuse invalid Mac native action identity
+        if: inputs.platform == 'mac-arm64'
+        shell: bash
+        run: |
+          mkdir -p .runtime
+          xcrun swiftc -O tests/ui/store-ui.swift -o .runtime/store-ui
+          xcrun swiftc -O tests/ui/store-action.swift -o .runtime/store-action
+          .runtime/store-action --pid 1 --profile /nonexistent-owned-test-profile --executable /nonexistent-test-browser --expected-started invalid-pid-guard --expected-start-seconds 1 --expected-start-microseconds 0 --target ubol --operation accept-install > .runtime/delivery-action-guard.json
+          python -c 'import json; from pathlib import Path; x=json.loads(Path(".runtime/delivery-action-guard.json").read_text()); assert x["status"]=="refused" and x["actionAttempted"] is False and x["actionPerformed"] is False and x["nativeUiAccessed"] is False and x["visitedNodes"]==0'
+          echo "AA_STORE_UI_HELPER=$GITHUB_WORKSPACE/.runtime/store-ui" >> "$GITHUB_ENV"
+          echo "AA_STORE_ACTION_HELPER=$GITHUB_WORKSPACE/.runtime/store-action" >> "$GITHUB_ENV"
+      - name: Refuse invalid Windows action identity and verify cleanup parser
+        if: inputs.platform == 'win-x64'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $helper = Join-Path $env:GITHUB_WORKSPACE 'tests/ui/store-action.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) { throw 'Native action helper parse failure' }
+          $raw = & powershell.exe -NoProfile -NonInteractive -File $helper -PidValue 0 -Target ubol -Operation accept-install
+          if ($LASTEXITCODE -ne 0) { throw 'Native refusal guard failed' }
+          $guard = $raw | ConvertFrom-Json
+          if ($guard.status -cne 'refused' -or $guard.actionAttempted -ne $false -or $guard.actionPerformed -ne $false -or $guard.visitedNodes -ne 0) { throw 'Native action guard did not refuse' }
+          Add-Content $env:GITHUB_ENV "AA_STORE_UI_HELPER=$env:GITHUB_WORKSPACE/tests/ui/store-ui.ps1"
+          Add-Content $env:GITHUB_ENV "AA_STORE_ACTION_HELPER=$helper"
+          node tests/test-owned-store-windows.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Windows cleanup parser guard failed' }
+      - name: Acquire and really extract or install the draft package
+        id: acquire
+        timeout-minutes: 16
+        shell: bash
+        run: python ci/acquire_delivery.py --source-root delivery-source --source-tag "$AA_PACKAGE_SOURCE_TAG" --platform "$AA_PLATFORM" --output .runtime/delivery
+      - name: Verify delivered native defaults, master-off, optional and no-debug modes
+        id: behavior
+        if: ${{ !cancelled() && steps.acquire.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 20
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+        run: python ci/verify.py --browser "$AA_BROWSER" --output reports/delivery-behavior
+      - name: Verify normal Store compatibility on the delivered browser
+        id: store
+        if: ${{ !cancelled() && steps.acquire.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 14
+        shell: bash
+        env:
+          AA_BROWSER: ${{ steps.acquire.outputs.browser }}
+        run: node tests/store-compat.mjs --browser "$AA_BROWSER" --output reports/delivery-store
+      - name: Publish only finite delivery evidence
+        if: ${{ always() }}
+        timeout-minutes: 10
+        env:
+          AA_ACQUIRE_OUTCOME: ${{ steps.acquire.outcome }}
+          AA_BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+          AA_STORE_OUTCOME: ${{ steps.store.outcome }}
+        run: python .github/scripts/publish-delivery.py
+      - name: Fail incomplete delivery verification
+        if: ${{ always() && (steps.acquire.outcome != 'success' || steps.behavior.outcome != 'success' || steps.store.outcome != 'success') }}
+        run: python -c 'raise SystemExit("Real-package delivery verification is incomplete; inspect the bounded evidence.")'

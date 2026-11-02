@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run all native-browser modes with isolated fixture profiles and bounded time."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,6 +10,18 @@ import subprocess
 import sys
 
 from build import PROJECT
+
+
+def executable_identity(file):
+    original = Path(file)
+    canonical = original.resolve(strict=True)
+    if original.is_symlink() or not canonical.is_file():
+        raise ValueError('A regular delivered browser executable is required')
+    digest = hashlib.sha256()
+    with canonical.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return {'executable': str(canonical), 'sha256': digest.hexdigest(), 'size': canonical.stat().st_size}
 
 
 def cleanup_timeout(process, variant, windows=None):
@@ -53,6 +66,8 @@ def main():
     parser.add_argument('--browser', required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    initial_executable = executable_identity(args.browser)
+    args.browser = initial_executable['executable']
     args.output.mkdir(parents=True, exist_ok=True)
     modes = [
         ('baseline', 'run.mjs', ['--mode', 'baseline', '--disable-features', 'AlwaysActive'], 240),
@@ -100,8 +115,15 @@ def main():
         # directories or per-process *-browser.log files.
         if name != 'no-debug' and (destination / 'browser.log').is_file():
             logs.append(f'===== {name} =====\n' + (destination / 'browser.log').read_text(errors='replace'))
+    try:
+        final_executable = executable_identity(args.browser)
+    except (OSError, ValueError):
+        final_executable = None
+    unchanged = final_executable == initial_executable
+    failed = failed or not unchanged
     (args.output / 'results.json').write_text(json.dumps({
         'schema': 1, 'status': 'failed' if failed else 'passed', 'variants': variants,
+        'executable_binding': {'initial': initial_executable, 'final': final_executable, 'unchanged': unchanged},
         'scope': 'Built-browser baseline, native defaults, optional native flags, and paired zero-debugger control/native checks. '
                  'Inspect per-check coverage; automation does not substitute for install/Web Store review.'
     }, indent=2) + '\n')
