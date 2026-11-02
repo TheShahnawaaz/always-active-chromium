@@ -107,10 +107,14 @@ function targetPreferenceShape(entry){
   return shape;
 }
 export async function inspectTargetPreferences(profile,target=COMPAT_TARGET){
-  const parsedFiles=[],entries=[],errors=[];
+  const parsedFiles=[],entries=[],errors=[],registrationShapeUncertainty=[];
   for(const name of ['Preferences','Secure Preferences']){
     try{
       const bytes=await boundedFile(profile,`Default/${name}`,8388608),data=JSON.parse(bytes.toString('utf8'));
+      const dictionary=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+      if(!dictionary(data))registrationShapeUncertainty.push({file:name,reason:'preferences-root-not-dictionary'});
+      else if(Object.hasOwn(data,'extensions')&&!dictionary(data.extensions))registrationShapeUncertainty.push({file:name,reason:'extensions-not-dictionary'});
+      else if(data.extensions&&Object.hasOwn(data.extensions,'settings')&&!dictionary(data.extensions.settings))registrationShapeUncertainty.push({file:name,reason:'settings-not-dictionary'});
       parsedFiles.push(name);const settings=data.extensions?.settings??{};
       if(Object.hasOwn(settings,target.id)){
         const entry=settings[target.id];
@@ -123,9 +127,22 @@ export async function inspectTargetPreferences(profile,target=COMPAT_TARGET){
       }
     }catch(error){if(error.code!=='ENOENT')errors.push({file:name,error:error.message.slice(0,500)});}
   }
-  return {parsedFiles,entries,errors,targetAbsent:parsedFiles.length>0&&entries.length===0&&errors.length===0};
+  const knownEmptyDictionary=entry=>entry.shape?.schema===1&&entry.shape.type==='object'&&entry.shape.status==='complete'&&
+    entry.shape.keyCount===0&&entry.shape.fields?.length===0&&entry.shape.omittedKeys===0&&entry.shape.keySetComplete===true&&
+    entry.shape.truncated===false&&entry.shape.unknownReasons?.length===0;
+  return {parsedFiles,entries,errors,registrationShapeUncertainty,
+    targetAbsent:parsedFiles.length>0&&entries.length===0&&errors.length===0,
+    targetRegistrationAbsent:parsedFiles.length>0&&errors.length===0&&registrationShapeUncertainty.length===0&&entries.every(knownEmptyDictionary)};
 }
 export function summarizePreferences(result){return {...result,entries:result.entries.map(entry=>({...entry,path:publicRegistrationString(entry.path,'path')}))};}
+export function requiredRemovalEvidenceVerified(report){
+  const removal=report.removal;
+  return removal?.confirmed===true&&removal.confirmationOutcome==='performed-with-verified-receipt'&&
+    removal.liveRegistryAbsenceVerified===true&&removal.postRestartLiveRegistryAbsenceVerified===true&&
+    report.observations?.finalNormalClose?.closedNormally===true&&
+    report.phases?.some(phase=>phase.name==='confirmRemove'&&phase.status==='passed')===true&&
+    report.actions?.some(action=>action.operation==='confirm-remove'&&action.status==='acted'&&action.actionAttempted===true&&action.actionPerformed===true&&action.actionOutcomeUncertain===false)===true;
+}
 export async function verifyInstalledSources(profile,{target=COMPAT_TARGET,audit=UBOL_AUDIT}={}){
   const preferences=await inspectTargetPreferences(profile,target);
   if(preferences.errors.length||!preferences.entries.length)throw Error('Persisted installed target path is unavailable');

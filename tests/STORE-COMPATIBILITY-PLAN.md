@@ -1,9 +1,11 @@
 # Normal Store compatibility test preparation
 
-Status: `store-compat.mjs` and offline boundary tests are implemented; actual
-installation execution remains pending joint controller/helper review. No
-uBlock Origin Lite installation, native permission action, update request, or
-removal has been performed. The separate
+Status: reviewed CFT reference runs on both platforms have observed normal uBOL
+installation, source verification, execution, restart persistence, one update
+check, native removal and post-removal restart absence. The final reference run
+of the corrected persisted-registration check remains pending. Actual native
+browser packages and a genuine newer Store version transition remain unverified.
+The separate
 `store-dialog.mjs` inspection contract remains read-only after clicking Store
 Add: it must never acquire an acceptance action.
 
@@ -101,10 +103,14 @@ old artifact as the installed one or pin installation through a private API.
    `management.uninstall`, developerPrivate uninstall, or remove files/prefs.
 9. **Removal persists.** Require the item to disappear, read-only target registry
    absence, and a normal close. Relaunch the same owned profile and require
-   absence again; after normal closure, confirm no target extension settings
-   entry in bounded owned Preferences/Secure Preferences reads. Cached files
-   alone are not an installed registry entry. Do not open missing extension
-   resources merely to infer absence.
+   absence again; after normal closure, confirm persisted registration absence
+   in bounded owned Preferences/Secure Preferences reads. Permit only no ID
+   entry or a verified actually empty JSON dictionary, with no parse/shape
+   uncertainty. Preserve `targetAbsent=false` when the empty identifier entry
+   remains, separately from `targetRegistrationAbsent=true`. Nonempty or pending
+   data must fail. This does not claim removal of every ID/preference byte.
+   Cached files alone are not an installed registration. Do not open missing
+   extension resources merely to infer absence.
 
 Proposed controller budget: 12 minutes for all phases, with an additional
 18-second final cleanup bound, smaller per-operation limits, at most 15 seconds
@@ -206,17 +212,14 @@ proof. The ordinary toolbar Update path is separately source-backed at
 
 ## Remaining implementation/evidence gaps
 
-- uBOL install prompts were captured read-only on both standard hosted platforms
-  in run 41371223903, with exact target heading, native controls and all-websites
-  permission text. Complete native removal capture and actual acceptance/removal
-  action execution remain pending. Finite derived prompt records are retained
-  for offline validator regression with source report hashes.
-- Jointly review and validate the separate native action helpers and controller;
-  current read-only helpers retain their contract. See STORE-ACTION-CONTRACT.md.
-- The owned launcher now supplies a fixed-profile restart boundary; actual
-  extension persistence and own-extension-page probe access without unsafe flags
-  still need a genuine-install mechanics run. No unpacked/private installation
-  workaround is permitted if those mechanics fail.
+- Reference run 41381085404 verified the full normal sequence through post-removal
+  restart absence and final normal close on both platforms. Its original reports
+  remain 19/20 because the old final predicate rejected any ID entry; the new
+  bounded shape evidence proves that both remaining dictionaries are exactly
+  empty. Execute the reviewed narrow registration-semantics correction once;
+  do not retroactively relabel the historical reports as passed.
+- Native helpers and full controller retain separate action/read-only contracts;
+  see STORE-ACTION-CONTRACT.md. Reference success is not native-package success.
 - Obtain genuine older-Store/newer-release conditions for version-transition
   proof, or report that particular gate unverified with completed check results.
 - Run the complete test on actual built packages for both OS targets. Publish

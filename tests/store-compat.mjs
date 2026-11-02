@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { launchOwnedStoreBrowser, probeOwnedStoreUi, storeOperation } from './lib/owned-store-browser.mjs';
 import { matchesStoreTargetUrl } from './lib/store-targets.mjs';
-import { COMPAT_TARGET as target, BROWSER_REVISION, UBOL_AUDIT, inspectCompatPrompt, inspectTargetPreferences, summarizePreferences, verifyInstalledSources, validRulesetResponse, classifyActionReceipt, boundedNativeDialogTrace } from './lib/store-compat-policy.mjs';
+import { COMPAT_TARGET as target, BROWSER_REVISION, UBOL_AUDIT, inspectCompatPrompt, inspectTargetPreferences, summarizePreferences, verifyInstalledSources, validRulesetResponse, classifyActionReceipt, boundedNativeDialogTrace, requiredRemovalEvidenceVerified } from './lib/store-compat-policy.mjs';
 import { storeAddControl, extensionRemoveControl } from './lib/store-compat-dom.mjs';
 const execute=promisify(execFile);
 const options={browser:process.env.CHROME_PATH,output:null};
@@ -21,12 +21,12 @@ for(let index=2;index<process.argv.length;index++){
 }
 if(!options.browser||!options.output)throw Error('Usage: node tests/store-compat.mjs --browser PATH --output NEW_DIR');
 options.output=path.resolve(options.output);await mkdir(path.dirname(options.output),{recursive:true});await mkdir(options.output,{mode:0o700});
-const phaseNames=['helpers','launch','listing','installPrompt','acceptInstall','installedRegistry','closeForSourceAudit','installedSourceAudit','resumeForExecution','executionInitial','restartPersistence','executionAfterRestart','ordinaryUpdateCheck','removeUi','removePrompt','confirmRemove','registryAbsent','restartRemovalAbsence','finalNormalClose','persistedRegistryAbsent'];
+const phaseNames=['helpers','launch','listing','installPrompt','acceptInstall','installedRegistry','closeForSourceAudit','installedSourceAudit','resumeForExecution','executionInitial','restartPersistence','executionAfterRestart','ordinaryUpdateCheck','removeUi','removePrompt','confirmRemove','registryAbsent','restartRemovalAbsence','finalNormalClose','persistedRegistrationAbsent'];
 const report={schema:1,stage:'normal-store-compatibility',target,started:new Date().toISOString(),platform:process.platform,architecture:process.arch,status:'running',
   phases:phaseNames.map(name=>({name,status:'not-reached'})),observations:{},inputEvents:[],generations:[],actions:[],
   installation:{addClicked:false,accepted:false,acceptanceOutcome:'not-attempted',normalInstallVerified:false,version:null,executionVerified:false,restartPersistenceVerified:false},
   update:{checkAttempted:false,checkCompleted:false,result:null,versionTransitionVerified:false,versionBefore:null,versionAfter:null,limit:'Check completion is separate from a successful server response or an audited installed version upgrade.'},
-  removal:{requested:false,confirmed:false,confirmationOutcome:'not-attempted',registryAbsenceVerified:false,restartAbsenceVerified:false,persistedAbsenceVerified:false},
+  removal:{requested:false,confirmed:false,confirmationOutcome:'not-attempted',liveRegistryAbsenceVerified:false,postRestartLiveRegistryAbsenceVerified:false,persistedRegistrationAbsenceVerified:false,targetIdentifierEntryAbsent:null},
   limits:{actionsMs:720000,finalCleanupMs:18000,restartMs:45000,listingMs:60000,nativeProbeOrActionMs:15000,dialogMs:45000,maxDialogProbes:4,maxNativeDialogTraceBytes:32768,oneUpdateCheckMs:60000,maxReportBytes:1048576},
   limitations:[
     'This test uses a CDP controller; native everyday operation without debugging is verified separately by no-debug.mjs.',
@@ -239,13 +239,17 @@ try{
   let removalPrompt;
   await phase('removePrompt',async()=>{removalPrompt=await capturePrompt('confirm-remove',until(45000));report.observations.removePrompt=removalPrompt;});
   await phase('confirmRemove',async()=>{await nativeAction('confirm-remove',removalPrompt,until(15000));report.removal.confirmed=true;});
-  await phase('registryAbsent',async()=>{await openStorePage(until(30000));report.observations.registryAfterRemoval=await waitRegistry(until(30000),false);report.removal.registryAbsenceVerified=true;});
+  await phase('registryAbsent',async()=>{await openStorePage(until(30000));report.observations.registryAfterRemoval=await waitRegistry(until(30000),false);report.removal.liveRegistryAbsenceVerified=true;});
   await phase('restartRemovalAbsence',async()=>{
     if(typeof browser.restart!=='function')throw Error('Owned restart API unavailable');const previousPid=browser.child.pid,handle=await op(()=>browser.restart({signal:abort.signal}),until(45000),'Restart after normal removal',45000);
-    if(handle!==browser||browser.child.pid===previousPid||browser.lastClose?.closedNormally!==true)throw Error('Post-removal restart was not verified');recordGeneration();await openStorePage(until(30000));report.observations.registryAfterRemovalRestart=await registry(until(5000));if(report.observations.registryAfterRemovalRestart.items.length)throw Error('Removed target returned after restart');report.removal.restartAbsenceVerified=true;
+    if(handle!==browser||browser.child.pid===previousPid||browser.lastClose?.closedNormally!==true)throw Error('Post-removal restart was not verified');recordGeneration();await openStorePage(until(30000));report.observations.registryAfterRemovalRestart=await registry(until(5000));if(report.observations.registryAfterRemovalRestart.items.length)throw Error('Removed target returned after restart');report.removal.postRestartLiveRegistryAbsenceVerified=true;
   });
   await phase('finalNormalClose',async()=>{report.observations.finalNormalClose=await browser.close();if(!report.observations.finalNormalClose.closedNormally)throw Error('Final browser close was not normal');});
-  await phase('persistedRegistryAbsent',async()=>{const value=await inspectTargetPreferences(browser.profile);report.observations.persistedRegistry=summarizePreferences(value);if(!value.targetAbsent)throw Error('Target still present or persisted registry read incomplete');report.removal.persistedAbsenceVerified=true;});
+  await phase('persistedRegistrationAbsent',async()=>{
+    if(!requiredRemovalEvidenceVerified(report))throw Error('Native removal, live/restarted absence, and normal final close must all be verified');
+    const value=await inspectTargetPreferences(browser.profile);report.observations.persistedRegistration=summarizePreferences(value);report.removal.targetIdentifierEntryAbsent=value.targetAbsent;
+    if(!value.targetRegistrationAbsent)throw Error('Persisted target registration remains or preference evidence is incomplete/nonempty');report.removal.persistedRegistrationAbsenceVerified=true;
+  });
 }catch(error){report.error=String(error.stack).slice(0,8000);if(error.cleanup)report.cleanup=error.cleanup;}
 finally{
   clearTimeout(timer);
@@ -253,13 +257,13 @@ finally{
   if(browser){
     try{report.cleanup=await browser.close();}catch(error){report.cleanup={error:String(error.message).slice(0,2000)};}
     if(report.cleanup?.rootGone===true&&Date.now()<cleanupDeadline){
-      try{const value=await storeOperation(()=>inspectTargetPreferences(browser.profile),cleanupDeadline,'Read final owned persisted target state',{maxMs:3000});report.observations.persistedRegistryAfterAnyClose={authoritativeNormalClose:report.cleanup.closedNormally===true,...summarizePreferences(value)};}
-      catch(error){report.observations.persistedRegistryAfterAnyClose={completed:false,error:String(error.message).slice(0,500)};}
+      try{const value=await storeOperation(()=>inspectTargetPreferences(browser.profile),cleanupDeadline,'Read final owned persisted target state',{maxMs:3000});report.observations.persistedPreferenceStateAfterAnyClose={authoritativeNormalClose:report.cleanup.closedNormally===true,...summarizePreferences(value)};}
+      catch(error){report.observations.persistedPreferenceStateAfterAnyClose={completed:false,error:String(error.message).slice(0,500)};}
     }
   }
   report.interrupted=interrupted;report.finished=new Date().toISOString();
   report.status=!interrupted&&report.phases.every(value=>value.status==='passed')&&report.cleanup?.closedNormally===true?'passed':'failed';
-  report.coverage={normalInstall:report.installation.normalInstallVerified,workerExecution:report.installation.executionVerified,restartPersistence:report.installation.restartPersistenceVerified,ordinaryUpdateCheck:report.update.checkCompleted,genuineVersionTransition:report.update.versionTransitionVerified,normalRemoval:report.removal.persistedAbsenceVerified&&report.removal.restartAbsenceVerified};
+  report.coverage={normalInstall:report.installation.normalInstallVerified,workerExecution:report.installation.executionVerified,restartPersistence:report.installation.restartPersistenceVerified,ordinaryUpdateCheck:report.update.checkCompleted,genuineVersionTransition:report.update.versionTransitionVerified,normalRemovalWithPersistedRegistrationAbsence:requiredRemovalEvidenceVerified(report)&&report.removal.persistedRegistrationAbsenceVerified&&report.cleanup?.closedNormally===true};
   let text=JSON.stringify(report,null,2)+'\n';if(Buffer.byteLength(text)>1048576){report.observations={omitted:'Report exceeded finite evidence limit'};report.status='failed';report.error='Finite report size exceeded';text=JSON.stringify(report,null,2)+'\n';}
   await writeFile(path.join(options.output,'results.json'),text);
 }

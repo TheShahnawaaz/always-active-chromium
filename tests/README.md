@@ -270,8 +270,18 @@ It restarts only its created profile, reads the actual own-origin worker's
 `getEnabledRulesets` response, repeats that probe after another normal restart,
 and makes one ordinary own-extension update request. It then uses the visible
 Remove button on the selected real `chrome://extensions` item and a separate
-native confirmation. Removal must survive restart and normal close, with no
-target in the bounded persisted registry read. The ordinary update result and
+native confirmation. Removal must survive restart and normal close, with verified
+persisted **registration** absence. `targetRegistrationAbsent` accepts only no
+target ID entry or an actually empty JSON dictionary with complete untruncated
+evidence and no parse/container uncertainty. Every nonempty, pending, malformed,
+oversized or unknown entry still fails. `targetAbsent` separately retains the
+physical ID-entry result: it stays false when an empty identifier dictionary
+remains. No claim of removing every identifier or preference byte is made.
+The final phase is `persistedRegistrationAbsent`; the removal result is
+`persistedRegistrationAbsenceVerified`, and combined coverage is
+`normalRemovalWithPersistedRegistrationAbsence`. The native removal receipt,
+live registry absence, post-removal restart absence and normal final close all
+remain mandatory alongside the static preference check. The ordinary update result and
 `versionTransitionVerified` are separate: `no_update` does not prove an upgrade
 or independently establish successful server transport.
 

@@ -527,7 +527,50 @@ All eight downloaded assets and manifests were verified under
 Finite derived records in `tests/fixtures/store-ubol-prompts.json` retain those
 source hashes and only the native fields needed for offline validator checks.
 They do not represent a new runtime result. The separate full compatibility
-controller is implemented with required native action-helper gates and offline
-tests; actual installation, worker execution, restart, update check and removal
-remain unverified until that reviewed controller is executed on the reference
-browser and, separately, actual native packages.
+controller was implemented with required native action-helper gates and offline
+tests before the full reference observations below. Actual native-package
+compatibility remains a separate verification.
+
+## Empty identifier metadata and persisted registration
+
+Full reference run **41381085404** at controller commit `604a9c8` passed **19/20**
+phases on each standard hosted platform. Both observed normal uBOL installation
+at `2026.1026.1812`, audited manifest/selected-source verification, actual worker
+responses before and after restart, one ordinary `no_update` result, verified
+native removal, live absence after removal and another restart, and normal final
+close. The unchanged final ID-entry check failed. All eight assets, GitHub asset
+digests/sizes, SHA manifests and controller identity were verified under
+`.runtime/oracle/hosted-store-compat-41381085404`.
+
+- macOS report SHA-256:
+  `833a0563812b2227cbb73f25e480033f1c4b70edc897b12a03bfb4de63557fd4`.
+- Windows report SHA-256:
+  `184ffec752db1cb590b6485726790df5a78f340242d03c7bbfce081e21d07624`.
+
+The new bounded target-only evidence proves both remaining Secure Preferences
+values are **exactly empty JSON dictionaries**: `keyCount=0`, `fields=[]`,
+`keySetComplete=true`, `truncated=false`, `status=complete`, no unknown reasons
+and no file parse errors. They contain no `location`, `path`, `manifest` or
+`idle_install_info` fields. Their creator remains unknown; this evidence does
+not establish a general Store tombstone mechanism.
+
+Pinned Chromium's [installed-record reader](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/browser/extension_prefs.cc#L1574)
+returns no installed record without integer `location`; it also requires string
+`path` later. The [delayed-install reader](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/browser/extension_prefs.cc#L518)
+finds a dictionary named `idle_install_info`, then uses the same registration
+reader. An empty ID dictionary therefore represents neither an installed
+startup registration nor pending installation. Normal uninstall's
+[DeleteExtensionPrefs](https://github.com/chromium/chromium/blob/fb096c0011f9d50f0a264a9376420cdea9c421e3/extensions/browser/extension_prefs.cc#L601)
+removes the whole ID dictionary; that source fact does not identify the later
+empty dictionary's writer in these runs.
+
+The corrected full-controller check records `targetRegistrationAbsent`
+separately from unchanged `targetAbsent`. It permits only no ID entry or an
+actually empty dictionary with complete parse/shape evidence. All nonempty,
+pending, malformed, oversized and unknown entries still fail. Empty identifier
+metadata remains visible as `targetAbsent=false`; no preference-byte erasure is
+claimed. Native removal receipt, live absence, post-removal restart absence and
+normal final close remain independently mandatory. Historical fourth-run
+reports retain their original failed status; execution of the reviewed corrected
+check remains pending. A genuine newer Store version transition and actual
+native-browser packages remain unverified by these CFT reference results.
