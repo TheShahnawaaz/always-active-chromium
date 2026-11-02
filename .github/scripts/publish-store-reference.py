@@ -18,6 +18,12 @@ def main():
     phase = os.environ.get('AA_STORE_PHASE', 'preflight')
     if phase not in ('preflight', 'permission-dialog'):
         raise RuntimeError('Unexpected Store inspection phase')
+    target_key = os.environ.get('AA_STORE_TARGET', 'always-active')
+    targets = json.loads((project / 'tests/lib/store-targets.json').read_text(encoding='utf-8'))
+    if target_key not in ('always-active', 'ubol') or target_key not in targets:
+        raise RuntimeError('Unexpected Store inspection target')
+    inspected_target = targets[target_key]
+    observed_target = None
     destination = project / 'packages/store-reference'
     destination.mkdir(parents=True, exist_ok=True)
     selected = []
@@ -31,7 +37,11 @@ def main():
             continue
         if source.is_symlink() or not source.is_file() or source.stat().st_size > (1 << 20):
             raise RuntimeError('Refusing nonregular or oversized preflight evidence')
-        json.loads(source.read_text(encoding='utf-8'))
+        data = json.loads(source.read_text(encoding='utf-8'))
+        if source == project / 'reports/store/results.json':
+            observed_target = data.get('target')
+            if observed_target != inspected_target:
+                raise RuntimeError('Store report target does not match the selected allowlisted target')
         target = destination / name
         shutil.copy2(source, target)
         selected.append(target)
@@ -42,6 +52,10 @@ def main():
         'platform': platform,
         'inspection_outcome': os.environ['AA_STORE_OUTCOME'],
         'phase': phase,
+        'target': inspected_target,
+        'observed_report_target': observed_target,
+        'report_target_verified': observed_target == inspected_target,
+        'reference_provenance_scope': 'Browser acquisition provenance may also describe the original Always Active CRX. That CRX was not loaded and does not establish the selected live Store target version or bytes.',
         'scope': ('Read-only official CFT Store page and owned native UI prerequisites. '
                   if phase == 'preflight' else
                   'Official CFT Store Add click and inspection of the unaccepted native permission dialog. ')
@@ -56,14 +70,16 @@ def main():
                             for item in sorted(selected)), encoding='utf-8')
     selected.append(sums)
     notes = destination / '.notes.txt'
-    notes.write_text(status['scope'] + '\n\nThe draft tag is a default-branch storage anchor. '
+    notes.write_text(f"Target: {inspected_target['name']} ({inspected_target['id']}).\n\n" + status['scope'] + '\n\nThe draft tag is a default-branch storage anchor. '
         'Actual controller commit and exact reference package hashes are attached. '
         'Only finite JSON and checksums are uploaded; profiles, logs, binaries, '
         'browser packages and extension source are excluded.\n', encoding='utf-8')
     kind = 'store-reference' if phase == 'preflight' else 'store-dialog'
+    if target_key != 'always-active':
+        kind += f'-{target_key}'
     tag = f'{kind}-{platform}-{run_id}-{attempt}'
     subprocess.run(['gh', 'release', 'create', tag, '--repo', repository, '--draft',
-        '--title', f'Store {phase}: {platform}', '--notes-file', str(notes)], check=True)
+        '--title', f'Store {target_key} {phase}: {platform}', '--notes-file', str(notes)], check=True)
     for item in selected:
         subprocess.run(['gh', 'release', 'upload', tag, str(item), '--repo', repository], check=True)
     subprocess.run(['gh', 'release', 'view', tag, '--repo', repository, '--json', 'url'], check=True)

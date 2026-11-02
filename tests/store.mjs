@@ -7,17 +7,18 @@ import { access, mkdir, open, readFile, realpath, writeFile } from 'node:fs/prom
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { CDP } from './lib/cdp.mjs';
+import { DEFAULT_STORE_TARGET, getStoreTarget, matchesStoreTargetUrl } from './lib/store-targets.mjs';
 
 const execute=promisify(execFile);
-const listing='https://chromewebstore.google.com/detail/always-active-window-alwa/ehllkhjndgnlokhomdlhgbineffifcbj';
 const revision='fb096c0011f9d50f0a264a9376420cdea9c421e3';
-const options={browser:process.env.CHROME_PATH,output:null,'timeout-ms':'60000'};
+const options={browser:process.env.CHROME_PATH,output:null,'timeout-ms':'60000',target:DEFAULT_STORE_TARGET};
 for(let i=2;i<process.argv.length;i++) {
   const key=process.argv[i].replace(/^--/,'');
   if(!Object.hasOwn(options,key)||!process.argv[i+1])throw Error(`Unknown/missing argument: ${process.argv[i]}`);
   options[key]=process.argv[++i];
 }
-if(!options.browser||!options.output)throw Error('Usage: node tests/store.mjs --browser PATH --output NEW_DIR [--timeout-ms 60000]');
+if(!options.browser||!options.output)throw Error('Usage: node tests/store.mjs --browser PATH --output NEW_DIR [--timeout-ms 60000] [--target always-active|ubol]');
+const target=getStoreTarget(options.target),listing=target.url;
 options['timeout-ms']=Number(options['timeout-ms']);
 if(!Number.isInteger(options['timeout-ms'])||options['timeout-ms']<5000||options['timeout-ms']>120000)throw Error('Invalid timeout-ms');
 options.browser=await realpath(options.browser);
@@ -27,7 +28,7 @@ await mkdir(options.output,{mode:0o700});
 const profile=path.join(options.output,'profile');
 await mkdir(profile,{mode:0o700});
 const report={schema:1,stage:'read-only-store-preflight',started:new Date().toISOString(),platform:process.platform,architecture:process.arch,
-  listing,expectedVersion:'156.0.8078.80',expectedRevision:revision,tests:[],observations:{},
+  listing,target,expectedVersion:'156.0.8078.80',expectedRevision:revision,tests:[],observations:{},
   actions:['Launch a fresh owned browser profile','Navigate the owned page to the fixed public listing','Read bounded DOM/AX and capability types','Read optional owned-PID native UI prerequisites','Close only the owned browser'],
   installation:{attempted:false,addClicked:false,permissionDialogAccepted:false,verified:false},
   limits:{launchMs:20000,setupMs:15000,listingWaitMs:options['timeout-ms'],buttonSettleMs:3000,buttonStableMs:1500,finalCaptureMs:30000,cleanupMs:18000,readOperationMs:5000,nativeUiHelperMs:15000,maxButtonRecords:40,maxCandidateRecords:8,maxTextSnippet:1200,maxStringLength:240},
@@ -235,8 +236,8 @@ try {
   catch(error){axError=error.message;report.observations.ax={error:axError};}
   report.observations.documentResponses=documentResponses;
   report.observations.nativeUiPrerequisites=await within(()=>nativeUiPrerequisites(finalDeadline),finalDeadline,'Native UI prerequisites',{maxMs:15000});
-  const rightListing=dom?.url?.startsWith('https://chromewebstore.google.com/detail/')&&dom.url.includes('ehllkhjndgnlokhomdlhgbineffifcbj');
-  const documentLoaded=documentResponses.some(response=>response.status>=200&&response.status<300&&response.url.includes('ehllkhjndgnlokhomdlhgbineffifcbj'));
+  const rightListing=matchesStoreTargetUrl(dom?.url,target)&&dom.title.toLowerCase().includes(target.name.toLowerCase());
+  const documentLoaded=documentResponses.some(response=>response.status>=200&&response.status<300&&matchesStoreTargetUrl(response.url,target));
   check('actual audited Store listing loaded',rightListing===true&&dom.readyState==='complete'&&documentLoaded,{url:dom?.url,readyState:dom?.readyState,documentResponses});
   check('finite DOM and AX summaries captured',Boolean(dom)&&Boolean(ax)&&!axError,{domCaptured:Boolean(dom),axCaptured:Boolean(ax),axError});
   check('Store Add button label and enabled state observed',Boolean(dom?.addCandidates.length||ax?.addCandidates.length),{dom:dom?.addCandidates??[],ax:ax?.addCandidates??[]});
@@ -253,5 +254,5 @@ finally {
   report.status=!interrupted&&report.tests.length>0&&report.tests.every(test=>test.status==='passed')?'passed':'failed';
   await writeFile(path.join(options.output,'results.json'),JSON.stringify(report,null,2)+'\n');
 }
-console.log(JSON.stringify({status:report.status,stage:report.stage,readiness:report.readiness,installation:report.installation,tests:report.tests.map(test=>({name:test.name,status:test.status}))}));
+console.log(JSON.stringify({status:report.status,stage:report.stage,target:report.target,readiness:report.readiness,installation:report.installation,tests:report.tests.map(test=>({name:test.name,status:test.status}))}));
 process.exitCode=report.status==='passed'?0:1;

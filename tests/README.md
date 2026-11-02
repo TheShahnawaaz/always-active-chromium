@@ -193,10 +193,17 @@ PID/profile/creation-identity-checked fallback signals if needed.
 
 ```sh
 node tests/store-dialog.mjs --browser /path/to/browser --output reports/store-dialog
+node tests/store-dialog.mjs --browser /path/to/browser --output reports/store-dialog-ubol --target ubol
 ```
 
-This separate stage uses the same fixed audited listing and a fresh minimal
-browser profile. The normal browser window is requested at 1280 by 900 pixels
+This separate stage defaults to the original audited Always Active listing.
+`--target ubol` selects the audited uBlock Origin Lite listing; these are the
+only two allowed targets. The read-only `store.mjs` preflight and hosted workflow
+accept the same selection, and published status must match the report's target.
+Audited version/CRX fields describe the static reference, not a verified live
+Store version or installation. No target is installed by this inspection.
+
+Each target uses a fresh minimal browser profile. The normal browser window is requested at 1280 by 900 pixels
 so the Store's desktop layout fits; no viewport/device emulation is used.
 Actual viewport dimensions and button rectangles are retained for diagnostics.
 If an enabled Add button is clipped or obscured, one bounded ordinary target
@@ -211,8 +218,10 @@ installation API. The native helper runs in read-only `dialog` mode afterward;
 there is **no acceptance action**.
 
 The captured prompt must belong to a verified same-PID native window and contain
-the exact target extension name, enabled Add extension/Cancel button roles and
-labels, and substantive permission text. Focused ancestry and a macOS owned
+the exact selected-target native Add heading, enabled Add extension/Cancel button
+roles and labels, and substantive permission text captured from that same owned
+prompt. No uBOL permission phrase is guessed or copied from the original target.
+Focused ancestry and a macOS owned
 visible window/sheet subtree are recorded as distinct proof kinds; the latter
 must establish its owning window and known visible/non-minimized state without
 claiming a focused-element ancestor chain. Only records carrying the relevant

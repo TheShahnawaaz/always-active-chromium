@@ -4,16 +4,16 @@ import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { launchOwnedStoreBrowser, probeOwnedStoreUi, storeOperation } from './lib/owned-store-browser.mjs';
+import { DEFAULT_STORE_TARGET, getStoreTarget, matchesStoreTargetUrl } from './lib/store-targets.mjs';
 
-const target={id:'ehllkhjndgnlokhomdlhgbineffifcbj',name:'Always active Window - Always Visible',auditedVersion:'0.4.8',
-  url:'https://chromewebstore.google.com/detail/always-active-window-alwa/ehllkhjndgnlokhomdlhgbineffifcbj'};
-const options={browser:process.env.CHROME_PATH,output:null};
+const options={browser:process.env.CHROME_PATH,output:null,target:DEFAULT_STORE_TARGET};
 for(let i=2;i<process.argv.length;i++) {
   const key=process.argv[i].replace(/^--/,'');
   if(!Object.hasOwn(options,key)||!process.argv[i+1])throw Error(`Unknown/missing argument: ${process.argv[i]}`);
   options[key]=process.argv[++i];
 }
-if(!options.browser||!options.output)throw Error('Usage: node tests/store-dialog.mjs --browser PATH --output NEW_DIR');
+if(!options.browser||!options.output)throw Error('Usage: node tests/store-dialog.mjs --browser PATH --output NEW_DIR [--target always-active|ubol]');
+const target=getStoreTarget(options.target);
 options.output=path.resolve(options.output);
 await mkdir(path.dirname(options.output),{recursive:true});await mkdir(options.output,{mode:0o700});
 const overallDeadline=Date.now()+180000;
@@ -22,6 +22,8 @@ process.once('SIGINT',()=>{interrupted='SIGINT';abort.abort();});
 process.once('SIGTERM',()=>{interrupted='SIGTERM';abort.abort();});
 const report={schema:1,stage:'normal-store-dialog-inspection-NO-INSTALL-ACCEPTANCE',started:new Date().toISOString(),platform:process.platform,architecture:process.arch,target,
   tests:[],observations:{},inputEvents:[],installation:{addClickAttempted:false,addClicked:false,accepted:false,acceptInteractionPerformed:false,successfulInstallVerified:false,targetInstalledObserved:null},
+  update:{checkAttempted:false,checkCompleted:false,result:null,versionTransitionVerified:false},
+  permissionTextPolicy:'Capture actual text from the verified selected-target native prompt; no target-specific permission phrase is presumed.',
   limits:{actionBudgetMs:180000,cleanupBudgetMs:18000,listingMs:60000,scrollAttemptMs:7000,maxScrollAttempts:1,dialogMs:45000,nativeUiProbeMs:15000,maxDialogProbes:4,dialogProbeScheduledOffsetsMs:[500,10000,20000,30000],maxNativeUiBytes:65536,maxProfilePreferenceBytes:8388608,maxCandidateRecords:8,maxTextLength:240},
   limitations:[
     'This is an inspection of the real permission UI, not a completed extension install/restart/update/removal gate.',
@@ -91,7 +93,8 @@ function inspectPrompt(probe) {
       owner.minimized===false&&owner.applicationHidden===false);
     const records=[container,...(container.controls??[])].slice(0,128).filter(ownsRecord);
     const strings=[...new Set(records.flatMap(fields))];
-    const targetMatched=strings.some(text=>text.toLowerCase().includes(target.name.toLowerCase()));
+    const expectedHeading=`Add "${target.name}"?`;
+    const targetMatched=strings.some(text=>text.replace(/[“”]/g,'"').toLowerCase()===expectedHeading.toLowerCase());
     const buttons=records.filter(isButton).map(record=>({role:record.role,subrole:record.subrole??null,title:normalized(record.title),description:normalized(record.description),value:normalized(record.value),enabled:record.enabled,identifier:record.identifier??record.automationId??null}));
     const add=buttons.filter(button=>[button.title,button.description,button.value].some(label=>/^add extension$/i.test(label)));
     const cancel=buttons.filter(button=>[button.title,button.description,button.value].some(label=>/^cancel$/i.test(label)));
@@ -155,8 +158,8 @@ try {
     await delay(300);
   }
   report.observations.addBeforeClick=add;
-  const listingLoaded=add?.url?.startsWith('https://chromewebstore.google.com/detail/')&&add.url.includes(target.id)&&add.title.toLowerCase().includes(target.name.toLowerCase())&&
-    report.observations.documentResponses.some(response=>response.status===200&&response.url.includes(target.id));
+  const listingLoaded=matchesStoreTargetUrl(add?.url,target)&&add.title.toLowerCase().includes(target.name.toLowerCase())&&
+    report.observations.documentResponses.some(response=>response.status===200&&matchesStoreTargetUrl(response.url,target));
   if(!check('actual audited Store listing loaded',Boolean(listingLoaded),report.observations.documentResponses))throw Error('Required actual listing is unavailable');
   let candidate=add.candidates.find(button=>!button.disabled&&button.visible&&button.pointerEvents!=='none'&&button.hitTargetMatches&&button.insideViewport);
   if(!candidate) {
@@ -249,5 +252,5 @@ finally {
   report.status=!interrupted&&report.tests.length>0&&report.tests.every(test=>test.status==='passed')?'passed':'failed';
   await writeFile(path.join(options.output,'results.json'),JSON.stringify(report,null,2)+'\n');
 }
-console.log(JSON.stringify({status:report.status,stage:report.stage,installation:report.installation,promptObserved:report.observations.prompt?.targetPromptObserved??false,tests:report.tests.map(test=>({name:test.name,status:test.status}))}));
+console.log(JSON.stringify({status:report.status,stage:report.stage,target:report.target,installation:report.installation,update:report.update,promptObserved:report.observations.prompt?.targetPromptObserved??false,tests:report.tests.map(test=>({name:test.name,status:test.status}))}));
 process.exitCode=report.status==='passed'?0:1;

@@ -498,3 +498,16 @@ These results establish reference-browser preflight and Windows prompt
 inspection mechanics. They do **not** establish a completed Store installation,
 restart persistence, genuine Store update, removal, or native-browser success.
 Those gates remain required on actual built macOS and Windows packages.
+
+The macOS follow-up **41370550957** passed **11/11** checks after the bounded
+observer was able to inspect the actual owned `AXSheet` descendants. The matched
+sheet contained the exact original target Add heading, enabled native
+**Add extension** and **Cancel** controls, **It can:**, and the observed
+all-websites permission text. No acceptance action occurred. The target remained
+absent, normal close succeeded, and persisted target settings were absent.
+The downloaded report and manifest were verified under
+`.runtime/hosted-store-dialog-mac-fifth`; report SHA-256:
+`67b6f6cdbe297b75a53131399ee08ea5e09dbdf377451e28ac377d496ecdebd3`.
+Both operating systems therefore have real original-target prompt-inspection
+evidence. uBOL-specific prompt capture, acceptance, and complete normal Store
+compatibility remain separate unverified gates.

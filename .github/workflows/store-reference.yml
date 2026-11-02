@@ -13,13 +13,18 @@ on:
         type: choice
         options: [preflight, permission-dialog]
         default: preflight
+      target:
+        description: Audited Store listing to observe; permission dialogs are never accepted
+        type: choice
+        options: [always-active, ubol]
+        default: always-active
 
 permissions:
   contents: read
 
 jobs:
   store:
-    name: Store ${{ inputs.phase }} on ${{ matrix.platform }}
+    name: Store ${{ inputs.target }} ${{ inputs.phase }} on ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
@@ -33,6 +38,7 @@ jobs:
       AA_REFERENCE_ROOT: .runtime/store-reference
       AA_PLATFORM: ${{ matrix.platform }}
       AA_STORE_PHASE: ${{ inputs.phase }}
+      AA_STORE_TARGET: ${{ inputs.target }}
       PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -79,7 +85,11 @@ jobs:
             permission-dialog) entrypoint=tests/store-dialog.mjs ;;
             *) echo 'Unsupported Store inspection phase' >&2; exit 2 ;;
           esac
-          node "$entrypoint" --browser "$AA_BROWSER" --output reports/store
+          case "$AA_STORE_TARGET" in
+            always-active|ubol) ;;
+            *) echo 'Unsupported Store inspection target' >&2; exit 2 ;;
+          esac
+          node "$entrypoint" --browser "$AA_BROWSER" --output reports/store --target "$AA_STORE_TARGET"
       - name: Retain finite preflight evidence
         if: ${{ always() && steps.acquire.outcome == 'success' }}
         env:

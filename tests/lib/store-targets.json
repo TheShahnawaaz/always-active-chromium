@@ -1,0 +1,18 @@
+{
+  "always-active": {
+    "key": "always-active",
+    "id": "ehllkhjndgnlokhomdlhgbineffifcbj",
+    "name": "Always active Window - Always Visible",
+    "auditedVersion": "0.4.8",
+    "url": "https://chromewebstore.google.com/detail/always-active-window-alwa/ehllkhjndgnlokhomdlhgbineffifcbj",
+    "auditedCrxSha256": "17e792706dcc8d7b1ad236bd090b662ca97786c085594b35da421851a33b655b"
+  },
+  "ubol": {
+    "key": "ubol",
+    "id": "ddkjiahejlhfcafbddmgiahcphecmpfh",
+    "name": "uBlock Origin Lite",
+    "auditedVersion": "2026.1026.1812",
+    "url": "https://chromewebstore.google.com/detail/ublock-origin-lite/ddkjiahejlhfcafbddmgiahcphecmpfh",
+    "auditedCrxSha256": "6763ff30cb7b89bf3b411908c03674b5d4e98c12a38fbae776fd057d1a8d1837"
+  }
+}
