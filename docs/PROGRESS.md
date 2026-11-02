@@ -2,6 +2,26 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows stage 0 is safely complete; automatic stage 1 is restoring.**
+[41503529408](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41503529408)
+ended successfully after a final resumed counter of **6,270/37,979 actions**
+(31,709 remaining at that point). Its complete five-part checkpoint totals
+**7,942,759,589 bytes**; ready asset 703462639 has SHA-256
+`f11db7db5f645d68beab4982d964c81c6825e5e4b5dc871707f0f9f7bf7143d9`.
+Ready bytes, source/native identity and all part server digests/sizes were
+verified. The save took **30m51s**. Automatic
+[41541479553](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41541479553)
+started at 22:56:57 UTC November 2 and was restoring at 04:30 IST November 3.
+The healthy old-source campaign was preserved without a competing dispatch.
+Windows still needs remaining compilation, the authenticated metadata fix,
+real installer verification, Store checks and native UI review.
+
+The finalized actual prepare log, separately from earlier unit fixtures, records
+a 59,365,536-byte ELF `bin/python3` alongside 103,192-byte MZ Python executables.
+Python foreign-host residue is now observed; the precise prior V8 subprocess
+causation remains inferred. Clean preflight and the next 6,270 real build actions
+passed.
+
 **Windows budget transition, 03:57 IST:** 41503529408 is now saving completed
 work after its normal stage cutoff. Hash-verified diagnostics record `pending`,
 exit 2, no events, complete capture and a successful compile step; the valid
@@ -10,7 +30,7 @@ not a compiler-error result or a finished browser. Draft checkpoint 432035409 is
 incomplete until its ready marker appears. Preserve its save and configured
 automatic next stage; no competing dispatch is needed.
 
-**Mac verified development delivery is ready. Windows is still compiling.**
+**Mac verified development delivery is ready. Windows builds continue.**
 [41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385)
 passed fresh extraction, all behavior modes and 20/20 normal Store phases, then
 produced the real 1000×677 native no-debug window image. Codex visually inspected

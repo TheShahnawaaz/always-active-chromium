@@ -49,6 +49,32 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Windows checkpoint is verified complete and automatic stage 1 is running.**
+Stage 0 **41503529408** completed successfully. Its final resumed Ninja counter
+was **6,270/37,979**, leaving **31,709** declared actions at that point; this is
+an invocation counter, not a completed browser or a completion-time estimate.
+The five-part checkpoint totals **7,942,759,589 bytes**. Ready asset **703462639**
+is 3,304 bytes, SHA-256
+`f11db7db5f645d68beab4982d964c81c6825e5e4b5dc871707f0f9f7bf7143d9`.
+Its bytes, source `81735e8f2ce2`, exact native16 Windows fingerprint,
+build-ready/pending state and all five server part sizes/digests were verified.
+Save time was **30m51s** (22:25:58–22:56:49 UTC).
+
+The configured continuation already started **41541479553**, stage 1, at
+22:56:57 UTC. It was restoring that checkpoint at 04:30 IST November 3 (23:00
+UTC November 2). No duplicate dispatch or cancellation occurred. It retains the
+healthy immutable `ci-source-81735e8f2ce2` campaign. Preserve it; switch metadata
+source only at a safe terminal boundary without racing its continuation. Its
+220-minute absolute compile cutoff is approximately **08:07 IST November 3**,
+with the six-hour job limit approximately **10:27 IST**.
+
+Finalized real prepare logs now establish Python ELF residue as an observation:
+at 19:12:04 UTC, `bin/python3` was a 59,365,536-byte ELF while `bin/python.exe`
+and `bin/python3.exe` were 103,192-byte MZ files. Earlier small synthetic header
+records in the unit-test step are fixtures and must not be substituted for that
+real prepare result. The exact old V8 failure's subprocess remains inferred;
+the clean-host/default-GN preflight and subsequent real compilation passed.
+
 **Mac is delivered as a verified development package; Windows remains active.**
 Final Mac delivery **41533441385**, controller `68a55d8132e9`, passed real
 extraction, all four behavior modes and 20/20 normal Store phases. Its actual
