@@ -49,6 +49,32 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Mac is delivered as a verified development package; Windows remains active.**
+Final Mac delivery **41533441385**, controller `68a55d8132e9`, passed real
+extraction, all four behavior modes and 20/20 normal Store phases. Its actual
+1000×677 normal-window PNG was visually inspected: complete standard Chromium
+toolbar/tab strip/profile/menu and rendered fixture, with no added always-active
+controls or banners. All seven evidence assets and six manifest entries match
+their server sizes/digests and downloaded hashes. See `docs/UI-REVIEW.md` and
+`docs/releases/mac-arm64/` for the separate review, verification and installation
+records. Screenshot SHA-256:
+`540fbca5d806231a06c3a759f8b8b60a6fd5b6a5caf89e8da0a12b142c1f6f52`.
+The original automated review fields were preserved; the later visual review is
+separate evidence, not an alteration of CI results.
+
+Mac package draft 431995111 has its verified download/checksum assets and updated
+installation/review notes at
+https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-4eebb053bab880d711db
+All six original asset IDs, sizes and digests remain unchanged; its original
+five-entry manifest is still valid. Extra document uploads from the coordinator
+were rejected at `uploads.github.com` by the runtime's network policy. No asset
+was changed by those failed uploads. The permitted API path successfully updated
+draft notes, while instructions/review records and the exact screenshot are
+committed to the repository. Do not bypass the network policy or move credentials.
+The client projectless `/codex/.../output` path also cannot be created by this
+runtime's non-root user; use the existing GitHub release/repository route, not
+broken local output links. No permission request is needed for this fallback.
+
 Latest Mac progress: **run 41524595935** at `ci-source-e146fe41bca3` compiled
 successfully, sealed all 16 Mach-O parts with compiler outputs unchanged, and
 passed core baseline **32/32**, native **38/38**, optional **55/55**, paired
@@ -172,9 +198,9 @@ avoid racing an existing automatic continuation with a second queued job.
    tag and both `build.final_release_tag(platform, HEAD)` tags. Never retarget
    an existing tag. Push commits/tags before dispatch. Keep `migrate_native=false`
    for exact native16 caches, `bootstrap_only=false`, `auto_resume=true`.
-3. Mac metadata rebuild and fresh-delivery/Store verification have passed.
-   Finish its native UI evidence using the same real e146 ZIP; no additional
-   browser compile is needed. Do not cold-build or change compiler/native pins.
+3. Mac metadata rebuild, fresh-delivery/Store verification and native UI review
+   are complete. Its source is still e146 and its original ZIP is unchanged.
+   Do not dispatch another Mac compile or verifier without a new concrete issue.
 4. Finish Windows through standard hosted stages. Read real failure diagnostics
    and preserve completed checkpoints; no blind repeated reference trials.
 5. For each real package with passing core tests, dispatch

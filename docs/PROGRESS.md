@@ -2,6 +2,22 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Mac verified development delivery is ready. Windows is still compiling.**
+[41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385)
+passed fresh extraction, all behavior modes and 20/20 normal Store phases, then
+produced the real 1000×677 native no-debug window image. Codex visually inspected
+the complete standard Chromium shell and rendered fixture, with no added
+always-active controls/banners. All seven evidence assets and six checksum
+entries were independently verified. See [UI review](UI-REVIEW.md) and
+[installation instructions](releases/mac-arm64/INSTALLATION.txt).
+
+The [Mac draft download](https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-4eebb053bab880d711db)
+now links those records and exact checksums. The six original assets, including
+ZIP and its five-entry manifest, are unchanged. Coordinator uploads to
+`uploads.github.com` were network-policy denied, so documents/image are in the
+repository and draft notes were updated through the permitted API. No policy
+bypass, credential move, public release publication or new compiler job occurred.
+
 Mac **41524595935** now passes compile, strict 16-part ad-hoc package sealing,
 and core checks: baseline **32/32**, native **38/38**, optional **55/55**, paired
 no-debug **7/7 each**. Its e146 ZIP is **252,685,495 bytes**, SHA-256
@@ -57,7 +73,7 @@ preserved. At 02:53 IST Mac had also passed preparation/audit and begun its
 incremental metadata rebuild. Windows was still compiling. No build was
 restarted, cancelled or moved to another provider.
 
-## Current state — 2026-11-02
+## Previous state — 2026-11-02, before hosted continuation
 
 There is no finished custom browser package yet. The exact-source **15-file**
 native16 patch targets Chromium `156.0.8078.80`. It includes
