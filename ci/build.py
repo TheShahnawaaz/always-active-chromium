@@ -347,6 +347,7 @@ def hydrate(src, platform):
                 'src/third_party/subresource-filter-ruleset/data'}
     if platform == 'win-x64':
         selected.discard('src/third_party/rust-toolchain')
+        selected.discard('src/third_party/cpython3/host')
         selected.update({'src/third_party/lzma_sdk/bin/host_platform',
                          'src/third_party/lzma_sdk/bin/win64',
                          'src/third_party/wtl', 'src/third_party/webview2'})
@@ -406,6 +407,8 @@ def hydrate(src, platform):
 
     hydrate_entries(scope['deps'], src.parent, selected, enabled)
     if platform == 'win-x64':
+        from python_host import ensure_windows_python
+        records.extend(ensure_windows_python(src, scope['deps']['src/third_party/cpython3/host'], fetch))
         from rust_host import ensure_windows_rust
         records.extend(ensure_windows_rust(src, scope['deps']['src/third_party/rust-toolchain'], fetch))
     hydrate_crubit_formatter(src, platform, scope, enabled, hydrate_entries)
@@ -543,6 +546,9 @@ def prepare(platform):
     if platform == 'win-x64':
         from windows_rc import preflight_windows_rc
         try:
+            from python_host import preflight_gn_desc
+            preflight_gn_desc(src)
+            print('Windows exact V8 GN desc without script override: passed', flush=True)
             preflight = preflight_windows_rc(src)
             print(f'Windows resource compiler preflight: {preflight["status"]}', flush=True)
         except Exception as problem:

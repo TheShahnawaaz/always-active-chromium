@@ -6,13 +6,14 @@ There is no finished custom browser package yet. The exact-source **15-file**
 native16 patch targets Chromium `156.0.8078.80`. It includes
 visibility/focus/event/animation behavior, detached-document safety and optional
 fullscreen/background-navigation controls and the pinned KURL method correction. Application/reversal/digest checks
-pass; actual native C++ and runtime verification remain pending. The standard
+pass; two corrected Mac native objects have compiled, while complete native
+builds and runtime verification remain pending. The standard
 interface and ordinary extension platform are retained in source.
 
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
-| macOS arm64 | [Stage 1, run 41384338455](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384338455) failed after **2,945/34,130** actions in that invocation: `document.cc:2382` called the nonexistent KURL method `ProtocolIsInHTTPFamily`. Its complete **8,104,577,408-byte** native15 checkpoint is verified. | Resume the reviewed native16 spelling correction from that exact cache, preserving compiled work. |
-| Windows x64 | [Run 41384211984](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41384211984) passed real clean Rust/GN and the complete input audit, then failed compiling `swiftshader_libvulkan/Vulkan.res`: pinned `rc.py` could not find `build/toolchain/win/rc/win/rc.exe`. Early diagnostics and progress were verified; its checkpoint save remains live. | Preserve the save; review the exact pinned RC-hook repair, then resume with native16 and the repaired tool. |
+| macOS arm64 | Native16 source `b3237eac7f70` passed migration and input audit, and corrected `document.o` plus `scripted_animation_controller.o` compiled successfully. Three pending stages completed at their normal budgets; the latest verified checkpoint is **8,962,434,131 bytes**. [Current stage 41495538189](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41495538189) is compiling from 18:13:46 UTC, with **2,841 scheduled actions** at the last checkpoint before graph changes. | Preserve the live continuation; inspect the real link/package/runtime results. Remaining actions are not an ETA. |
+| Windows x64 | Native16 [run 41395928784](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41395928784), source `1219c3c7eb27`, passed real RC preparation and audit, then stopped at **9,651/47,629** in V8 metagen: a standalone `gn desc` returned 1. The verified complete native16 checkpoint is **7,741,978,948 bytes**. | Repair and prove the exact default Windows interpreter/GN-desc path, then restore the same fingerprint cache. |
 
 The native16 correction changes exactly one source line to the pinned API
 `ProtocolIsInHttpFamily()`, also used by upstream `document.cc`. The other 14
@@ -32,9 +33,28 @@ not replace Microsoft's SDK compiler or alter Chromium's source driver. A real
 post-GN smoke test will use the pinned Python/tool wrapper/environment and
 compare a tiny compiled resource with the SDK compiler's output. Nine focused
 repair guards and 15 existing build guards passed at root (one Windows-only
-extractor integration skipped locally); actual hosted RC execution remains
-unverified. Native16 fingerprints and the Mac path stay unchanged. The Windows
+extractor integration skipped locally); the actual hosted RC preflight subsequently
+passed in run 41395928784. Native16 fingerprints and the Mac path stay unchanged. The Windows
 retry can queue behind the current save and restore its newest complete cache.
+
+The standalone V8 `gn desc` rereads `.gn` without the `--script-executable`
+override used by `gn gen`. A tiny fixture with the real pinned GN reproduced
+that distinction; V8's wrapper drops GN stdout containing the useful error.
+The exact runner's CPython residue remains unverified. A clean, exact-pinned
+Windows CPython package and default-interpreter/GN-desc preflight are ready
+without editing Chromium's `.gn` or V8. Ten focused Python-host tests and 15
+existing build checks pass at root (one Windows-only integration skipped).
+The GN JSON validator accepts its exact qualified or default-toolchain label
+only with the expected Windows toolchain. Its native16 fingerprint stays
+unchanged so the completed Windows objects remain reusable. Actual host
+execution must still prove the repair.
+
+Real Windows Rust pre-clean evidence is now available from the prepare step,
+separately from unit fixtures: extensionless `rustc` was a 315,608-byte ELF,
+while `rustc.exe` was a 119,296-byte MZ file. The clean-host remediation and
+mandatory executable/host/stdlib checks passed. The earlier ELF-shadowing
+hypothesis is therefore observed for Rust; that does not by itself prove the
+CPython cause.
 
 The previous Windows retry
 [41377808648](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41377808648)
@@ -194,6 +214,19 @@ Both real launchable packages, native behavior/no-debug evidence, installation
 checks and actual-package Store compatibility are still required for completion.
 Stock Chrome and its profiles remain untouched. All build compute remains on
 standard GitHub-hosted runners, with no AWS, external builders or paid upgrades.
+
+The third Windows reference trial 41393878708 verified a foreground, visible,
+nonminimized owned CFT window at the expected loopback address, with five
+renderers and a network utility among nine verified children. UIA found no
+allowlisted error tags. Parsed HTTP counters still remained zero, and no capture
+was attempted. All finite assets/checksums and cleanup were verified. This does
+not prove zero TCP connections: request callbacks and TCP accepts are distinct.
+The reviewed next diagnostic adds bounded accepted-socket/byte/close counters
+and a separate 2-second controller health GET before launch. Controller traffic
+is excluded from observation counters; later connections remain explicitly
+unattributed. Fourteen guards pass, including real local HTTP/TCP cases. Browser
+flags and acceptance checks remain unchanged; actual Windows startup/capture
+cause is still unresolved.
 
 The older entries below are historical observations. The state above takes
 precedence over their former "current" campaign labels.

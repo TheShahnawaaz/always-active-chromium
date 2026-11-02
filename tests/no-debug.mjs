@@ -12,6 +12,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import {captureOwnedWindow} from './lib/window-capture.mjs';
 import {parseFailedWindowDiagnostic} from './lib/failed-window-diagnostic.mjs';
 import {fileURLToPath} from 'node:url';
+import {observePassiveTransport,controllerHealthGet} from './lib/passive-transport.mjs';
 
 const execute=promisify(execFile);
 const captureHelper=process.env.AA_WINDOW_CAPTURE_HELPER;
@@ -43,7 +44,7 @@ const report={schema:1,started:new Date().toISOString(),platform:process.platfor
   startupSelection:'Not assumed; control accepts whichever page supplies stable genuinely-hidden observations.',
   expectedVersion:options['expected-version'],expectedSourceRevision:'fb096c0011f9d50f0a264a9376420cdea9c421e3',
   versionObservation:'Website UA-CH fullVersionList; source revision is not observable without debugging and is not claimed by this test.',
-  limits:{timeoutMs:options['timeout-ms'],settleMs:options['settle-ms'],stableMs:options['stable-ms'],maxSamplesPerPage:256,maxPostBytes:16384,maxRequestCounter:1000000,failedWindowsWindowDiagnosticMs:12000},
+  limits:{timeoutMs:options['timeout-ms'],settleMs:options['settle-ms'],stableMs:options['stable-ms'],maxSamplesPerPage:256,maxPostBytes:16384,maxRequestCounter:1000000,controllerHealthMs:2000,failedWindowsWindowDiagnosticMs:12000},
   runs:[],limitations:[
     'This verifies the test-owned normal launch and passive webpage observations, not a host-wide audit of unrelated processes.',
     'No remote-debugging, automation, load-extension, focus emulation, lifecycle override, or browser-control API is used.',
@@ -183,9 +184,10 @@ async function runMode(mode) {
   const token=randomUUID();
   const profile=path.join(options.output,`profile-${mode}`);
   await mkdir(profile,{mode:0o700});
-  let child,identity,server;
+  let child,identity,server,transport;
   try {
     server=http.createServer(async(req,res)=>{
+      if(transport.handlePrelaunchRequest(req,res))return;
       count('total');if(req.method==='GET')count('gets');if(req.method==='POST')count('posts');
       let url;
       try{if(typeof req.url!=='string'||req.url.length>2048)throw Error('invalid_request_url');url=new URL(req.url,'http://127.0.0.1');}
@@ -215,9 +217,13 @@ async function runMode(mode) {
       }
       count('otherRequests');res.writeHead(404).end();
     });
-    server.on('clientError',(_error,socket)=>{count('clientErrors');count('invalidRequests');socket.destroy();});
+    const healthPath=`/_controller-health/${token}`;
+    transport=observePassiveTransport(server,{healthPath});
+    server.on('clientError',(_error,socket)=>{if(!transport.isPrelaunchSocket(socket)){count('clientErrors');count('invalidRequests');}socket.destroy();});
     server.keepAliveTimeout=500;
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+    run.controllerHealth=await controllerHealthGet(server,transport,{healthPath});
+    transport.startObservation();
     const origin=`http://127.0.0.1:${server.address().port}`;
     const urls=['alpha','beta'].map(pageName=>`${origin}/page/${pageName}?run=${token}`);
     const captureThisRun=Boolean(captureHelper)&&mode===captureMode;
@@ -289,6 +295,7 @@ async function runMode(mode) {
       } catch(error) {run.cleanup={error:error.stack};addCheck(run,'verified owned browser process cleanup completes',false,error.message);}
     }
     if(server) {server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+    if(transport)run.transport=transport.snapshot();
     run.retainedSamples={alpha:run.pages.alpha.length,beta:run.pages.beta.length};
     run.finished=new Date().toISOString();
     run.status=run.tests.length>0&&run.tests.every(t=>t.status==='passed')?'passed':'failed';

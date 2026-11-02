@@ -38,6 +38,7 @@ jobs:
           node --test tests/test-window-capture.mjs
           node --test tests/test-no-debug-fixture.mjs
           node --test tests/test-failed-window-diagnostic.mjs
+          node --test tests/test-passive-transport.mjs
       - name: Validate capture helper syntax and invalid PID refusal
         shell: powershell
         run: |
