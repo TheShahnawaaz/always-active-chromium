@@ -17,6 +17,7 @@ $script:Report = [ordered]@{
     schema = 1; platform = 'win32'; status = 'refused'; target = $Target
     operation = $Operation; actionAttempted = $false; actionPerformed = $false
     identity = @{ verified = $false }; prompt = @{}; errors = @()
+    focusAncestryDiagnostics = @()
     limits = @{ totalMs = 10000; maxNodes = 192; maxDepth = 12; maxAncestors = 16; maxOutputBytes = 65536 }
 }
 
@@ -94,12 +95,32 @@ function Get-CurrentPrompt {
     $chain = New-Object 'System.Collections.Generic.List[object]'
     $cursor = $focus
     $ownedWindow = $null
+    $foreground = [StoreNativeAction.Ownership]::ForegroundHandle()
+    $script:Report.focusAncestryDiagnostics += @{
+        phase = 'foreground'; hwnd = $foreground
+        processId = [StoreNativeAction.Ownership]::WindowPid($foreground)
+        owner = [StoreNativeAction.Ownership]::OwnerHandle($foreground)
+        rootOwner = [StoreNativeAction.Ownership]::RootOwnerHandle($foreground)
+    }
     # First verify ownership of the entire focus-to-HWND chain without reading text.
     while ($null -ne $cursor -and $chain.Count -lt 16) {
         Assert-Budget
         $current = $cursor.Current
-        if ($current.ProcessId -ne $script:OwnedPid -or
-            $current.ControlType -eq [Windows.Automation.ControlType]::Document) {
+        if ($current.ProcessId -ne $script:OwnedPid) {
+            # PID alone is read from a foreign ancestor; never its title/value.
+            $script:Report.focusAncestryDiagnostics += @{ phase = 'foreign-ancestor'; processId = $current.ProcessId }
+            throw 'native_focus_ancestry_refused'
+        }
+        $trace = @{ phase = 'owned-ancestor'; depth = $chain.Count; processId = $current.ProcessId
+                    role = $current.ControlType.ProgrammaticName; hwnd = $current.NativeWindowHandle }
+        if ($current.ControlType -eq [Windows.Automation.ControlType]::Window) {
+            $trace.visibleOwnedWindow = [StoreNativeAction.Ownership]::IsVisibleOwnedWindow($current.NativeWindowHandle, $script:OwnedPid)
+            $trace.usableForegroundWindow = [StoreNativeAction.Ownership]::IsUsableOwnedWindow($current.NativeWindowHandle, $script:OwnedPid)
+            $trace.owner = [StoreNativeAction.Ownership]::OwnerHandle($current.NativeWindowHandle)
+            $trace.rootOwner = [StoreNativeAction.Ownership]::RootOwnerHandle($current.NativeWindowHandle)
+        }
+        $script:Report.focusAncestryDiagnostics += $trace
+        if ($current.ControlType -eq [Windows.Automation.ControlType]::Document) {
             throw 'native_focus_ancestry_refused'
         }
         foreach ($prior in $chain) {
@@ -209,7 +230,23 @@ namespace StoreNativeAction {
         [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr window);
         [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] private static extern bool IsChild(IntPtr parent, IntPtr child);
+        [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr window, uint command);
+        [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr window, uint flags);
         [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+        public static long ForegroundHandle() { return GetForegroundWindow().ToInt64(); }
+        public static long OwnerHandle(long window) { return GetWindow(new IntPtr(window), 4).ToInt64(); }
+        public static long RootOwnerHandle(long window) { return GetAncestor(new IntPtr(window), 3).ToInt64(); }
+        public static uint WindowPid(long window) {
+            uint actualPid;
+            return GetWindowThreadProcessId(new IntPtr(window), out actualPid) == 0 ? 0 : actualPid;
+        }
+        public static bool IsVisibleOwnedWindow(int window, int expectedPid) {
+            if (window == 0) return false;
+            uint actualPid;
+            var handle = new IntPtr(window);
+            return IsWindow(handle) && IsWindowVisible(handle) && !IsIconic(handle) &&
+                GetWindowThreadProcessId(handle, out actualPid) != 0 && actualPid == (uint)expectedPid;
+        }
         public static bool IsUsableOwnedWindow(int window, int expectedPid) {
             if (window == 0) return false;
             uint actualPid;

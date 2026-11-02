@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { launchOwnedStoreBrowser, probeOwnedStoreUi, storeOperation } from './lib/owned-store-browser.mjs';
 import { matchesStoreTargetUrl } from './lib/store-targets.mjs';
-import { COMPAT_TARGET as target, BROWSER_REVISION, UBOL_AUDIT, inspectCompatPrompt, inspectTargetPreferences, summarizePreferences, verifyInstalledSources, validRulesetResponse, classifyActionReceipt } from './lib/store-compat-policy.mjs';
+import { COMPAT_TARGET as target, BROWSER_REVISION, UBOL_AUDIT, inspectCompatPrompt, inspectTargetPreferences, summarizePreferences, verifyInstalledSources, validRulesetResponse, classifyActionReceipt, boundedNativeDialogTrace } from './lib/store-compat-policy.mjs';
 import { storeAddControl, extensionRemoveControl } from './lib/store-compat-dom.mjs';
 const execute=promisify(execFile);
 const options={browser:process.env.CHROME_PATH,output:null};
@@ -27,7 +27,7 @@ const report={schema:1,stage:'normal-store-compatibility',target,started:new Dat
   installation:{addClicked:false,accepted:false,acceptanceOutcome:'not-attempted',normalInstallVerified:false,version:null,executionVerified:false,restartPersistenceVerified:false},
   update:{checkAttempted:false,checkCompleted:false,result:null,versionTransitionVerified:false,versionBefore:null,versionAfter:null,limit:'Check completion is separate from a successful server response or an audited installed version upgrade.'},
   removal:{requested:false,confirmed:false,confirmationOutcome:'not-attempted',registryAbsenceVerified:false,restartAbsenceVerified:false,persistedAbsenceVerified:false},
-  limits:{actionsMs:720000,finalCleanupMs:18000,restartMs:45000,listingMs:60000,nativeProbeOrActionMs:15000,dialogMs:45000,maxDialogProbes:4,oneUpdateCheckMs:60000,maxReportBytes:1048576},
+  limits:{actionsMs:720000,finalCleanupMs:18000,restartMs:45000,listingMs:60000,nativeProbeOrActionMs:15000,dialogMs:45000,maxDialogProbes:4,maxNativeDialogTraceBytes:32768,oneUpdateCheckMs:60000,maxReportBytes:1048576},
   limitations:[
     'This test uses a CDP controller; native everyday operation without debugging is verified separately by no-debug.mjs.',
     'Installation and removal require a separately reviewed native action helper. No unpacked loader, Store private install API, privileged uninstall call, policy, auto-confirm, unsafe extension flag, or emulation is used.',
@@ -116,14 +116,20 @@ async function mouseClick(control,label,deadline){
   }
 }
 async function capturePrompt(operation,deadline){
-  const started=Date.now(),attempts=[];
-  for(const offset of [500,10000,20000,30000]){
-    const wait=Math.min(started+offset,deadline)-Date.now();if(wait>0)await delay(wait,undefined,{signal:abort.signal});if(Date.now()>=deadline)break;
-    const probe=await probeOwnedStoreUi(browser,{mode:'dialog',deadline,signal:abort.signal});
-    const prompt=inspectCompatPrompt(probe,{pid:browser.child.pid,operation});attempts.push({offset,completedOffsetMs:Date.now()-started,status:probe.status,targetPromptObserved:prompt.targetPromptObserved});
-    if(prompt.targetPromptObserved)return {identity:probe.identity,prompt,attempts};
-  }
-  throw Error(`Actual owned ${operation} prompt not verified after ${attempts.length} probes`);
+  const started=Date.now(),attempts=[],capture={operation,status:'observing',started:new Date().toISOString(),attempts:[]};
+  report.observations.promptCaptures??={};report.observations.promptCaptures[operation]=capture;
+  try{
+    for(const offset of [500,10000,20000,30000]){
+      const wait=Math.min(started+offset,deadline)-Date.now();if(wait>0)await delay(wait,undefined,{signal:abort.signal});if(Date.now()>=deadline)break;
+      const probe=await probeOwnedStoreUi(browser,{mode:'dialog',deadline,signal:abort.signal});
+      const prompt=inspectCompatPrompt(probe,{pid:browser.child.pid,operation}),attempt={offset,completedOffsetMs:Date.now()-started,status:probe.status,targetPromptObserved:prompt.targetPromptObserved};
+      attempts.push(attempt);
+      capture.attempts.push({...attempt,nativeDialogTrace:boundedNativeDialogTrace(probe,{maxBytes:report.limits.maxNativeDialogTraceBytes})});
+      if(prompt.targetPromptObserved){capture.status='observed';return {identity:probe.identity,prompt,attempts};}
+    }
+    capture.status='not-found';throw Error(`Actual owned ${operation} prompt not verified after ${attempts.length} probes`);
+  }catch(error){if(capture.status==='observing')capture.status='failed';capture.error=String(error.message).slice(0,1000);throw error;}
+  finally{capture.finished=new Date().toISOString();}
 }
 async function nativeAction(operation,captured,deadline){
   const expectedStarted=browser.identity.started;
@@ -136,7 +142,7 @@ async function nativeAction(operation,captured,deadline){
   const receipt={operation,target:target.key,status:'invoking',actionAttempted:null,actionPerformed:null,actionOutcomeUncertain:true};report.actions.push(receipt);
   try{
     const {stdout}=await execute(command,args,{timeout,killSignal:'SIGKILL',maxBuffer:65536,signal:abort.signal});const result=JSON.parse(stdout.replace(/^\uFEFF/,''));
-    Object.assign(receipt,{schema:result.schema,status:result.status,operation:result.operation,target:result.target,actionAttempted:result.actionAttempted,actionPerformed:result.actionPerformed,actionType:result.actionType,identity:result.identity,prompt:result.prompt,errors:result.errors});
+    Object.assign(receipt,{schema:result.schema,status:result.status,operation:result.operation,target:result.target,actionAttempted:result.actionAttempted,actionPerformed:result.actionPerformed,actionType:result.actionType,identity:result.identity,prompt:result.prompt,focusAncestryDiagnostics:result.focusAncestryDiagnostics,errors:result.errors});
     const {verified,actionOutcomeUncertain}=classifyActionReceipt(result,{browser,operation,...(process.platform==='darwin'?{expectedNativeIdentity:nativeIdentity}:{})});
     receipt.actionOutcomeUncertain=actionOutcomeUncertain;
     if(!verified)throw Error(`Native helper did not prove the exact ${operation} action`);

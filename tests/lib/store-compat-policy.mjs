@@ -89,6 +89,62 @@ export async function verifyInstalledSources(profile,{target=COMPAT_TARGET,audit
 export function validRulesetResponse(value,declaredRulesets){return Array.isArray(value)&&value.length>0&&value.length<=256&&new Set(value).size===value.length&&value.every(id=>typeof id==='string'&&id.length<=128&&declaredRulesets.includes(id));}
 const normalize=value=>String(value??'').trim().replace(/\s+/g,' ').replace(/[“”]/g,'"');
 const strings=record=>[record?.title,record?.description,record?.value].filter(value=>typeof value==='string').map(normalize).filter(Boolean);
+// Diagnostic projection only. The original native probe, never this truncated
+// view, is used for permission/action gates. No paths, DOM, or foreign UI data.
+export function boundedNativeDialogTrace(probe,{maxBytes=32768}={}){
+  if(!Number.isInteger(maxBytes)||maxBytes<8192||maxBytes>32768)throw Error('Invalid native trace budget');
+  let stringsTruncated=false;
+  const short=(value,limit)=>{
+    let result='';for(const character of String(value)){if(Buffer.byteLength(result+character)>limit){stringsTruncated=true;break;}result+=character;}return result;
+  };
+  const stringKeys=['role','subrole','title','description','selectionReason','toggleState','identifier','automationId'];
+  const scalarKeys=['enabled','offscreen','checked','valueRedacted','depth','windowRelativeDepth','nativeSheetDepth','windowOwnershipVerified','ownWindowSubtreeVerified','windowRoleVerified','nativeWindowOwnershipVerified','nativeWindowHandle','nativeSheetRoleVerified','nativeSheetAncestryVerified','minimized','applicationHidden','ownerPID'];
+  let labelLimit=240;
+  const copyRecord=source=>{
+    if(!source||typeof source!=='object')return null;
+    const result={};
+    for(const key of stringKeys)if(typeof source[key]==='string')result[key]=short(source[key],labelLimit);
+    if(typeof source.value==='string')result.value=short(source.value,labelLimit);
+    else if(source.value===null||typeof source.value==='boolean'||typeof source.value==='number'&&Number.isFinite(source.value))result.value=source.value;
+    for(const key of scalarKeys)if(typeof source[key]==='boolean'||typeof source[key]==='number'&&Number.isFinite(source[key]))result[key]=source[key];
+    return result;
+  };
+  const inspection=probe?.dialogInspection;
+  const build=()=>({schema:1,purpose:'bounded-owned-native-prompt-diagnostic-only',status:short(probe?.status??'unavailable',80),platform:short(probe?.platform??'',24),
+    identity:Object.fromEntries(['pid','verified','startSeconds','startMicroseconds','created'].filter(key=>['string','boolean','number'].includes(typeof probe?.identity?.[key])).map(key=>[key,typeof probe.identity[key]==='string'?short(probe.identity[key],100):probe.identity[key]])),
+    accessibility:Object.fromEntries(['trusted','applicationHidden','available','nativeWindowAvailable','visibleNativeWindowAvailable'].filter(key=>typeof probe?.accessibility?.[key]==='boolean').map(key=>[key,probe.accessibility[key]])),
+    helperTruncated:probe?.truncated===true,errors:(probe?.errors??[]).slice(0,8).map(value=>short(value,240)),
+    dialogInspection:{status:short(inspection?.status??'unavailable',80),proofKind:typeof inspection?.proofKind==='string'?short(inspection.proofKind,80):null,focusSource:typeof inspection?.focusSource==='string'?short(inspection.focusSource,80):null,
+      focused:copyRecord(inspection?.focused),ancestors:(inspection?.ancestors??[]).slice(0,16).map(copyRecord),window:copyRecord(inspection?.window),
+      notes:(inspection?.notes??[]).slice(0,8).map(value=>short(value,240)),helperTruncated:inspection?.truncated===true,
+      containers:(inspection?.containers??[]).slice(0,4).map((source,index)=>({...copyRecord(source),sourceContainerIndex:index,owningWindow:copyRecord(source.owningWindow),
+        observedControlCount:Array.isArray(source.controls)?source.controls.length:0,controls:(source.controls??[]).slice(0,128).map((record,controlIndex)=>({...copyRecord(record),sourceControlIndex:controlIndex}))}))},
+    retention:{maxBytes,maxAncestors:16,maxContainers:4,maxControlsPerContainer:128,labelByteLimit:labelLimit,
+      omittedAncestors:Math.max(0,(inspection?.ancestors??[]).length-16),omittedContainers:Math.max(0,(inspection?.containers??[]).length-4),
+      omittedControls:(inspection?.containers??[]).slice(0,4).reduce((sum,container)=>sum+Math.max(0,(container.controls??[]).length-128),0),
+      truncated:stringsTruncated||(inspection?.ancestors??[]).length>16||(inspection?.containers??[]).length>4||(inspection?.containers??[]).slice(0,4).some(container=>(container.controls??[]).length>128)}});
+  // This wrapper overestimates indentation at the actual report insertion site.
+  const size=value=>Buffer.byteLength(JSON.stringify({report:{observations:{promptCaptures:{operation:{attempts:[{nativeDialogTrace:value}]}}}}},null,2));
+  const priority=record=>{
+    const text=strings(record).join(' '),role=record.role??'';
+    if(/heading/i.test(role)||/button|checkbox/i.test(role)&&/Add extension|Cancel|Remove|Report abuse/.test(text))return 0;
+    if(/^(Add|Remove) "/.test(text)||text.includes(UBOL_PERMISSION))return 1;
+    if(/Window|Sheet|Dialog|Alert/.test(role))return 2;
+    return 3;
+  };
+  let trace=build();
+  for(;;){
+    while(size(trace)>maxBytes){
+      let selected=null;
+      for(const container of trace.dialogInspection.containers)for(let index=container.controls.length-1;index>=0;index--){const rank=priority(container.controls[index]);if(!selected||rank>selected.rank)selected={container,index,rank};}
+      if(!selected)break;
+      selected.container.controls.splice(selected.index,1);trace.retention.omittedControls++;trace.retention.truncated=true;
+    }
+    if(size(trace)<=maxBytes)return trace;
+    if(labelLimit<=60)throw Error('Native trace fixed metadata exceeds its finite budget');
+    labelLimit=Math.floor(labelLimit/2);trace=build();trace.retention.truncated=true;
+  }
+}
 export function inspectCompatPrompt(probe,{pid,operation,platform=process.platform,target=COMPAT_TARGET}){
   const inspection=probe.dialogInspection,nativeWindow=record=>['AXWindow','ControlType.Window'].includes(record?.role);
   const windowVerified=probe.status==='ready'&&probe.identity?.verified===true&&probe.identity.pid===pid&&nativeWindow(inspection?.window)&&inspection.window.windowRoleVerified===true&&(platform!=='win32'||inspection.window.nativeWindowOwnershipVerified===true);

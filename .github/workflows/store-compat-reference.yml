@@ -43,6 +43,9 @@ jobs:
           node-version: '22'
       - name: Check bounded evidence policy before any browser or permission action
         run: node --test tests/test-store-compat.mjs
+      - name: Verify Windows cleanup JSON parsing before any browser launch
+        if: matrix.platform == 'win-x64'
+        run: node tests/test-owned-store-windows.mjs
       - name: Compile separate Mac observers and native action helper
         if: matrix.platform == 'mac-arm64'
         shell: bash

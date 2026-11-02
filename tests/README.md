@@ -283,6 +283,15 @@ and no action can establish that no native action occurred. A bounded read-only
 registry query is attempted after an uncertain result, and final persisted state
 is retained when owned shutdown and remaining cleanup time permit.
 
+Every install/removal prompt probe also retains a diagnostic native trace under
+`observations.promptCaptures`, including failed attempts. At most four traces
+per operation are retained, each capped at 32 KiB with conservative nested JSON
+accounting. Native root titles, heading roles, focus ancestry, owning-window
+proof, and relevant button/checkbox records are preserved; source indexes and
+explicit truncation metadata describe omitted controls. These traces omit
+profile/executable paths and are diagnostic projections. The original probe
+continues to supply the unchanged permission/action gates.
+
 Main work has a 12-minute budget, plus at most 18 seconds for final cleanup.
 Publish only the bounded `results.json`; exclude owned profiles, all restart
 logs, extension source/package files, and full native trees. The report's

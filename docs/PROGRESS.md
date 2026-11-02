@@ -13,7 +13,7 @@ have not yet passed on a custom binary.
 | Target | Authoritative hosted state | Next action |
 | --- | --- | --- |
 | macOS arm64 | [Run 41363256213](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41363256213), immutable source `9f6d9a79aef2`: restored the prior compiler checkpoint, migrated native14 to native15, validated Dawn's exact Go toolchain and generated GN successfully. Ninja compilation began at 23:57:56 UTC on November 1 and remains in progress. | Preserve the live build and its retained objects; inspect its actual terminal result. |
-| Windows x64 | [Run 41371149418](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41371149418), immutable source and workflow `3b05cd2dbe7c`: formatter repair and declared-input audit enabled; restoring the complete native15 checkpoint from the prior run. | Validate the exact formatter, inspect the bounded input audit, then compile if its declared leaves exist. |
+| Windows x64 | [Run 41374312612](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41374312612), immutable source and workflow `9e31a68f748c`: restoring the complete native15 checkpoint with the streamed input audit. | Inspect the complete bounded input audit; compile only if declared scoped leaf inputs exist. |
 
 The earlier Mac run
 [41353967689](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41353967689)
@@ -35,7 +35,14 @@ run then rejected the missing `buildtools/win-format/clang-format.exe`, needed b
 Crubit's generated Rust/C++ support header. Its complete five-chunk native15
 checkpoint totals **7,773,142,945 bytes**. The next retry will include an exact
 formatter repair and the read-only declared-input audit, which reports missing
-leaves together before any compile attempt.
+leaves together before any compile attempt. Run
+[41371149418](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41371149418)
+validated the formatter and GN but its audit exceeded the original 128 MiB
+in-memory graph bound in 9.937 seconds. Its result was explicitly incomplete:
+zero leaves checked, not zero missing dependencies. Compilation and redundant
+checkpoint saving were correctly skipped. The streamed retry now uses a
+512 MiB temporary graph file, bounded incremental parsing, separate raw-leaf
+memory limits and actual output-byte counts; every limit still fails incomplete.
 
 Both original seed campaigns predate the detached-document fix. Their undelivered
 final release tags were removed after verifying that no corresponding release
@@ -45,7 +52,7 @@ exact approved seed commits with identical build pins, validates original and
 patched source hashes, preserves unchanged outputs/timestamps, and requires a
 fresh real build. CI-only tool repairs leave the native fingerprints unchanged.
 
-Local CI tests currently pass: **45 tests**, including exact nested-Go, gperf and formatter
+Local CI tests currently pass: **47 tests**, including exact nested-Go, gperf and formatter
 selection/rejection, bounded no-debugger cleanup, real Ninja incremental reuse,
 the selected-file native14-to-native15 transition, and the read-only declared
 input audit against the pinned Ninja. The Windows-only GNU tar
@@ -96,8 +103,29 @@ no installation was accepted. The separate Windows action helper also passed
 [41372103012](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41372103012):
 Windows PowerShell 5 parsing and five refusal cases (PID, target, operation,
 creation identity and profile), each before any native UI access. These are
-negative guards, not proof of a successful native action. Full normal Store
-installation/restart/update-check/removal verification is still pending.
+negative guards, not proof of a successful native action.
+
+The first full normal Store reference trial
+[41374571900](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41374571900)
+then established real Mac installation of uBOL `2026.1026.1812`, the matching
+installer-inserted public key/semantic manifest and four selected source hashes,
+actual worker ruleset reads before/after normal restarts, and one ordinary
+`no_update` result with unchanged installed version. The worker returned the six
+expected default rulesets in both generations. This is reference-browser
+mechanics, not custom-browser verification, a complete extension audit or a
+verified newer Store release transition.
+
+That Mac trial stopped before removal acceptance because the real native
+uninstall prompt is a separate AXWindow and the action helper accepted only
+AXSheet. Normal cleanup passed; uBOL remained installed in that owned temporary
+profile. Windows safely refused before installation at
+`native_focus_ancestry_refused`; a separate PowerShell JSON-array nesting error
+also left its shutdown verification incomplete. All eight result assets and
+checksum manifests were verified. The next trial requires the exact native Mac
+removal-window path, corrected Windows array handling and bounded focus/HWND
+diagnostics; no generic window acceptance or uncertain action retry is used.
+Full normal Store removal on Mac and the Windows installation/restart/update/
+removal sequence still remain, followed by both actual custom packages.
 
 An earlier local disabled Store button did not establish a general compatibility
 failure: a local brand-only counterfactual did not enable it, hosted reference

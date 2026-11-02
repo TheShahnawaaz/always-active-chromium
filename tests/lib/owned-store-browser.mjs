@@ -73,10 +73,28 @@ while($queue.Count -gt 0){
 
 const windowsRemainingScript=String.raw`
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
-$expected=@(ConvertFrom-Json $env:AA_OWNED_STORE_TRACKED);$rows=New-Object 'System.Collections.Generic.List[object]'
-if($expected.Count -gt 128){throw 'Owned process identity bound exceeded'}
+$json=[string]$env:AA_OWNED_STORE_TRACKED
+if($json.Length -gt 32768 -or -not $json.TrimStart().StartsWith('[')){throw 'Owned tracked identities must be a bounded JSON array'}
+$parsed=ConvertFrom-Json -InputObject $json
+$expected=New-Object 'System.Collections.Generic.List[object]';$keys=@{}
+foreach($item in $parsed){
+ if($null -eq $item -or $item -is [System.Array] -or $item -isnot [pscustomobject]){throw 'Owned tracked record must be a flat object'}
+ $names=@($item.PSObject.Properties.Name)
+ if($names.Count -ne 2 -or -not ($names -ccontains 'pid') -or -not ($names -ccontains 'started')){throw 'Owned tracked record has unexpected fields'}
+ $number=0
+ if($item.pid -is [System.Array] -or -not [int]::TryParse([string]$item.pid,[ref]$number) -or $number -le 1){throw 'Owned tracked PID is invalid'}
+ if($item.started -isnot [string] -or $item.started.Length -lt 1 -or $item.started.Length -gt 80){throw 'Owned tracked creation identity is invalid'}
+ $key=[string]$number+'|'+$item.started
+ if($keys.ContainsKey($key)){throw 'Owned tracked identity is duplicated'};$keys[$key]=$true
+ $expected.Add([pscustomobject]@{pid=$number;started=$item.started})
+ if($expected.Count -gt 128){throw 'Owned process identity bound exceeded'}
+}
+if($expected.Count -eq 0){throw 'Owned process identities are empty'}
+$rows=New-Object 'System.Collections.Generic.List[object]'
 if($expected.Count -gt 0){
- $filter=($expected|ForEach-Object {'ProcessId='+[int]$_.pid}) -join ' OR '
+ $clauses=New-Object 'System.Collections.Generic.List[string]'
+ foreach($item in $expected){$clauses.Add('ProcessId='+$item.pid)}
+ $filter=[string]::Join(' OR ',$clauses.ToArray())
  $current=@(Get-CimInstance Win32_Process -Filter $filter -OperationTimeoutSec 2)
  foreach($item in $expected){
   $process=$current|Where-Object {$_.ProcessId -eq $item.pid}|Select-Object -First 1
