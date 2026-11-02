@@ -39,10 +39,11 @@ The user requested laptop-independent work. GitHub jobs and their configured
 bounded continuations already run remotely. The initial Cloud sign-in rate limit
 was resolved by the user. Project-only environment onboarding validated the
 e146 checkout (147 Python passes, 13 skips; 67 Node passes, one skip) and prepared
-a private environment. Publication is in progress; GitHub API permissions still
-need rechecking after its network configuration is applied. See
-[the continuation handoff](CONTINUE.md); do not claim autonomous cloud debugging
-is running until a real hosted continuation task is started and verified.
+a private environment. Publication is now confirmed in the Cloud environment
+picker as `always-active-chromium`; GitHub API permissions still need rechecking
+in the task runtime. The user chose to hand the goal to Dot, so no separate
+continuation coding task was launched. See [Dot's goal and handover](CONTINUE.md);
+do not claim Dot has started until its actual task is running.
 
 The metadata/window-state fix is pushed at `e146fe41bca3`, with source and both
 final package tags. [Mac retry 41524595935](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41524595935)
