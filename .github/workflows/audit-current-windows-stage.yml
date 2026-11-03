@@ -1,0 +1,154 @@
+name: Audit Windows stage artifact bytes
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/audit-current-windows-stage.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: audit-windows-stage-41598060999
+      cancel-in-progress: false
+    permissions:
+      contents: write # Draft release visibility requires repository push access; code only reads.
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Hash finite diagnostic bytes and verify the complete checkpoint manifest
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+
+          REPO = 'TheShahnawaaz/always-active-chromium'
+          SOURCE = 'dd4dfe7709ce6dffbc310f03c6c57edd10c95be5'
+          RUN = '41598060999'
+          FINGERPRINT = 'cfc3210920f1d83aa4ac25d5b69f54dd7b611c4df44b91dceb1a61d12c36468a'
+          assert os.environ['GITHUB_REPOSITORY'] == REPO
+
+          def gh(*args):
+              return subprocess.check_output(['gh', *args], text=True, timeout=90)
+
+          def api(path):
+              return json.loads(gh('api', 'repos/' + REPO + '/' + path))
+
+          def release(number, tag):
+              result = api('releases/' + str(number))
+              assert result['id'] == number and result['tag_name'] == tag
+              assert result['draft'] is True
+              assert len(result['assets']) <= 20
+              return result
+
+          def download_asset(release, name, directory):
+              assert re.fullmatch(r'[A-Za-z0-9_.-]+', name)
+              matches = [asset for asset in release['assets'] if asset['name'] == name]
+              assert len(matches) == 1
+              asset = matches[0]
+              assert asset['state'] == 'uploaded' and 0 < asset['size'] <= 2 * 1024 * 1024
+              assert re.fullmatch(r'sha256:[0-9a-f]{64}', asset['digest'])
+              gh('release', 'download', release['tag_name'], '--repo', REPO,
+                 '--pattern', name, '--dir', str(directory))
+              data = (directory / name).read_bytes()
+              assert len(data) == asset['size']
+              digest = hashlib.sha256(data).hexdigest()
+              assert asset['digest'] == 'sha256:' + digest
+              return data, {'id': asset['id'], 'name': name, 'size': len(data), 'sha256': digest}
+
+          report = {'schema': 1, 'audit_run': os.environ['GITHUB_RUN_ID'],
+                    'source_commit': SOURCE, 'build_run': RUN,
+                    'scope': 'Independent standard GitHub-hosted audit of downloaded small asset bytes and checkpoint part server metadata; archive parts are not downloaded by this audit.'}
+          with tempfile.TemporaryDirectory(prefix='aacc-artifact-audit-') as temp:
+              root = Path(temp)
+              compile_release = release(432649898, 'build-compile-win-x64-' + RUN + '-1')
+              names = {'win-x64-compile-diagnostics.json', 'win-x64-compile-status.json',
+                       'win-x64-compile-SHA256SUMS.txt'}
+              assert {asset['name'] for asset in compile_release['assets']} == names
+              downloaded = {}
+              receipts = []
+              for name in sorted(names):
+                  data, receipt = download_asset(compile_release, name, root)
+                  downloaded[name] = data
+                  receipts.append(receipt)
+              entries = {}
+              for line in downloaded['win-x64-compile-SHA256SUMS.txt'].decode('utf-8').splitlines():
+                  match = re.fullmatch(r'([0-9a-f]{64})  ([A-Za-z0-9_.-]+)', line)
+                  assert match and match[2] not in entries and match[2] in downloaded
+                  entries[match[2]] = match[1]
+                  assert hashlib.sha256(downloaded[match[2]]).hexdigest() == match[1]
+              assert set(entries) == names - {'win-x64-compile-SHA256SUMS.txt'}
+              status = json.loads(downloaded['win-x64-compile-status.json'])
+              diagnostics = json.loads(downloaded['win-x64-compile-diagnostics.json'])
+              assert status['source_commit'] == status['workflow_commit'] == SOURCE
+              assert status['platform'] == diagnostics['platform'] == 'win-x64'
+              assert status['run_url'] == 'https://github.com/' + REPO + '/actions/runs/' + RUN
+              assert status['phase'] == 'compile'
+              assert status['compile_report_available'] is True
+              assert status['compile_report_status'] == diagnostics['status']
+              report['compile'] = {'release_id': compile_release['id'], 'assets': receipts,
+                                   'manifest_entries_verified': len(entries),
+                                   'status': status, 'diagnostics': diagnostics}
+              checkpoint = release(432649986,
+                                   'checkpoint-win-x64-cfc3210920f1d83aa4ac-' + RUN + '-1')
+              ready_data, ready_receipt = download_asset(checkpoint, 'ready.json', root)
+              ready = json.loads(ready_data)
+              state = ready['state']
+              assert ready['schema'] == state['schema'] == 1
+              assert ready['format'] == 'tar+zstd+pax-nanoseconds'
+              assert state['platform'] == 'win-x64'
+              assert state['version'] == '156.0.8078.80'
+              assert state['revision'] == 'fb096c0011f9d50f0a264a9376420cdea9c421e3'
+              assert state['fingerprint'] == FINGERPRINT
+              assert state['repository_commit'] == SOURCE
+              assert state['phase'] == 'build-ready'
+              assert state['status'] == diagnostics['status']
+              assert ready['run_id'] == state['last_run'] == state['last_prepare_run'] == RUN
+              revision = state['source_revision']
+              assert revision['status'] == 'complete'
+              assert revision['revision'] == state['revision']
+              assert revision['mechanism'] == 'authenticated-upstream-archive-LASTCHANGE'
+              assert revision['commit_position'] == 'refs/branch-heads/8078@{#1705}'
+              assert revision['raw_commit_sha256'] == '528ae5921cf9f9044b55f0fe8005ad04208f09a1fb0a5e41e5dff5a06953fd8b'
+              assert revision['source_archive_sha256'] == '5b1a1f3bfdf4fc559db4eddfb4492b72ffcec7ae1a52b30f8b172230788f5740'
+              assert revision['metadata_gn_args'] == {'use_dummy_lastchange': False}
+              parts = ready['parts']
+              assert 1 <= len(parts) <= 16
+              server = {asset['name']: asset for asset in checkpoint['assets']}
+              assert len(server) == len(checkpoint['assets'])
+              assert set(server) == {'ready.json'} | {part['name'] for part in parts}
+              part_receipts = []
+              for index, part in enumerate(parts):
+                  assert part['name'] == 'state.tar.zst.' + str(index).zfill(5)
+                  assert 0 < part['size'] <= 1800000000
+                  assert re.fullmatch(r'[0-9a-f]{64}', part['sha256'])
+                  asset = server[part['name']]
+                  assert asset['state'] == 'uploaded' and asset['size'] == part['size']
+                  assert asset['digest'] == 'sha256:' + part['sha256']
+                  part_receipts.append({'id': asset['id'], **part})
+              report['checkpoint'] = {
+                  'release_id': checkpoint['id'], 'tag': checkpoint['tag_name'],
+                  'ready': ready_receipt, 'state_status': state['status'],
+                  'source_commit': state['repository_commit'],
+                  'native_fingerprint': state['fingerprint'],
+                  'source_revision_record_identity_verified': True,
+                  'parts_verified_against_server': part_receipts,
+                  'total_part_bytes': sum(part['size'] for part in parts)}
+          print('AACC_AUDIT_REPORT=' + json.dumps(report, sort_keys=True, separators=(',', ':')))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('Verified compiler diagnostics: ' + diagnostics['status'] + '\n\n')
+              summary.write('Verified ready manifest and ' + str(len(parts)) +
+                            ' server part digests/sizes, ' + str(report['checkpoint']['total_part_bytes']) +
+                            ' bytes. No browser package or runtime success is inferred.\n')
+          PY
