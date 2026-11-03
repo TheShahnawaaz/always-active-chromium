@@ -2,6 +2,17 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Corrected Windows compilation began at 08:39 IST** in
+[41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474).
+It restored its verified checkpoint in 22m48s, passed mandatory source/tool/native/
+GN preparation, and audited **75,790 declared leaves, zero missing**, no errors,
+31.719s. All six bounded diagnostic assets, server sizes/digests and four checksum
+entries match exact source/workflow `dd4dfe7709ce`. No package or successful FIDO
+retry is inferred yet. Preserve this healthy compile. Its 270-minute absolute
+cutoff is approximately **12:42 IST**, with the six-hour job limit approximately
+**14:12 IST**; these are stage limits, not completion estimates. Mac remains
+verified and unchanged. Earlier entries below retain their observation-time state.
+
 **Corrected Windows run [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
 was admitted at 08:11 IST**, immutable source `ci-source-dd4dfe7709ce`. Exactly
 one dispatch followed the terminal failed run and verification of its complete

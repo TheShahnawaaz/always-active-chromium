@@ -49,95 +49,58 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
-**Corrected Windows retry 41567711474 is admitted at `ci-source-dd4dfe7709ce`.**
-It was dispatched exactly once at **02:41:57 UTC / 08:11 IST November 3**, only
-after prior run 41541479553 was terminal/failure and its new checkpoint verified.
+**Corrected Windows run [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
+is compiling at immutable `ci-source-dd4dfe7709ce`.** It was dispatched exactly
+once at **02:41:57 UTC / 08:11 IST November 3**, after failed run 41541479553
+was terminal and its completed checkpoint independently verified. Preserve this
+healthy run; do not dispatch a competing retry or cancel its eventual save.
 Inputs: `platform=win-x64`, `bootstrap_only=false`, `migrate_native=false`,
-`auto_resume=true`, stage 0 / max 48. No competing or cancelled healthy job.
-This source includes the pinned WebAuthn closure, existing input audit,
-authenticated LASTCHANGE metadata fix and 270-minute absolute build budget.
+`auto_resume=true`, stage 0 / max 48. Full source/workflow commit:
+`dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`; both corresponding final build tags
+were pushed before dispatch and must never be retargeted.
 
-The retained failed-stage checkpoint is complete in draft **432206655**, tag
+The corrected run restored the checkpoint **02:45:12–03:08:00 UTC**, completed
+mandatory dependency/tool/native/GN preparation **03:08:00–03:08:51**, and passed
+the declared-input audit: **75,790 checked, zero missing, no errors**, 31.719s.
+All six preparation/input assets and four manifest entries were independently
+verified against downloaded bytes, API sizes/digests and exact source/workflow.
+The preparation report is complete with no diagnostic events. Real compilation
+started **03:09:33 UTC / 08:39 IST**. This establishes resumed compilation, not
+yet successful FIDO objects or a completed browser. The new 270-minute absolute
+cutoff is approximately **07:12 UTC / 12:42 IST**; the six-hour job limit is
+approximately **08:42 UTC / 14:12 IST**. These are stage limits, not finish ETAs.
+
+The selected failed-stage checkpoint is complete in draft **432206655**, tag
 `checkpoint-win-x64-cfc3210920f1d83aa4ac-41541479553-1`: five parts totaling
 **8,149,383,278 bytes**. Ready asset **703999235** is 3,303 bytes, SHA-256
 `e9082cbc1a76c41a98f6e16c5a91d61bcc980224a5d618d43d9f1dedab7b9489`.
 Its bytes, build-ready/failed state, source `81735e8f2ce2`, native16 fingerprint,
 version/revision and all five server part digests/sizes were verified. Save
-completed at 02:40:05 UTC in **19m15s**; automatic continuation was skipped for
-the real compiler failure. The final counter was **6,785/31,709**, including
-the two failed FIDO commands: 24,924 actions were unattempted at that point,
-plus failed work to retry and any later metadata regeneration. It is not an
-overall completion percentage or a finish estimate. Mac delivery remains e146.
+completed at 02:40:05 UTC in **19m15s**; run 41541479553 failed at 02:40:15,
+and its automatic continuation was skipped. Preserve any newer complete cache.
 
-**Windows stage 1 found a recoverable missing source dependency.** Actual
-hash-verified diagnostics from run **41541479553** report `status=failed`, exit 1,
-and missing `third_party/microsoft_webauthn/src/webauthn.h` in the two FIDO
-objects. Its valid Ninja log grew from 8,121,013 to 9,749,935 bytes, so completed
-objects are being saved in draft **432206655**. **Do not cancel that live save.**
-The REST step conclusion is success because of `continue-on-error`; the explicit
-compile report/outcome is failure and must not be relabeled as a normal cutoff.
-No package exists from that run, and its automatic pending-stage continuation
-will be skipped for this compiler failure.
+That prior invocation failed on missing
+`third_party/microsoft_webauthn/src/webauthn.h` in two FIDO objects. Its explicit
+compile report/outcome is failure despite the REST step's effective success
+under `continue-on-error`. Its valid Ninja log grew from 8,121,013 to 9,749,935
+bytes. The final counter was **6,785/31,709**, including the failed commands:
+24,924 actions were unattempted then, plus failed work to retry and subsequent
+metadata regeneration. This is no overall percentage or reliable short ETA.
+No package exists from that failed run.
 
-The fix adds the exact upstream WebAuthn Git DEPS to the existing bounded source
-hydrator: revision `ef82c157125a0490e05f6ea82a7adb1b8e1bad08`, tree
-`5d68c9cc6c711940710d72462ced8817fcc56334`, eight complete files/101,632 bytes,
-including the header and MIT license. All file modes/blob IDs reconstruct the
-pinned tree; the real small archive installs through the production hydrator and
-resumes without changing matching mtimes. Its archive SHA-256 is
+The corrected source adds the complete upstream WebAuthn Git DEPS to the
+existing bounded hydrator: revision `ef82c157125a0490e05f6ea82a7adb1b8e1bad08`,
+tree `5d68c9cc6c711940710d72462ced8817fcc56334`, eight files/101,632 bytes,
+including the header and MIT license. All modes/blob IDs reconstruct the pinned
+tree; the real archive passed production hydration and an unchanged-mtime resume.
+Archive SHA-256:
 `30d68f0da7a75e787a5a2b8436668c4e00e7648ac56231304f85bd5611eca28c`.
-All 144 local Python tests run successfully with 15 platform/tool/source-fixture
+All 144 local Python tests ran successfully with 15 platform/tool/source-fixture
 skips; eight focused hydration tests pass. Both native fingerprints remain
-unchanged. The prior 75,790-leaf audit excluded compiler-discovered headers, so
-its pass did not establish this missing include's existence.
-
-Wait for a complete ready manifest and terminal old run, verify that new cache,
-then dispatch a single corrected Windows build from the new immutable fix tag
-with `migrate_native=false`, `bootstrap_only=false`, `auto_resume=true`.
-The corrected source also carries the already-tested authenticated LASTCHANGE
-metadata repair and the longer 270-minute budget. Preserve the successful Mac
-delivery; no Mac rebuild is needed for this Windows-only hydration repair.
-
-The correction is committed/pushed as
-`dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`, immutable source
-`ci-source-dd4dfe7709ce`, with both corresponding final build tags already
-pushed. Use that exact source for the next single Windows retry after the save
-is verified complete and the old failed run is terminal. Do not retarget a tag.
-
-**Current Windows stage 1 is compiling.** Run **41541479553** successfully
-restored the verified checkpoint (22:59:17–23:17:51 UTC), completed source/tool/GN
-preparation without diagnostic events, and passed its declared-input audit:
-**75,790 checked, zero missing, no errors**, 23.218 seconds. All six preparation/
-input assets and four checksum entries were independently verified against API
-digests/sizes and exact source/workflow `81735e8f2ce2`. Real compilation began
-at **23:19:04 UTC November 2 / 04:49 IST November 3**. Preserve the live compile;
-the next absolute cutoff remains approximately 08:07 IST, not a finish estimate.
-
-**Windows checkpoint is verified complete and automatic stage 1 is running.**
-Stage 0 **41503529408** completed successfully. Its final resumed Ninja counter
-was **6,270/37,979**, leaving **31,709** declared actions at that point; this is
-an invocation counter, not a completed browser or a completion-time estimate.
-The five-part checkpoint totals **7,942,759,589 bytes**. Ready asset **703462639**
-is 3,304 bytes, SHA-256
-`f11db7db5f645d68beab4982d964c81c6825e5e4b5dc871707f0f9f7bf7143d9`.
-Its bytes, source `81735e8f2ce2`, exact native16 Windows fingerprint,
-build-ready/pending state and all five server part sizes/digests were verified.
-Save time was **30m51s** (22:25:58–22:56:49 UTC).
-
-The configured continuation already started **41541479553**, stage 1, at
-22:56:57 UTC. It was restoring that checkpoint at 04:30 IST November 3 (23:00
-UTC November 2). No duplicate dispatch or cancellation occurred. It retains the
-healthy immutable `ci-source-81735e8f2ce2` campaign. Preserve it; switch metadata
-source only at a safe terminal boundary without racing its continuation. Its
-220-minute absolute compile cutoff is approximately **08:07 IST November 3**,
-with the six-hour job limit approximately **10:27 IST**.
-
-Finalized real prepare logs now establish Python ELF residue as an observation:
-at 19:12:04 UTC, `bin/python3` was a 59,365,536-byte ELF while `bin/python.exe`
-and `bin/python3.exe` were 103,192-byte MZ files. Earlier small synthetic header
-records in the unit-test step are fixtures and must not be substituted for that
-real prepare result. The exact old V8 failure's subprocess remains inferred;
-the clean-host/default-GN preflight and subsequent real compilation passed.
+unchanged. The earlier leaf audit excludes compiler-discovered headers, so its
+pass did not establish that missing include's existence. The corrected source
+also includes the authenticated LASTCHANGE metadata repair and 270-minute budget.
+No Mac rebuild is needed for this Windows-only hydration correction.
 
 **Mac is delivered as a verified development package; Windows remains active.**
 Final Mac delivery **41533441385**, controller `68a55d8132e9`, passed real
@@ -183,6 +146,12 @@ Ready asset **703318165** is 5,942 bytes, SHA-256
 Its bytes, source/native/revision identity and all server part digests/sizes
 were verified. This newest complete e146 cache supersedes the older caches;
 normal checkpoint cleanup may have removed earlier drafts.
+
+## Earlier observations (historical; current state is above)
+
+The following records describe earlier observations, not current dispatch or
+waiting instructions. In particular, Mac visual review is now complete and the
+older Windows runs are terminal.
 
 Fresh actual-package delivery **41529944500** also passed, controller
 `0728fb141cee`, source still e146. Draft **431998425**, tag
@@ -294,9 +263,10 @@ avoid racing an existing automatic continuation with a second queued job.
 
 ## Next actions
 
-1. Inspect actual live runs and queued jobs before dispatching anything. New
-   Mac work can queue behind the current save (`cancel-in-progress:false`);
-   this completed compile cannot auto-dispatch a pending-stage continuation.
+1. Inspect actual live runs and queued jobs before dispatching anything.
+   Preserve corrected Windows 41567711474 and its configured continuation;
+   no competing dispatch is needed. Diagnose explicit compile outcomes and
+   verify each completed ready manifest before treating a cache as usable.
 2. Use the latest committed fix with a matching immutable `ci-source-<HEAD12>`
    tag and both `build.final_release_tag(platform, HEAD)` tags. Never retarget
    an existing tag. Push commits/tags before dispatch. Keep `migrate_native=false`
