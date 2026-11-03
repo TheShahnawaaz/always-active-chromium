@@ -20,6 +20,9 @@ skips. Browser source, compiler pins and native fingerprints are unchanged.
 Hosted repaired compilation is still pending. The next single retry must use
 the new immutable fix source after this checkpoint is complete and the old run
 is terminal; no cold build, live cancellation or duplicate dispatch is needed.
+The pushed correction is `dd4dfe7709ce`, source tag
+`ci-source-dd4dfe7709ce`; both matching final build tags are present. It also
+includes the authenticated revision-metadata fix and 270-minute future budget.
 
 **Windows stage 1 resumed compilation at 04:49 IST** in
 [41541479553](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41541479553).

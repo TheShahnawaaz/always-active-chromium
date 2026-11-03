@@ -78,6 +78,12 @@ The corrected source also carries the already-tested authenticated LASTCHANGE
 metadata repair and the longer 270-minute budget. Preserve the successful Mac
 delivery; no Mac rebuild is needed for this Windows-only hydration repair.
 
+The correction is committed/pushed as
+`dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`, immutable source
+`ci-source-dd4dfe7709ce`, with both corresponding final build tags already
+pushed. Use that exact source for the next single Windows retry after the save
+is verified complete and the old failed run is terminal. Do not retarget a tag.
+
 **Current Windows stage 1 is compiling.** Run **41541479553** successfully
 restored the verified checkpoint (22:59:17–23:17:51 UTC), completed source/tool/GN
 preparation without diagnostic events, and passed its declared-input audit:
