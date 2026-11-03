@@ -1,0 +1,126 @@
+{
+  "audit_run": "41638507119",
+  "build_run": "41598060999",
+  "checkpoint": {
+    "native_fingerprint": "cfc3210920f1d83aa4ac25d5b69f54dd7b611c4df44b91dceb1a61d12c36468a",
+    "parts_verified_against_server": [
+      {
+        "id": 705508378,
+        "name": "state.tar.zst.00000",
+        "sha256": "70d2502bc5633d867e50887ff4ab104580aa21b01aac52426e137432f9fedee6",
+        "size": 1800000000
+      },
+      {
+        "id": 705524592,
+        "name": "state.tar.zst.00001",
+        "sha256": "70759a8e368ffc5d7706fcfde5d010c8bc2fe744dc4f1e9f34652d1c81e3ccbc",
+        "size": 1800000000
+      },
+      {
+        "id": 705543882,
+        "name": "state.tar.zst.00002",
+        "sha256": "37a0759cd9b9b30a4d66ad50a9083c145091734bdb10ae790c2d4a3caaa98e50",
+        "size": 1800000000
+      },
+      {
+        "id": 705565128,
+        "name": "state.tar.zst.00003",
+        "sha256": "3eecafe191c4dedd796ffb0043d8df8142f4e42f6bb608b784e1c0bbb812cc33",
+        "size": 1800000000
+      },
+      {
+        "id": 705577537,
+        "name": "state.tar.zst.00004",
+        "sha256": "42fde66aa13dd3e869d53dfe5f13cbda6c059d109a3a6e0e0f21827cf22251b8",
+        "size": 1649247927
+      }
+    ],
+    "ready": {
+      "id": 705580125,
+      "name": "ready.json",
+      "sha256": "9746dcdda88798c84e992a03fa8cd0ca15d0534457ef70afefc7fe96e342f56a",
+      "size": 6027
+    },
+    "release_id": 432649986,
+    "source_commit": "dd4dfe7709ce6dffbc310f03c6c57edd10c95be5",
+    "source_revision_record_identity_verified": true,
+    "state_status": "pending",
+    "tag": "checkpoint-win-x64-cfc3210920f1d83aa4ac-41598060999-1",
+    "total_part_bytes": 8849247927
+  },
+  "compile": {
+    "assets": [
+      {
+        "id": 705486609,
+        "name": "win-x64-compile-SHA256SUMS.txt",
+        "sha256": "999e7c81174eb131a95d22c2311288fd777d582bf9c375b205671c89ca4dc425",
+        "size": 195
+      },
+      {
+        "id": 705486517,
+        "name": "win-x64-compile-diagnostics.json",
+        "sha256": "0e5b456ad79660ffc8fcc630c5341746abc92c54a6231b594740c38e06141e81",
+        "size": 1331
+      },
+      {
+        "id": 705486559,
+        "name": "win-x64-compile-status.json",
+        "sha256": "7a10786fa3a62cb817046bb1d880753d988346ddcbeba34a5a95ade4a280fc24",
+        "size": 603
+      }
+    ],
+    "diagnostics": {
+      "capture_complete": true,
+      "checkpoint_reuse": {
+        "after": {
+          "sha256": "f3c8c9b8a4df5bfe39e5087ae1718f45e1a7c91f1b7418df38a58cfa3aed4d0b",
+          "size": 15792205,
+          "state": "valid"
+        },
+        "basis": "Pinned Ninja 1.12.1 normal failure; known log path; unchanged valid v6 log or both absent; successful command actions create/append and flush the log; logging errors excluded.",
+        "before": {
+          "sha256": "5c25067df4e79a6edb4c80d25138ef8f43ca1f8a89e50f04f0087a5e1c79ec25",
+          "size": 12986938,
+          "state": "valid"
+        },
+        "logging_error": false,
+        "manifest_after": {
+          "sha256": "87e5fedc808ac1717ec077f296a71996e1404877339a081f6c2c8aa723803850",
+          "valid": true
+        },
+        "manifest_before": {
+          "sha256": "87e5fedc808ac1717ec077f296a71996e1404877339a081f6c2c8aa723803850",
+          "valid": true
+        },
+        "no_new_completed_actions": false,
+        "normal_failure": false,
+        "version_verified": true
+      },
+      "console_bytes": 1160527,
+      "events": [],
+      "exit_code": 2,
+      "oversized_context_lines": 0,
+      "platform": "win-x64",
+      "schema": 1,
+      "scope": "Structured compiler/action diagnostics only; no raw commands, logs or environment. A failed-stage reuse proof concerns newly completed Ninja command actions only, not browser correctness or build success.",
+      "status": "pending"
+    },
+    "manifest_entries_verified": 2,
+    "release_id": 432649898,
+    "status": {
+      "compile_report_available": true,
+      "compile_report_status": "pending",
+      "compile_step_outcome": "success",
+      "phase": "compile",
+      "platform": "win-x64",
+      "run_url": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999",
+      "schema": 1,
+      "scope": "Finite structured build tool/action diagnostics. Raw logs, commands, environment, signed URLs and profiles are excluded. No browser behavior or package success is established.",
+      "source_commit": "dd4dfe7709ce6dffbc310f03c6c57edd10c95be5",
+      "workflow_commit": "dd4dfe7709ce6dffbc310f03c6c57edd10c95be5"
+    }
+  },
+  "schema": 1,
+  "scope": "Independent standard GitHub-hosted audit of downloaded small asset bytes and checkpoint part server metadata; archive parts are not downloaded by this audit.",
+  "source_commit": "dd4dfe7709ce6dffbc310f03c6c57edd10c95be5"
+}
