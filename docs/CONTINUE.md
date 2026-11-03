@@ -49,6 +49,18 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Active final Windows CI replay: [41657571863](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41657571863),
+source `ci-source-07fb6c3f9ed7`.** Full source/workflow commit:
+`07fb6c3f9ed75340048ae6aeb0df5696c5b59fde`. Both matching final build tags are
+pushed and independently resolved to that commit. Exactly one dispatch was
+admitted **14:49:55 UTC / 20:19 IST**, after the old run was terminal and the
+completed checkpoint verified. Inputs: win-x64, bootstrap false, migrate false,
+auto-resume true, stage 0/max 48. Preserve this replay; do not duplicate it or
+rebuild Mac. It validates the normal installed-app core target from cached outputs.
+Latest package bytes/provenance and hosted core/fresh-delivery results still
+need inspection before closeout. The already-verified Windows installer below
+remains available and unchanged while this CI correction is validated.
+
 **Both actual development packages have passed fresh delivery and UI review.**
 Mac remains the unchanged e146 package below. Windows source
 `ci-source-dd4dfe7709ce` passed real default per-user installation, baseline
@@ -86,7 +98,7 @@ error 0x5, followed by a sandbox policy fatal check. The actual published
 `continue-on-error`. Do not relabel that build-tree failure. The unchanged
 normal installer passed every fresh test with the sandbox and flags unchanged.
 
-The prepared correction adds `ci/install_build.py` and a Windows-only workflow
+The committed/pushed correction adds `ci/install_build.py` and a Windows-only workflow
 step to install the actual task-owned mini-installer before core checks, using
 the same already-proven clean-identity/per-user/x64/version guards as delivery.
 It binds source/workflow/manifest, unchanged installer bytes and installed exe
@@ -96,16 +108,18 @@ stock Google Chrome. No ACL, sandbox, native source, compiler pin or fingerprint
 is changed. **148 local Python tests pass (15 platform/tool/source skips)**,
 including four new host/provenance/mutation guards; workflow YAML parses.
 
-The old run is still saving its completed compiler outputs to draft **432797322**,
-tag `checkpoint-win-x64-cfc3210920f1d83aa4ac-41638453497-1`; at 14:44 UTC five
-full parts existed but no ready marker. **Preserve that save.** Wait for a full
-ready manifest and terminal old run, verify bytes/identity/every server part,
-then dispatch exactly one incremental Windows replay from the new immutable CI
-fix tag with `migrate_native=false`, `bootstrap_only=false`, `auto_resume=true`.
-No Mac rebuild or cold Windows compilation is needed. The old source remains
-`dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`; never retarget it. Record the new
-source/final tags and actual new run after they exist. Finish the clean CI replay,
-latest asset/provenance verification and final release notes/instructions.
+The completed output cache is draft **432797322**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41638453497-1`, six parts totaling
+**10,669,016,313 bytes**. Downloaded ready asset **705955160** is **6,192 bytes**,
+SHA-256 `316cedd7a10bd83ab5d88ed3ae79fd247feb7f025243b942e42e9e179fcf6f5a`.
+Its bytes, source dd4dfe, native16 fingerprint/version/revision, build-ready/
+complete state, authenticated revision metadata and every part's server size/
+digest were verified. Save completed **14:47:39 UTC** in **24m56s**. The old job
+ended **failure at 14:47:46 UTC** because of the real uninstalled-layout core
+failure; automatic continuation was skipped for completed compilation. Final
+Ninja counter was **3,243/3,243**, including the real mini-installer link.
+All native outputs are retained; no cold rebuild or tag retarget is authorized.
+The corrected immutable source/replay above now reuses this verified cache.
 
 Earlier stages and the positive WebAuthn repair proof are retained in
 PROGRESS.md. Standard-hosted independent audit 41638507119 and its finite receipt
@@ -291,9 +305,8 @@ avoid racing an existing automatic continuation with a second queued job.
 ## Next actions
 
 1. Inspect actual live runs and queued jobs before dispatching anything.
-   Preserve 41638453497 until its completed cache save is ready and the run is
-   terminal. Verify that cache, then admit exactly one Windows CI target-fix
-   replay from its new immutable tag; do not duplicate or cold rebuild.
+   Preserve final CI replay 41657571863 at source ci-source-07fb6c3f9ed7.
+   Its prior completed cache is already verified; do not duplicate or cold build.
 2. Use the latest committed fix with a matching immutable `ci-source-<HEAD12>`
    tag and both `build.final_release_tag(platform, HEAD)` tags. Never retarget
    an existing tag. Push commits/tags before dispatch. Keep `migrate_native=false`

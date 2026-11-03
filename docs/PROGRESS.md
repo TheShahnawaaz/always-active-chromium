@@ -2,6 +2,26 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Final Windows CI target replay admitted at 20:19 IST / 14:49:55 UTC.**
+[41657571863](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41657571863)
+uses immutable `ci-source-07fb6c3f9ed7`, full commit
+`07fb6c3f9ed75340048ae6aeb0df5696c5b59fde`; both matching final tags are pushed
+and remotely verified. One dispatch followed the terminal old failure and
+verified completed cache, with bootstrap/migrate false and auto-resume true.
+No Mac job or duplicate was requested. This reuses native outputs while testing
+the normal installed-app core target; hosted validation and latest package/
+provenance review remain before closeout.
+
+Old stage 41638453497 linked **3,243/3,243** remaining actions and saved a
+complete six-part **10,669,016,313-byte** cache in **24m56s**, draft **432797322**.
+Ready asset 705955160, 6,192 bytes, SHA-256
+`316cedd7a10bd83ab5d88ed3ae79fd247feb7f025243b942e42e9e179fcf6f5a`,
+was downloaded/hash verified along with exact native/version/revision/source,
+complete state and all part server digests/sizes. The old run ended failure at
+14:47:46 UTC for its actual uninstalled-tree core startup failure. Its unchanged
+installer separately passed fresh native/Store/UI delivery. No original results
+were relabeled or changed, and all completed compiler outputs are preserved.
+
 **Windows actual installer delivery and visual review passed.**
 [41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196)
 installed the 215,424,512-byte native x64 package through its normal per-user
