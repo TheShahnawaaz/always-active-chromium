@@ -49,6 +49,18 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Windows stage 1 41598060999 is saving its checkpoint.** Compilation ended
+at **12:12:35 UTC**, near its configured deadline; save began **12:12:42 UTC**.
+Compiler diagnostic draft **432649898**, tag `build-compile-win-x64-41598060999-1`,
+has all three assets, but their bytes and explicit outcome have not yet been
+independently read/hash-verified because coordinator execution is unavailable.
+Do not infer a clean cutoff from the REST step's effective success under
+`continue-on-error`. Inspect the actual report and terminal job log. New cache
+is draft **432649986**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41598060999-1`; no ready marker was
+present at 12:13 UTC. Preserve the save and configured automatic continuation;
+do not manually dispatch a duplicate. No Windows installer exists yet.
+
 **Coordinator execution became unavailable at 11:13 UTC November 3.** GitHub
 still reports Windows 41598060999 compiling; it was preserved without a duplicate
 or cancellation. The shell tool reports `No usable execution environment is
