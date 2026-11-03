@@ -49,129 +49,72 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
-**Windows stage 1 41598060999 is saving its checkpoint.** Compilation ended
-at **12:12:35 UTC**, near its configured deadline; save began **12:12:42 UTC**.
-Compiler diagnostic draft **432649898**, tag `build-compile-win-x64-41598060999-1`,
-has all three assets, but their bytes and explicit outcome have not yet been
-independently read/hash-verified because coordinator execution is unavailable.
-Do not infer a clean cutoff from the REST step's effective success under
-`continue-on-error`. Inspect the actual report and terminal job log. New cache
-is draft **432649986**, tag
-`checkpoint-win-x64-cfc3210920f1d83aa4ac-41598060999-1`; no ready marker was
-present at 12:13 UTC. Preserve the save and configured automatic continuation;
-do not manually dispatch a duplicate. No Windows installer exists yet.
+**Windows automatic stage 2 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
+is active at immutable `ci-source-dd4dfe7709ce`.** It was admitted at **12:45:53
+UTC / 18:15 IST November 3**, after stage 1's complete checkpoint save. Preserve
+its source/restore/compile/save chain; no duplicate was manually dispatched.
+Full source/workflow: `dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`, with both
+matching final build tags already present. Its 270-minute absolute cutoff is
+approximately **17:16 UTC / 22:46 IST**, with six-hour limit **18:46 UTC /
+00:16 IST November 4**. These are stage limits, not completion estimates.
 
-**Coordinator execution became unavailable at 11:13 UTC November 3.** GitHub
-still reports Windows 41598060999 compiling; it was preserved without a duplicate
-or cancellation. The shell tool reports `No usable execution environment is
-available`, while the environment status API reports running/connected with no
-provider failure. This is a coordinator execution/readiness discrepancy, not a
-GitHub build failure. Read-only GitHub monitoring continues. Reconnect the
-existing execution environment for new artifact downloads/hash verification and
-the final delivery dispatch; do not restart healthy remote builds or move
-credentials. A reconnect request is pending. The latest source/progress records
-are committed to main and the current build source remains immutable dd4dfe.
+Stage 1 **41598060999** is terminal/success. Its final Ninja counter was
+**12,058/15,301**, leaving **3,243** actions in that invocation. That does not
+establish an overall percentage, package or short ETA. Final logs show the
+budget interruption, no compiler failure. Independent standard GitHub-hosted
+audit **[41638507119](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638507119)**,
+controller `d2c40b11e2ecf59478bfefaa7e6affbb56f684cc`, downloaded all three finite
+compiler assets and verified API sizes/digests plus both manifest entries.
+The actual report is **pending, exit 2, complete capture, no events**, no normal
+compiler failure or logging error. Its valid Ninja log grew **12,986,938 →
+15,792,205 bytes**. See the original finite audit receipt:
+[windows-41598060999-audit.json](evidence/windows-41598060999-audit.json).
 
-**Automatic Windows stage 1 [41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999)
-is compiling from `ci-source-dd4dfe7709ce`.** It was admitted at **07:42:10 UTC /
-13:12 IST November 3** after the corrected stage's complete checkpoint save.
-Preserve this continuation; no manual duplicate was dispatched. Its 270-minute
-absolute cutoff is approximately **12:12 UTC / 17:42 IST**, with the six-hour
-job limit approximately **13:42 UTC / 19:12 IST**. These are stage limits, not
-completion estimates. Mac's verified e146 delivery remains unchanged.
+The new completed checkpoint is draft **432649986**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41598060999-1`: five parts totaling
+**8,849,247,927 bytes**. Ready asset **705580125** is **6,027 bytes**, SHA-256
+`9746dcdda88798c84e992a03fa8cd0ca15d0534457ef70afefc7fe96e342f56a`.
+The independent audit hashed the downloaded ready bytes and verified exact
+source/native/version/revision, build-ready/pending state, authenticated source
+revision record identity and every part's server digest/size. It did not download
+the large archive parts; restoration verifies those bytes on the next builder.
+Save ran **12:12:42–12:45:51 UTC**, **33m09s**, followed by the configured
+automatic continuation. The old job ended at 12:45:57 UTC. This cache supersedes
+the earlier cache; normal cleanup may remove older same-configuration drafts.
 
-It restored the verified cache **07:45:12–08:08:51 UTC**, completed mandatory
-source/tool/native/GN preparation without diagnostic events, and passed its audit:
-**75,790 checked, zero missing, no errors**, 33.172s. All six preparation/input
-assets and four manifest entries independently match downloaded hashes, server
-sizes/digests and exact `dd4dfe7709ce` source/workflow. Actual compilation resumed
-at **08:10:31 UTC / 13:40 IST**. Preserve the active compile and eventual save.
+The Windows WebAuthn repair is positively observed: stage 0 **41567711474**
+compiled `fido_request_handler_base.obj` at **03:13:05 UTC** and
+`fido_discovery_factory.obj` at **03:13:07 UTC**, plus the Windows WebAuthn API
+objects, without the old missing-header failure. The source hydrates the complete
+eight-file/101,632-byte Chromium-pinned dependency at revision
+`ef82c157125a0490e05f6ea82a7adb1b8e1bad08`, tree
+`5d68c9cc6c711940710d72462ced8817fcc56334`, including its MIT license.
+All 144 local Python tests ran successfully (15 platform/tool/source skips);
+eight focused hydration guards and real-archive unchanged-mtime resume passed.
+Browser source, compiler pins and both native fingerprints remain unchanged.
+No Windows installer exists yet.
 
-The preceding corrected stage **41567711474** is terminal/success. Its final
-log positively proves that the former missing-header failure is repaired:
-`fido_request_handler_base.obj` completed at **03:13:05 UTC** and
-`fido_discovery_factory.obj` at **03:13:07 UTC**; the Windows WebAuthn API objects
-also compiled. No compiler failure occurred. The final resumed Ninja counter
-was **9,677/24,978**, leaving **15,301** actions in that invocation. Later graph
-changes may alter that count; it is not an overall percentage or a short ETA.
+**Coordinator execution remains unavailable since 11:13 UTC.** Even `pwd` cannot
+start: the shell reports `No usable execution environment is available`. The
+same managed cloud computer is marked unavailable to this task while the provider
+reports current running/connected state, enforced policy, no failure and no
+retained diagnostic records. This is an unexplained execution availability
+discrepancy, not a GitHub build failure. The affected environment is
+`ccarenv_b64_Y2NhcmVudl9kMmJlOWVlNzE5NjA4MTkxOTFkNDFlZjlkZWI1ZmFhNw`;
+it is not the user's Mac or a GitHub builder. No reconnect tool is exposed.
+The smallest recovery is to reattach this already-published cloud environment
+to the same task until execution becomes available; no new computer, credential
+move or network-policy change is needed. A reconnect request is pending.
 
-Its checkpoint draft **432375839**, tag
-`checkpoint-win-x64-cfc3210920f1d83aa4ac-41567711474-1`, is verified complete:
-five parts totaling **8,351,681,125 bytes**. Ready asset **704759000** is 6,027
-bytes, SHA-256
-`e9060d812855bab4045c81b005be1d4611a9219e8b144518033cc6311f3d0b3b`.
-Ready bytes, exact source/native/version/revision, build-ready/pending state,
-authenticated LASTCHANGE metadata and every server part digest/size matched.
-Save completed **07:42:08 UTC** in **29m25s**, followed by the configured
-automatic dispatch. The old job ended at 07:42:15 UTC. This cache supersedes
-the earlier failed-stage cache; normal cleanup may remove older drafts.
-
-The following paragraphs retain the prior observation-time details.
-
-**Corrected Windows run [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
-is saving its normal-cutoff checkpoint at immutable `ci-source-dd4dfe7709ce`.**
-Compilation ended **07:12:37 UTC / 12:42 IST** at the configured absolute budget.
-All three compiler diagnostic assets and both checksum entries were independently
-verified against bytes, server sizes/digests and exact source/workflow. The actual
-report says **pending, exit 2, no events, complete capture**, with no logging
-error or normal compiler failure. Its valid Ninja log grew from **9,749,935** to
-**12,986,938 bytes**. The prior WebAuthn error did not recur in this captured
-stage; inspect the terminal job log for the two affected FIDO object actions
-before claiming that specific compiler repair exercised successfully.
-
-Save began **07:12:43 UTC** to draft **432375839**, tag
-`checkpoint-win-x64-cfc3210920f1d83aa4ac-41567711474-1`. It has no verified ready
-manifest yet. Preserve this save and its configured automatic continuation;
-do not manually duplicate it. No installer exists yet. The run was dispatched
-once at **02:41:57 UTC / 08:11 IST November 3**, after failed run 41541479553
-was terminal and its completed checkpoint independently verified. Preserve this
-healthy run; do not dispatch a competing retry or cancel its eventual save.
-Inputs: `platform=win-x64`, `bootstrap_only=false`, `migrate_native=false`,
-`auto_resume=true`, stage 0 / max 48. Full source/workflow commit:
-`dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`; both corresponding final build tags
-were pushed before dispatch and must never be retargeted.
-
-The corrected run restored the checkpoint **02:45:12–03:08:00 UTC**, completed
-mandatory dependency/tool/native/GN preparation **03:08:00–03:08:51**, and passed
-the declared-input audit: **75,790 checked, zero missing, no errors**, 31.719s.
-All six preparation/input assets and four manifest entries were independently
-verified against downloaded bytes, API sizes/digests and exact source/workflow.
-The preparation report is complete with no diagnostic events. Real compilation
-started **03:09:33 UTC / 08:39 IST** and reached its normal budget cutoff above.
-The six-hour job limit is approximately **08:42 UTC / 14:12 IST**; this is a
-stage limit, not a finish ETA.
-
-The selected failed-stage checkpoint is complete in draft **432206655**, tag
-`checkpoint-win-x64-cfc3210920f1d83aa4ac-41541479553-1`: five parts totaling
-**8,149,383,278 bytes**. Ready asset **703999235** is 3,303 bytes, SHA-256
-`e9082cbc1a76c41a98f6e16c5a91d61bcc980224a5d618d43d9f1dedab7b9489`.
-Its bytes, build-ready/failed state, source `81735e8f2ce2`, native16 fingerprint,
-version/revision and all five server part digests/sizes were verified. Save
-completed at 02:40:05 UTC in **19m15s**; run 41541479553 failed at 02:40:15,
-and its automatic continuation was skipped. Preserve any newer complete cache.
-
-That prior invocation failed on missing
-`third_party/microsoft_webauthn/src/webauthn.h` in two FIDO objects. Its explicit
-compile report/outcome is failure despite the REST step's effective success
-under `continue-on-error`. Its valid Ninja log grew from 8,121,013 to 9,749,935
-bytes. The final counter was **6,785/31,709**, including the failed commands:
-24,924 actions were unattempted then, plus failed work to retry and subsequent
-metadata regeneration. This is no overall percentage or reliable short ETA.
-No package exists from that failed run.
-
-The corrected source adds the complete upstream WebAuthn Git DEPS to the
-existing bounded hydrator: revision `ef82c157125a0490e05f6ea82a7adb1b8e1bad08`,
-tree `5d68c9cc6c711940710d72462ced8817fcc56334`, eight files/101,632 bytes,
-including the header and MIT license. All modes/blob IDs reconstruct the pinned
-tree; the real archive passed production hydration and an unchanged-mtime resume.
-Archive SHA-256:
-`30d68f0da7a75e787a5a2b8436668c4e00e7648ac56231304f85bd5611eca28c`.
-All 144 local Python tests ran successfully with 15 platform/tool/source-fixture
-skips; eight focused hydration tests pass. Both native fingerprints remain
-unchanged. The earlier leaf audit excludes compiler-discovered headers, so its
-pass did not establish that missing include's existence. The corrected source
-also includes the authenticated LASTCHANGE metadata repair and 270-minute budget.
-No Mac rebuild is needed for this Windows-only hydration correction.
+GitHub connector reads and repository writes still work. The existing source and
+builds were preserved. A bounded read-only audit now runs successfully through
+`.github/workflows/audit-current-windows-stage.yml` on standard `ubuntu-latest`,
+using the repository's own scoped job token. It changes no browser/build/cache
+and needs no external or paid builder. The current audit is pinned to stage 1;
+review/update exact IDs/source before adapting it. Its finite report is actual
+download/hash evidence, not browser runtime proof. Continue supported GitHub work
+while direct execution is unavailable. Before later local edits, fetch/sync main:
+remote documentation and this audit workflow advanced beyond local `4910217`.
 
 **Mac is delivered as a verified development package; Windows remains active.**
 Final Mac delivery **41533441385**, controller `68a55d8132e9`, passed real
@@ -335,7 +278,7 @@ avoid racing an existing automatic continuation with a second queued job.
 ## Next actions
 
 1. Inspect actual live runs and queued jobs before dispatching anything.
-   Preserve corrected Windows continuation 41598060999 and its configured chain;
+   Preserve corrected Windows continuation 41638453497 and its configured chain;
    no competing dispatch is needed. Diagnose explicit compile outcomes and
    verify each completed ready manifest before treating a cache as usable.
 2. Use the latest committed fix with a matching immutable `ci-source-<HEAD12>`
