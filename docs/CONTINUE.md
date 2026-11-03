@@ -50,13 +50,20 @@ fixtures, a compile, a package, or reference Chrome results alone.
 ## Current source and observed results
 
 **Windows automatic stage 2 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
-is active at immutable `ci-source-dd4dfe7709ce`.** It was admitted at **12:45:53
+is compiling at immutable `ci-source-dd4dfe7709ce`.** It was admitted at **12:45:53
 UTC / 18:15 IST November 3**, after stage 1's complete checkpoint save. Preserve
 its source/restore/compile/save chain; no duplicate was manually dispatched.
 Full source/workflow: `dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`, with both
 matching final build tags already present. Its 270-minute absolute cutoff is
 approximately **17:16 UTC / 22:46 IST**, with six-hour limit **18:46 UTC /
 00:16 IST November 4**. These are stage limits, not completion estimates.
+
+Its cache restored **12:49:31–13:10:30 UTC**, mandatory source/tool/native/GN
+preparation passed without diagnostic events, and the declared-input audit passed:
+**75,790 checked, zero missing, no errors**, 28.562s. All six preparation/input
+assets and four manifest entries match independently downloaded bytes, API sizes/
+digests and exact `dd4dfe7709ce` source/workflow. Real compilation resumed at
+**13:11:59 UTC / 18:41 IST**. Preserve this healthy compile and eventual save.
 
 Stage 1 **41598060999** is terminal/success. Its final Ninja counter was
 **12,058/15,301**, leaving **3,243** actions in that invocation. That does not

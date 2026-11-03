@@ -2,6 +2,15 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows stage 2 resumed compilation at 18:41 IST / 13:11:59 UTC** in
+[41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497).
+Its cache restored in 20m59s, mandatory source/tool/native/GN preparation passed
+without events, and all **75,790** declared leaves passed (zero missing/errors,
+28.562s). All six finite assets/four manifest entries and their server sizes/
+digests were independently downloaded/hash verified against exact `dd4dfe7709ce`
+source/workflow. Direct execution and existing final-delivery dispatch are usable
+again. Healthy builds and the verified Mac artifacts remain unchanged.
+
 **Coordinator execution recovered at 18:33 IST / 13:03 UTC.** The new workspace
 message was followed by a successful `pwd`; the clean checkout fast-forwarded
 to main `638fe1f`, retaining the remote audit receipt/workflow and progress.
