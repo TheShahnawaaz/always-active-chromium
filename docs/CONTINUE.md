@@ -49,6 +49,35 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Automatic Windows stage 1 [41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999)
+has started from `ci-source-dd4dfe7709ce`.** It was admitted at **07:42:10 UTC /
+13:12 IST November 3** after the corrected stage's complete checkpoint save.
+Preserve this continuation; no manual duplicate was dispatched. Its 270-minute
+absolute cutoff is approximately **12:12 UTC / 17:42 IST**, with the six-hour
+job limit approximately **13:42 UTC / 19:12 IST**. These are stage limits, not
+completion estimates. Mac's verified e146 delivery remains unchanged.
+
+The preceding corrected stage **41567711474** is terminal/success. Its final
+log positively proves that the former missing-header failure is repaired:
+`fido_request_handler_base.obj` completed at **03:13:05 UTC** and
+`fido_discovery_factory.obj` at **03:13:07 UTC**; the Windows WebAuthn API objects
+also compiled. No compiler failure occurred. The final resumed Ninja counter
+was **9,677/24,978**, leaving **15,301** actions in that invocation. Later graph
+changes may alter that count; it is not an overall percentage or a short ETA.
+
+Its checkpoint draft **432375839**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41567711474-1`, is verified complete:
+five parts totaling **8,351,681,125 bytes**. Ready asset **704759000** is 6,027
+bytes, SHA-256
+`e9060d812855bab4045c81b005be1d4611a9219e8b144518033cc6311f3d0b3b`.
+Ready bytes, exact source/native/version/revision, build-ready/pending state,
+authenticated LASTCHANGE metadata and every server part digest/size matched.
+Save completed **07:42:08 UTC** in **29m25s**, followed by the configured
+automatic dispatch. The old job ended at 07:42:15 UTC. This cache supersedes
+the earlier failed-stage cache; normal cleanup may remove older drafts.
+
+The following paragraphs retain the prior observation-time details.
+
 **Corrected Windows run [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
 is saving its normal-cutoff checkpoint at immutable `ci-source-dd4dfe7709ce`.**
 Compilation ended **07:12:37 UTC / 12:42 IST** at the configured absolute budget.
@@ -276,7 +305,7 @@ avoid racing an existing automatic continuation with a second queued job.
 ## Next actions
 
 1. Inspect actual live runs and queued jobs before dispatching anything.
-   Preserve corrected Windows 41567711474 and its configured continuation;
+   Preserve corrected Windows continuation 41598060999 and its configured chain;
    no competing dispatch is needed. Diagnose explicit compile outcomes and
    verify each completed ready manifest before treating a cache as usable.
 2. Use the latest committed fix with a matching immutable `ci-source-<HEAD12>`

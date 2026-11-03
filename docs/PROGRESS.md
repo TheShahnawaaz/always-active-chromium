@@ -2,6 +2,23 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows WebAuthn repair is observed working; automatic stage 1 is admitted.**
+Terminal-success [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
+compiled both formerly failing FIDO objects at 03:13:05/03:13:07 UTC, plus the
+Windows WebAuthn API objects. Its final counter was **9,677/24,978**, leaving
+15,301 actions in that invocation, not an overall percentage or reliable ETA.
+The normal-cutoff checkpoint is complete: five parts, **8,351,681,125 bytes**,
+draft **432375839**. Ready asset **704759000**, 6,027 bytes, SHA-256
+`e9060d812855bab4045c81b005be1d4611a9219e8b144518033cc6311f3d0b3b`,
+matches downloaded bytes, exact source/native/pending identity, authenticated
+revision metadata and all server part sizes/digests. Save took **29m25s**.
+
+The configured continuation [41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999)
+started at **13:12 IST**, same immutable `ci-source-dd4dfe7709ce`; no manual
+duplicate or cancellation occurred. Preserve its restore/compile/save chain.
+Its next absolute cutoff is approximately **17:42 IST**, with six-hour limit
+**19:12 IST**, not a completion estimate. Mac's verified package is unchanged.
+
 **Corrected Windows reached its normal cutoff at 12:42 IST** in
 [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474).
 The actual compiler report is **pending/exit 2, complete capture, no events**,
