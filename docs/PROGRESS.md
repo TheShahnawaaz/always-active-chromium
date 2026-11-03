@@ -2,6 +2,15 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows compilation and packaging completed at 19:51 IST / 14:21 UTC** in
+[41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497).
+All three finite compiler assets and two checksum entries were independently
+downloaded/hash verified: actual **complete, exit 0, no events, complete capture**,
+exact `dd4dfe7709ce` source/workflow. Packaging passed at 14:21:50 UTC and real
+native/core verification began immediately. A package alone is not delivery
+success: retain upload/cache and finish fresh installer, normal Store and actual
+native Windows UI evidence before declaring completion. Mac remains unchanged.
+
 **Windows stage 2 resumed compilation at 18:41 IST / 13:11:59 UTC** in
 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497).
 Its cache restored in 20m59s, mandatory source/tool/native/GN preparation passed

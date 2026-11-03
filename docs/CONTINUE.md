@@ -50,7 +50,8 @@ fixtures, a compile, a package, or reference Chrome results alone.
 ## Current source and observed results
 
 **Windows automatic stage 2 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
-is compiling at immutable `ci-source-dd4dfe7709ce`.** It was admitted at **12:45:53
+has compiled and packaged at immutable `ci-source-dd4dfe7709ce`; core tests are
+running.** It was admitted at **12:45:53
 UTC / 18:15 IST November 3**, after stage 1's complete checkpoint save. Preserve
 its source/restore/compile/save chain; no duplicate was manually dispatched.
 Full source/workflow: `dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`, with both
@@ -64,6 +65,14 @@ preparation passed without diagnostic events, and the declared-input audit passe
 assets and four manifest entries match independently downloaded bytes, API sizes/
 digests and exact `dd4dfe7709ce` source/workflow. Real compilation resumed at
 **13:11:59 UTC / 18:41 IST**. Preserve this healthy compile and eventual save.
+
+Compilation completed at **14:21:41 UTC / 19:51 IST**, actual diagnostics
+**complete/exit 0, complete capture, no events**. All three finite compiler
+assets/two manifest entries match downloaded hashes, server sizes/digests and
+exact source/workflow. Packaging passed **14:21:48–14:21:50 UTC** and real
+native behavior/core checks began at 14:21:50. This is not yet a verified delivery:
+retain the package/evidence upload and completed cache save, then perform fresh
+per-user installer, normal Store and actual Windows UI verification.
 
 Stage 1 **41598060999** is terminal/success. Its final Ninja counter was
 **12,058/15,301**, leaving **3,243** actions in that invocation. That does not
@@ -99,7 +108,8 @@ eight-file/101,632-byte Chromium-pinned dependency at revision
 All 144 local Python tests ran successfully (15 platform/tool/source skips);
 eight focused hydration guards and real-archive unchanged-mtime resume passed.
 Browser source, compiler pins and both native fingerprints remain unchanged.
-No Windows installer exists yet.
+A real Windows installer is packaged; its draft upload and verified delivery
+are still pending. The successful Mac package remains unchanged.
 
 **Coordinator execution was restored at 13:03 UTC / 18:33 IST.** A new workspace
 message arrived, `pwd` succeeded, and the clean local checkout fast-forwarded to
