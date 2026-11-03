@@ -2,6 +2,15 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows stage 1 resumed at 13:40 IST** in
+[41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999).
+The verified checkpoint restored 07:45:12–08:08:51 UTC, mandatory preparation
+passed without events, and all **75,790** declared leaves passed (zero missing,
+no errors; 33.172s). All six finite assets/four checksum entries, API sizes/
+digests and exact `dd4dfe7709ce` source/workflow were independently verified.
+No duplicate build, cancellation or Mac artifact change occurred. Compilation,
+real installer/core/delivery/Store verification and Windows UI review remain.
+
 **Windows WebAuthn repair is observed working; automatic stage 1 is admitted.**
 Terminal-success [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
 compiled both formerly failing FIDO objects at 03:13:05/03:13:07 UTC, plus the

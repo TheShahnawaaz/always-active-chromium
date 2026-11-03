@@ -50,12 +50,19 @@ fixtures, a compile, a package, or reference Chrome results alone.
 ## Current source and observed results
 
 **Automatic Windows stage 1 [41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999)
-has started from `ci-source-dd4dfe7709ce`.** It was admitted at **07:42:10 UTC /
+is compiling from `ci-source-dd4dfe7709ce`.** It was admitted at **07:42:10 UTC /
 13:12 IST November 3** after the corrected stage's complete checkpoint save.
 Preserve this continuation; no manual duplicate was dispatched. Its 270-minute
 absolute cutoff is approximately **12:12 UTC / 17:42 IST**, with the six-hour
 job limit approximately **13:42 UTC / 19:12 IST**. These are stage limits, not
 completion estimates. Mac's verified e146 delivery remains unchanged.
+
+It restored the verified cache **07:45:12–08:08:51 UTC**, completed mandatory
+source/tool/native/GN preparation without diagnostic events, and passed its audit:
+**75,790 checked, zero missing, no errors**, 33.172s. All six preparation/input
+assets and four manifest entries independently match downloaded hashes, server
+sizes/digests and exact `dd4dfe7709ce` source/workflow. Actual compilation resumed
+at **08:10:31 UTC / 13:40 IST**. Preserve the active compile and eventual save.
 
 The preceding corrected stage **41567711474** is terminal/success. Its final
 log positively proves that the former missing-header failure is repaired:
