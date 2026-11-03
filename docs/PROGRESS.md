@@ -2,6 +2,28 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows stage 2 is active; stage 1 is independently verified as a normal cutoff.**
+[41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
+started at **18:15 IST**, same immutable `ci-source-dd4dfe7709ce`. Prior stage
+41598060999 completed **12,058/15,301** actions in its invocation (3,243 left
+then), not an overall percentage or short ETA. Save took **33m09s** and automatic
+continuation was preserved without a manual duplicate.
+
+A bounded standard `ubuntu-latest` [audit 41638507119](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638507119)
+passed while direct coordinator execution remained unavailable. It downloaded
+and hash-verified all three compiler assets/two manifest entries: actual pending,
+exit 2, complete capture, zero events, no compiler or logging error. The valid
+Ninja log grew 12,986,938 → 15,792,205 bytes. It also hashed ready asset 705580125
+(6,027 bytes, SHA-256 `9746dcdda88798c84e992a03fa8cd0ca15d0534457ef70afefc7fe96e342f56a`),
+verified exact source/native/pending identity and authenticated revision record,
+and matched every server part digest/size: **8,849,247,927 bytes**, five parts,
+draft **432649986**. Large archive parts were not downloaded by this separate
+audit; the resumed builder verifies them during restoration. The [finite receipt](evidence/windows-41598060999-audit.json)
+retains the actual results. This restores small-artifact verification through
+supported GitHub tooling without changing access settings, native source or
+healthy builds. Direct cloud execution still needs reconnection; GitHub reads
+and repository writes continue. Mac remains verified and unchanged.
+
 **Windows stage 1 41598060999 is saving its checkpoint.** Compilation ended
 at **12:12:35 UTC**, near its configured deadline; save began **12:12:42 UTC**.
 Compiler diagnostic draft **432649898**, tag `build-compile-win-x64-41598060999-1`,
