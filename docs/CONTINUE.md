@@ -94,27 +94,21 @@ eight focused hydration guards and real-archive unchanged-mtime resume passed.
 Browser source, compiler pins and both native fingerprints remain unchanged.
 No Windows installer exists yet.
 
-**Coordinator execution remains unavailable since 11:13 UTC.** Even `pwd` cannot
-start: the shell reports `No usable execution environment is available`. The
-same managed cloud computer is marked unavailable to this task while the provider
-reports current running/connected state, enforced policy, no failure and no
-retained diagnostic records. This is an unexplained execution availability
-discrepancy, not a GitHub build failure. The affected environment is
-`ccarenv_b64_Y2NhcmVudl9kMmJlOWVlNzE5NjA4MTkxOTFkNDFlZjlkZWI1ZmFhNw`;
-it is not the user's Mac or a GitHub builder. No reconnect tool is exposed.
-The smallest recovery is to reattach this already-published cloud environment
-to the same task until execution becomes available; no new computer, credential
-move or network-policy change is needed. A reconnect request is pending.
+**Coordinator execution was restored at 13:03 UTC / 18:33 IST.** A new workspace
+message arrived, `pwd` succeeded, and the clean local checkout fast-forwarded to
+main `638fe1f`. The reconnection request is resolved; no answer or new approval
+is needed. Between 11:13 and 13:03 UTC the executor reported unavailable while
+the provider reported running/connected with no failure/retained diagnostics.
+Its underlying cause was not exposed. No credential or network-policy change
+was made, and healthy GitHub jobs were never restarted or cancelled.
 
-GitHub connector reads and repository writes still work. The existing source and
-builds were preserved. A bounded read-only audit now runs successfully through
+The bounded read-only audit filled that gap through
 `.github/workflows/audit-current-windows-stage.yml` on standard `ubuntu-latest`,
-using the repository's own scoped job token. It changes no browser/build/cache
-and needs no external or paid builder. The current audit is pinned to stage 1;
-review/update exact IDs/source before adapting it. Its finite report is actual
-download/hash evidence, not browser runtime proof. Continue supported GitHub work
-while direct execution is unavailable. Before later local edits, fetch/sync main:
-remote documentation and this audit workflow advanced beyond local `4910217`.
+using the repository's own scoped job token. Its receipt above is actual small
+asset download/hash evidence, not browser runtime proof. This historical audit
+is pinned to stage 1 and is useful only while that cache exists; do not rerun a
+retired checkpoint or confuse its failure with a browser failure. Direct CLI
+and the existing final-delivery workflow can now be used normally.
 
 **Mac is delivered as a verified development package; Windows remains active.**
 Final Mac delivery **41533441385**, controller `68a55d8132e9`, passed real

@@ -2,6 +2,13 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Coordinator execution recovered at 18:33 IST / 13:03 UTC.** The new workspace
+message was followed by a successful `pwd`; the clean checkout fast-forwarded
+to main `638fe1f`, retaining the remote audit receipt/workflow and progress.
+The reconnection request is resolved with no answer or further approval needed.
+The unexplained execution gap changed no credentials, policy or native builds.
+Windows stage 2 continues restoring its verified cache; Mac remains unchanged.
+
 **Windows stage 2 is active; stage 1 is independently verified as a normal cutoff.**
 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
 started at **18:15 IST**, same immutable `ci-source-dd4dfe7709ce`. Prior stage
