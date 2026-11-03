@@ -2,6 +2,22 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Corrected Windows run [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
+was admitted at 08:11 IST**, immutable source `ci-source-dd4dfe7709ce`. Exactly
+one dispatch followed the terminal failed run and verification of its complete
+**8,149,383,278-byte**, five-part checkpoint. Ready asset 703999235 is 3,303 bytes,
+SHA-256 `e9082cbc1a76c41a98f6e16c5a91d61bcc980224a5d618d43d9f1dedab7b9489`;
+its bytes, identity and every server part size/digest matched. The save took
+19m15s, and the old automatic continuation was skipped. Mac artifacts remain
+unchanged.
+
+The failed invocation's final Ninja counter was **6,785/31,709**, including
+two failed FIDO commands. The 24,924 unattempted actions, failed work to retry
+and forthcoming metadata regeneration are separate; this is no overall
+percentage or reliable short ETA. The new source restores the exact WebAuthn
+dependency before compilation, retains the input audit, and includes the proven
+revision metadata repair and 270-minute budget. Native fingerprints are unchanged.
+
 **Windows dependency repair is ready; the failed stage's checkpoint is saving.**
 [41541479553](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41541479553)
 stopped before its budget with missing

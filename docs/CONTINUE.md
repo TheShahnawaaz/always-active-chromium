@@ -49,6 +49,26 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Corrected Windows retry 41567711474 is admitted at `ci-source-dd4dfe7709ce`.**
+It was dispatched exactly once at **02:41:57 UTC / 08:11 IST November 3**, only
+after prior run 41541479553 was terminal/failure and its new checkpoint verified.
+Inputs: `platform=win-x64`, `bootstrap_only=false`, `migrate_native=false`,
+`auto_resume=true`, stage 0 / max 48. No competing or cancelled healthy job.
+This source includes the pinned WebAuthn closure, existing input audit,
+authenticated LASTCHANGE metadata fix and 270-minute absolute build budget.
+
+The retained failed-stage checkpoint is complete in draft **432206655**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41541479553-1`: five parts totaling
+**8,149,383,278 bytes**. Ready asset **703999235** is 3,303 bytes, SHA-256
+`e9082cbc1a76c41a98f6e16c5a91d61bcc980224a5d618d43d9f1dedab7b9489`.
+Its bytes, build-ready/failed state, source `81735e8f2ce2`, native16 fingerprint,
+version/revision and all five server part digests/sizes were verified. Save
+completed at 02:40:05 UTC in **19m15s**; automatic continuation was skipped for
+the real compiler failure. The final counter was **6,785/31,709**, including
+the two failed FIDO commands: 24,924 actions were unattempted at that point,
+plus failed work to retry and any later metadata regeneration. It is not an
+overall completion percentage or a finish estimate. Mac delivery remains e146.
+
 **Windows stage 1 found a recoverable missing source dependency.** Actual
 hash-verified diagnostics from run **41541479553** report `status=failed`, exit 1,
 and missing `third_party/microsoft_webauthn/src/webauthn.h` in the two FIDO
