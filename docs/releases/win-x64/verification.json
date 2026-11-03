@@ -86,6 +86,6 @@
     "Downloaded unsigned installer approval UI was not exercised by the hosted command-line installation."
   ],
   "tested_runner": "windows-2025-vs2026 x64",
-  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-db57e5eed15a0d547e9d",
+  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-6802c945109d0b8fbddc",
   "draft_release": true
 }

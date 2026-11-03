@@ -6,8 +6,10 @@ extension system. No extension, debugging connection or helper is needed in
 normal use.
 
 DOWNLOAD
-https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-db57e5eed15a0d547e9d
+https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-6802c945109d0b8fbddc
 This is a draft release. Sign in to GitHub with repository release access.
+A stable tag-based CLI alternative is:
+  gh release download build-156.0.8078.80-win-x64-cfc3210920f1-dd4dfe7709ce --repo TheShahnawaaz/always-active-chromium --pattern always-active-chromium-156.0.8078.80-win-x64-installer.exe
 
 VERIFY
 File: always-active-chromium-156.0.8078.80-win-x64-installer.exe
