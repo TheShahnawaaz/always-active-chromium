@@ -49,6 +49,17 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Coordinator execution became unavailable at 11:13 UTC November 3.** GitHub
+still reports Windows 41598060999 compiling; it was preserved without a duplicate
+or cancellation. The shell tool reports `No usable execution environment is
+available`, while the environment status API reports running/connected with no
+provider failure. This is a coordinator execution/readiness discrepancy, not a
+GitHub build failure. Read-only GitHub monitoring continues. Reconnect the
+existing execution environment for new artifact downloads/hash verification and
+the final delivery dispatch; do not restart healthy remote builds or move
+credentials. A reconnect request is pending. The latest source/progress records
+are committed to main and the current build source remains immutable dd4dfe.
+
 **Automatic Windows stage 1 [41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999)
 is compiling from `ci-source-dd4dfe7709ce`.** It was admitted at **07:42:10 UTC /
 13:12 IST November 3** after the corrected stage's complete checkpoint save.
