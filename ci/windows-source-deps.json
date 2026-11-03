@@ -596,6 +596,64 @@
           "size": 896
         }
       ]
+    },
+    {
+      "relative": "src/third_party/microsoft_webauthn/src",
+      "repository": "https://chromium.googlesource.com/external/github.com/microsoft/webauthn.git",
+      "revision": "ef82c157125a0490e05f6ea82a7adb1b8e1bad08",
+      "tree": "5d68c9cc6c711940710d72462ced8817fcc56334",
+      "archive_url": "https://codeload.github.com/microsoft/webauthn/tar.gz/ef82c157125a0490e05f6ea82a7adb1b8e1bad08",
+      "archive_prefix": "webauthn-ef82c157125a0490e05f6ea82a7adb1b8e1bad08",
+      "files": [
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "blob": "3e759b75bf455ac809d0987d369aab89137b5689",
+          "size": 5582
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "blob": "21071075c24599ee98254f702bcfc504cdc275a6",
+          "size": 1162
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "blob": "08775bf24c60008ffb83aeaa68991f5208904b58",
+          "size": 1728
+        },
+        {
+          "path": "SECURITY.md",
+          "mode": "100644",
+          "blob": "e138ec5d6a77c5e6e09346a69cbdc90c85a3806f",
+          "size": 2757
+        },
+        {
+          "path": "pluginauthenticator.h",
+          "mode": "100644",
+          "blob": "edb3ffd4f004e0834d0677330ad48496c13c6d5d",
+          "size": 8593
+        },
+        {
+          "path": "pluginauthenticator.idl",
+          "mode": "100644",
+          "blob": "b33ca0615a277fdb45b9ab3ab660cf3bd9d5090d",
+          "size": 3052
+        },
+        {
+          "path": "webauthn.h",
+          "mode": "100644",
+          "blob": "b5eaca30f1ca71050d0df945148069695b650948",
+          "size": 56077
+        },
+        {
+          "path": "webauthnplugin.h",
+          "mode": "100644",
+          "blob": "64f02788f5126db03a9db06f5624a59e3e3d3a4f",
+          "size": 22681
+        }
+      ]
     }
   ]
 }

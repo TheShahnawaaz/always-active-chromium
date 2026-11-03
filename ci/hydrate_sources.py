@@ -1,4 +1,4 @@
-"""Hydrate only two audited Windows git DEPS, including headers and licenses."""
+"""Hydrate audited Windows git DEPS, including headers and licenses."""
 import hashlib
 import gzip
 import json
@@ -22,6 +22,9 @@ ALLOWED = {
     'src/third_party/microsoft_multimedia_redirection/src': (
         'https://chromium.googlesource.com/external/github.com/microsoft/multimedia-redirection.git',
         '8b1d8893d126547309f1bab8d8232418aa7c7109', 'b5f607aef6da553c78d68dbc4aa50657e4d6608d'),
+    'src/third_party/microsoft_webauthn/src': (
+        'https://chromium.googlesource.com/external/github.com/microsoft/webauthn.git',
+        'ef82c157125a0490e05f6ea82a7adb1b8e1bad08', '5d68c9cc6c711940710d72462ced8817fcc56334'),
 }
 
 
@@ -237,7 +240,7 @@ def hydrate_one(src, scope, enabled, pin, downloader=download):
 
 def hydrate_windows_sources(src, scope, enabled):
     manifest = json.loads(MANIFEST.read_text(encoding='utf-8'))
-    if (manifest['schema'] != 1 or len(manifest['dependencies']) != 2 or
+    if (manifest['schema'] != 1 or len(manifest['dependencies']) != len(ALLOWED) or
             {pin['relative'] for pin in manifest['dependencies']} != ALLOWED.keys()):
         raise RuntimeError('Unexpected pinned Windows source manifest')
     for pin in manifest['dependencies']:

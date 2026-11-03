@@ -49,6 +49,35 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
+**Windows stage 1 found a recoverable missing source dependency.** Actual
+hash-verified diagnostics from run **41541479553** report `status=failed`, exit 1,
+and missing `third_party/microsoft_webauthn/src/webauthn.h` in the two FIDO
+objects. Its valid Ninja log grew from 8,121,013 to 9,749,935 bytes, so completed
+objects are being saved in draft **432206655**. **Do not cancel that live save.**
+The REST step conclusion is success because of `continue-on-error`; the explicit
+compile report/outcome is failure and must not be relabeled as a normal cutoff.
+No package exists from that run, and its automatic pending-stage continuation
+will be skipped for this compiler failure.
+
+The fix adds the exact upstream WebAuthn Git DEPS to the existing bounded source
+hydrator: revision `ef82c157125a0490e05f6ea82a7adb1b8e1bad08`, tree
+`5d68c9cc6c711940710d72462ced8817fcc56334`, eight complete files/101,632 bytes,
+including the header and MIT license. All file modes/blob IDs reconstruct the
+pinned tree; the real small archive installs through the production hydrator and
+resumes without changing matching mtimes. Its archive SHA-256 is
+`30d68f0da7a75e787a5a2b8436668c4e00e7648ac56231304f85bd5611eca28c`.
+All 144 local Python tests run successfully with 15 platform/tool/source-fixture
+skips; eight focused hydration tests pass. Both native fingerprints remain
+unchanged. The prior 75,790-leaf audit excluded compiler-discovered headers, so
+its pass did not establish this missing include's existence.
+
+Wait for a complete ready manifest and terminal old run, verify that new cache,
+then dispatch a single corrected Windows build from the new immutable fix tag
+with `migrate_native=false`, `bootstrap_only=false`, `auto_resume=true`.
+The corrected source also carries the already-tested authenticated LASTCHANGE
+metadata repair and the longer 270-minute budget. Preserve the successful Mac
+delivery; no Mac rebuild is needed for this Windows-only hydration repair.
+
 **Current Windows stage 1 is compiling.** Run **41541479553** successfully
 restored the verified checkpoint (22:59:17–23:17:51 UTC), completed source/tool/GN
 preparation without diagnostic events, and passed its declared-input audit:

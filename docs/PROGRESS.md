@@ -2,6 +2,25 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows dependency repair is ready; the failed stage's checkpoint is saving.**
+[41541479553](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41541479553)
+stopped before its budget with missing
+`third_party/microsoft_webauthn/src/webauthn.h` in FIDO compilation. Its explicit
+diagnostics say failed/exit 1, despite the REST step's effective success
+conclusion under `continue-on-error`. The three diagnostics and both checksum
+entries were independently hash verified. Newly completed objects are retained
+by the ongoing save to draft 432206655; that save remains undisturbed.
+
+The correction materializes the complete eight-file/101,632-byte WebAuthn Git
+dependency at Chromium's exact DEPS commit/tree, including its MIT license.
+The actual small archive passed full blob/tree verification and production
+installation/resume with all matching mtimes preserved. Eight hydration guards
+pass; the complete local Python suite ran 144 tests with 15 platform/tool/source
+skips. Browser source, compiler pins and native fingerprints are unchanged.
+Hosted repaired compilation is still pending. The next single retry must use
+the new immutable fix source after this checkpoint is complete and the old run
+is terminal; no cold build, live cancellation or duplicate dispatch is needed.
+
 **Windows stage 1 resumed compilation at 04:49 IST** in
 [41541479553](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41541479553).
 Checkpoint restoration, mandatory source/tool/GN preparation and the input audit

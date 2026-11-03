@@ -31,14 +31,26 @@ same checks hydrate the pinned `README.chromium` and its referenced GPL-2.0
 the executable must report GNU gperf 3.0.1. Resumes verify and reuse the same
 binary without changing its mtime. This preserves the actual Windows pin;
 the separate Linux CIPD gperf dependency is not substituted.
-The Windows-only DirectX-Headers and multimedia-redirection source roots are
-materialized from their exact DEPS commits. `windows-source-deps.json` lists
-their complete 96-file closure, including headers and licenses. Its file modes,
+The Windows-only DirectX-Headers, multimedia-redirection and Microsoft WebAuthn
+source roots are materialized from their exact DEPS commits.
+`windows-source-deps.json` lists their complete 104-file closure, including
+headers and licenses. Its file modes,
 Git blob IDs and sizes reconstruct each pinned Git tree ID. Bounded official
 commit archives are verified against every file before installation; existing
 matching files retain their mtimes, while foreign edits/extra files are rejected.
 The archive SHA-256 and complete tree/commit provenance enter `dependencies.json`.
 No upstream checkout hook or hydration script runs.
+The WebAuthn root is the pinned `ef82c157125a0490e05f6ea82a7adb1b8e1bad08`
+commit, tree `5d68c9cc6c711940710d72462ced8817fcc56334`: eight files,
+101,632 bytes, including the exact `webauthn.h` and MIT license. This repairs the
+real FIDO compilation failure in run 41541479553. Its header-only GN source set
+does not make the header a Ninja leaf input, so the existing read-only leaf audit
+could pass while a compiler-discovered include remained absent. Preparation now
+verifies the complete dependency closure before GN/compilation. No SDK header
+substitution, system-DLL replacement, browser source change or native fingerprint
+change is involved. The real small archive and idempotent mtime-preserving
+installation were verified separately from the synthetic policy fixtures;
+actual repaired Windows compilation remains pending the hosted retry.
 Dawn's source generator uses its own nested
 [DEPS-pinned Go 1.26.6](https://dawn.googlesource.com/dawn/+/8114a24a35eed1db88d1d897e8bd193a8c334712/DEPS):
 the host Mac arm64 or Windows amd64 CIPD package is SHA-256 checked against

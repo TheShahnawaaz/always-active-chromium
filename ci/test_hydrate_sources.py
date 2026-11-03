@@ -130,9 +130,9 @@ class SourceHydrationTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'decompressed byte bounds'):
             reader.read(100)
 
-    def test_both_real_complete_manifests_reconstruct_exact_pinned_git_trees(self):
+    def test_all_real_complete_manifests_reconstruct_exact_pinned_git_trees(self):
         manifest = json.loads(hydration.MANIFEST.read_text())
-        expected = {(81, 4265112), (15, 145661)}
+        expected = {(81, 4265112), (15, 145661), (8, 101632)}
         actual = set()
         for pin in manifest['dependencies']:
             self.assertEqual(hydration.tree_digest(pin['files']), pin['tree'])
@@ -140,6 +140,31 @@ class SourceHydrationTests(unittest.TestCase):
             self.assertIn('LICENSE', {item['path'] for item in pin['files']})
             actual.add((len(pin['files']), sum(item['size'] for item in pin['files'])))
         self.assertEqual(actual, expected)
+
+    def test_webauthn_complete_closure_is_selected_and_foreign_archive_refuses_before_writes(self):
+        manifest = json.loads(hydration.MANIFEST.read_text())
+        webauthn = next(pin for pin in manifest['dependencies'] if pin['relative'].endswith('microsoft_webauthn/src'))
+        self.assertIn('webauthn.h', {item['path'] for item in webauthn['files']})
+        with mock.patch.object(hydration, 'hydrate_one', return_value={}) as hydrate:
+            hydration.hydrate_windows_sources(Path('/unused/src'), {}, bool)
+            self.assertEqual([call.args[3]['relative'] for call in hydrate.call_args_list],
+                             [pin['relative'] for pin in manifest['dependencies']])
+        # A new allowed root must not create an arbitrary download/write path.
+        webauthn['archive_url'] = webauthn['archive_url'].replace('codeload.github.com', 'foreign.invalid')
+        with mock.patch.object(Path, 'read_text', return_value=json.dumps(manifest)), \
+                mock.patch.object(hydration, 'hydrate_one') as hydrate:
+            with self.assertRaisesRegex(RuntimeError, 'archive identity'):
+                hydration.hydrate_windows_sources(Path('/unused/src'), {}, bool)
+            hydrate.assert_not_called()
+
+    def test_unlisted_windows_source_root_cannot_expand_the_allowlist(self):
+        manifest = json.loads(hydration.MANIFEST.read_text())
+        manifest['dependencies'].append(dict(manifest['dependencies'][-1], relative='src/third_party/unlisted/src'))
+        with mock.patch.object(Path, 'read_text', return_value=json.dumps(manifest)), \
+                mock.patch.object(hydration, 'hydrate_one') as hydrate:
+            with self.assertRaisesRegex(RuntimeError, 'Unexpected pinned Windows source manifest'):
+                hydration.hydrate_windows_sources(Path('/unused/src'), {}, bool)
+            hydrate.assert_not_called()
 
 
 if __name__ == '__main__':
