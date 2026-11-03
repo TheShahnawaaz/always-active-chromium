@@ -1,9 +1,10 @@
 # Browser identity and distribution
 
-The Mac development package has passed fresh-extraction, native behavior and
-normal Store verification in run 41533441385, followed by visual review of its
-actual normal-window image. Windows delivery remains pending. Exact results and
-limits are in PROGRESS.md, UI-REVIEW.md and the release documentation.
+The Mac development package passed fresh extraction, native behavior and normal
+Store verification in run 41533441385. Windows passed real per-user installation,
+all behavior modes and normal Store verification in run 41654101196. Both actual
+normal-window images were visually reviewed. Exact results and limits are in
+PROGRESS.md, UI-REVIEW.md and the platform release documentation.
 
 ## Appearance and identity
 
@@ -147,8 +148,8 @@ Actual image quality and completeness require observed pixels and manual review.
 
 ## Installation procedure
 
-These instructions describe the packages. **Mac has passed fresh delivery/Store
-checks and normal-window visual review; Windows verification remains pending.**
+These instructions describe the packages. **Both platforms have passed fresh
+delivery/Store checks and normal-window visual review.**
 Use only a package explicitly accompanied
 by passing delivery evidence and its matching SHA-256 manifest. Compiler
 checkpoints and diagnostic drafts are not browser downloads.

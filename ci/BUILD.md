@@ -205,6 +205,17 @@ Windows uses three compilation jobs and one link at a time. The standard
 extension platform, Web Store integration, sandbox, UI and upstream security
 defaults are retained. No paid runner or external compute fallback exists.
 
+Windows core tests now install the actual packaged mini-installer through the
+same guarded default per-user path as fresh delivery, then test that installed
+x64 executable. The installer refuses an existing Chromium identity and leaves
+Google Chrome separate. Its executable/version and unchanged installer hashes
+are recorded in the build manifest. This fixes the observed AppContainer read/
+execute denial from the archive-restored build directory in 41638453497:
+compilation completed, but uninstalled-tree startup failed before fixture loads.
+Fresh installed delivery 41654101196 passed all modes and 20 normal Store phases
+without changing the sandbox, browser flags or native bytes. Do not disable the
+sandbox or relabel the original build-tree failure as a clean core result.
+
 Seven GiB on Mac remains a material uncertainty. Upstream's no-dSYM Mac linker
 heuristic budgets roughly 4 GiB per link, but only an actual full build can
 establish that this version links on this runner. An OOM or exhausted disk is a

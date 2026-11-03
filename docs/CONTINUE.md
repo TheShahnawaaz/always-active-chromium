@@ -49,67 +49,69 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
-**Windows automatic stage 2 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
-has compiled and packaged at immutable `ci-source-dd4dfe7709ce`; core tests are
-running.** It was admitted at **12:45:53
-UTC / 18:15 IST November 3**, after stage 1's complete checkpoint save. Preserve
-its source/restore/compile/save chain; no duplicate was manually dispatched.
-Full source/workflow: `dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`, with both
-matching final build tags already present. Its 270-minute absolute cutoff is
-approximately **17:16 UTC / 22:46 IST**, with six-hour limit **18:46 UTC /
-00:16 IST November 4**. These are stage limits, not completion estimates.
+**Both actual development packages have passed fresh delivery and UI review.**
+Mac remains the unchanged e146 package below. Windows source
+`ci-source-dd4dfe7709ce` passed real default per-user installation, baseline
+**32/32**, native **38/38**, optional **55/55**, paired no-debug control/native
+**7/7 each**, and all **20/20** normal uBlock Origin Lite Store phases in
+[41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196).
+Controller: `03dc3d717e0cac1035e00f8bf717687513dce36d`. All seven finite delivery
+assets and six checksum entries were independently downloaded/hash verified.
+The actual **1044×788** installed-browser PNG was visually inspected: full
+standard Chromium controls and rendered fixture, with no added always-active
+controls/banners. Original automated review fields remain unchanged; see
+`docs/releases/win-x64/`, `docs/UI-REVIEW.md` and the separate visual review.
 
-Its cache restored **12:49:31–13:10:30 UTC**, mandatory source/tool/native/GN
-preparation passed without diagnostic events, and the declared-input audit passed:
-**75,790 checked, zero missing, no errors**, 28.562s. All six preparation/input
-assets and four manifest entries match independently downloaded bytes, API sizes/
-digests and exact `dd4dfe7709ce` source/workflow. Real compilation resumed at
-**13:11:59 UTC / 18:41 IST**. Preserve this healthy compile and eventual save.
+Windows installer draft **432796940**, tag
+`build-156.0.8078.80-win-x64-cfc3210920f1-dd4dfe7709ce`, has six independently
+hash-verified build assets/five checksum entries. Installer asset **705879122**
+is **215,424,512 bytes**, SHA-256
+`4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3`.
+Installed x64 executable: **4,200,448 bytes**, SHA-256
+`a622201cb3501ea22b2851878f144c2a70270bccc58cef333f8bcfa6727030b4`.
+Delivery draft **432809252** contains the verified evidence and PNG, asset
+**705910479**, SHA-256
+`dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343`.
+Store `no_update` is not a genuine newer-version upgrade. Persisted registration
+absence is verified; absence of every removed-extension identifier is not claimed.
 
-Compilation completed at **14:21:41 UTC / 19:51 IST**, actual diagnostics
-**complete/exit 0, complete capture, no events**. All three finite compiler
-assets/two manifest entries match downloaded hashes, server sizes/digests and
-exact source/workflow. Packaging passed **14:21:48–14:21:50 UTC** and real
-native behavior/core checks began at 14:21:50. This is not yet a verified delivery:
-retain the package/evidence upload and completed cache save, then perform fresh
-per-user installer, normal Store and actual Windows UI verification.
+**One CI layout correction remains to validate before final closeout.** Original
+build [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
+compiled at 14:21:41 UTC and packaged at 14:21:50: actual complete/exit 0, no
+compiler events, all finite diagnostics verified. Its core checks against the
+uninstalled `D:\aacc\src\out\AlwaysActive\chrome.exe` failed at startup:
+Chromium's AppContainer `AccessCheck` cannot read/execute that build-tree file,
+error 0x5, followed by a sandbox policy fatal check. The actual published
+`workflow_test_outcome` is failure despite the REST effective step success under
+`continue-on-error`. Do not relabel that build-tree failure. The unchanged
+normal installer passed every fresh test with the sandbox and flags unchanged.
 
-Stage 1 **41598060999** is terminal/success. Its final Ninja counter was
-**12,058/15,301**, leaving **3,243** actions in that invocation. That does not
-establish an overall percentage, package or short ETA. Final logs show the
-budget interruption, no compiler failure. Independent standard GitHub-hosted
-audit **[41638507119](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638507119)**,
-controller `d2c40b11e2ecf59478bfefaa7e6affbb56f684cc`, downloaded all three finite
-compiler assets and verified API sizes/digests plus both manifest entries.
-The actual report is **pending, exit 2, complete capture, no events**, no normal
-compiler failure or logging error. Its valid Ninja log grew **12,986,938 →
-15,792,205 bytes**. See the original finite audit receipt:
-[windows-41598060999-audit.json](evidence/windows-41598060999-audit.json).
+The prepared correction adds `ci/install_build.py` and a Windows-only workflow
+step to install the actual task-owned mini-installer before core checks, using
+the same already-proven clean-identity/per-user/x64/version guards as delivery.
+It binds source/workflow/manifest, unchanged installer bytes and installed exe
+hash, records installation provenance in the build manifest, and selects that
+executable for the unchanged tests. It refuses existing Chromium and preserves
+stock Google Chrome. No ACL, sandbox, native source, compiler pin or fingerprint
+is changed. **148 local Python tests pass (15 platform/tool/source skips)**,
+including four new host/provenance/mutation guards; workflow YAML parses.
 
-The new completed checkpoint is draft **432649986**, tag
-`checkpoint-win-x64-cfc3210920f1d83aa4ac-41598060999-1`: five parts totaling
-**8,849,247,927 bytes**. Ready asset **705580125** is **6,027 bytes**, SHA-256
-`9746dcdda88798c84e992a03fa8cd0ca15d0534457ef70afefc7fe96e342f56a`.
-The independent audit hashed the downloaded ready bytes and verified exact
-source/native/version/revision, build-ready/pending state, authenticated source
-revision record identity and every part's server digest/size. It did not download
-the large archive parts; restoration verifies those bytes on the next builder.
-Save ran **12:12:42–12:45:51 UTC**, **33m09s**, followed by the configured
-automatic continuation. The old job ended at 12:45:57 UTC. This cache supersedes
-the earlier cache; normal cleanup may remove older same-configuration drafts.
+The old run is still saving its completed compiler outputs to draft **432797322**,
+tag `checkpoint-win-x64-cfc3210920f1d83aa4ac-41638453497-1`; at 14:44 UTC five
+full parts existed but no ready marker. **Preserve that save.** Wait for a full
+ready manifest and terminal old run, verify bytes/identity/every server part,
+then dispatch exactly one incremental Windows replay from the new immutable CI
+fix tag with `migrate_native=false`, `bootstrap_only=false`, `auto_resume=true`.
+No Mac rebuild or cold Windows compilation is needed. The old source remains
+`dd4dfe7709ce6dffbc310f03c6c57edd10c95be5`; never retarget it. Record the new
+source/final tags and actual new run after they exist. Finish the clean CI replay,
+latest asset/provenance verification and final release notes/instructions.
 
-The Windows WebAuthn repair is positively observed: stage 0 **41567711474**
-compiled `fido_request_handler_base.obj` at **03:13:05 UTC** and
-`fido_discovery_factory.obj` at **03:13:07 UTC**, plus the Windows WebAuthn API
-objects, without the old missing-header failure. The source hydrates the complete
-eight-file/101,632-byte Chromium-pinned dependency at revision
-`ef82c157125a0490e05f6ea82a7adb1b8e1bad08`, tree
-`5d68c9cc6c711940710d72462ced8817fcc56334`, including its MIT license.
-All 144 local Python tests ran successfully (15 platform/tool/source skips);
-eight focused hydration guards and real-archive unchanged-mtime resume passed.
-Browser source, compiler pins and both native fingerprints remain unchanged.
-A real Windows installer is packaged; its draft upload and verified delivery
-are still pending. The successful Mac package remains unchanged.
+Earlier stages and the positive WebAuthn repair proof are retained in
+PROGRESS.md. Standard-hosted independent audit 41638507119 and its finite receipt
+`docs/evidence/windows-41598060999-audit.json` verified the preceding pending
+checkpoint (8,849,247,927 bytes). It is superseded when this complete cache is
+ready; normal cleanup may remove older same-configuration drafts.
 
 **Coordinator execution was restored at 13:03 UTC / 18:33 IST.** A new workspace
 message arrived, `pwd` succeeded, and the clean local checkout fast-forwarded to
@@ -289,9 +291,9 @@ avoid racing an existing automatic continuation with a second queued job.
 ## Next actions
 
 1. Inspect actual live runs and queued jobs before dispatching anything.
-   Preserve corrected Windows continuation 41638453497 and its configured chain;
-   no competing dispatch is needed. Diagnose explicit compile outcomes and
-   verify each completed ready manifest before treating a cache as usable.
+   Preserve 41638453497 until its completed cache save is ready and the run is
+   terminal. Verify that cache, then admit exactly one Windows CI target-fix
+   replay from its new immutable tag; do not duplicate or cold rebuild.
 2. Use the latest committed fix with a matching immutable `ci-source-<HEAD12>`
    tag and both `build.final_release_tag(platform, HEAD)` tags. Never retarget
    an existing tag. Push commits/tags before dispatch. Keep `migrate_native=false`

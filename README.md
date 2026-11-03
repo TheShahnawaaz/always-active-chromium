@@ -4,14 +4,15 @@ Work in progress: a desktop Chromium build with native always-visible/focused
 behavior for macOS Apple Silicon and Windows x64, while retaining Chromium's
 standard interface and extension support.
 
-**The Mac development package is verified; Windows is still building.** The real
-Mac app passes all core behavior modes after the revision/fullscreen corrections:
-baseline 32/32, native 38/38, optional 55/55, and paired no-debug 7/7 per mode.
-Fresh extracted-package and normal Store verification passed in
-[41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385),
-and its actual native window pixels were [visually reviewed](docs/UI-REVIEW.md).
-Windows compilation continues; the two-platform goal is not complete.
-The implementation goal is active.
+**Both native development packages have passed fresh delivery verification.**
+Mac [41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385)
+and Windows [41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196)
+pass baseline 32/32, native 38/38, optional 55/55 and paired no-debug 7/7 per
+mode, plus 20 normal Store phases. Their actual native windows were
+[visually reviewed](docs/UI-REVIEW.md). See the [Mac installation](docs/releases/mac-arm64/INSTALLATION.txt)
+and [Windows installation](docs/releases/win-x64/INSTALLATION.txt) records.
+The Windows build-core target is being corrected to use that normal installed
+layout; final incremental CI validation remains active in the progress ledger.
 The repository contains the native patch and its exact-source applicator,
 a resumable GitHub-hosted build workflow and behavior tests. Build and runtime results are tracked in
 [the progress ledger](docs/PROGRESS.md).

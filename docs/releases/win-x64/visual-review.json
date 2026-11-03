@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "platform": "win-x64",
+  "reviewed_at": "2026-11-03",
+  "reviewed_by": "Codex visual inspection of the actual installed-browser window PNG",
+  "source_tag": "ci-source-dd4dfe7709ce",
+  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196",
+  "image": "win-x64-delivery-browser-window.png",
+  "image_sha256": "dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343",
+  "dimensions": [
+    1044,
+    788
+  ],
+  "visual_review_complete": true,
+  "observations": [
+    "Complete normal window and rendered expected fixture heading/body are visible.",
+    "Standard Windows window controls, Chromium tab strip, navigation/address bar, bookmark, profile and menu controls are visible.",
+    "No added always-active toolbar controls, badges or startup banners are visible."
+  ],
+  "limits": [
+    "One light-mode normal-window view; no pixel-equivalence claim against proprietary Google Chrome.",
+    "Other themes/settings views and downloaded-installer Windows security approval dialogs are outside this image.",
+    "Original automated reports retain pending manual-review fields; this is a separate visual review."
+  ],
+  "image_release_tag": "delivery-verification-win-x64-41654101196-1"
+}

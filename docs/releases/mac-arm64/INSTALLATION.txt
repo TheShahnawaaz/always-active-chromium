@@ -5,6 +5,10 @@ always-active behavior is enabled by default, with the ordinary interface and
 extension system. No extension, debugging connection or helper is needed in
 normal use.
 
+DOWNLOAD
+https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-4eebb053bab880d711db
+This is a draft release. Sign in to GitHub with repository release access.
+
 VERIFY
 File: always-active-chromium-156.0.8078.80-mac-arm64.zip
 Bytes: 252685495
@@ -50,4 +54,4 @@ OS sleep, freezing or tab discard.
 The repository docs/releases/mac-arm64/verification.json and visual-review.json
 link exact source/build/delivery evidence. Original delivery reports remain
 unchanged; the separate review records inspection of the actual screenshot.
-Windows is still compiling and is not included in this Mac package.
+The separately verified Windows installer has its own docs/releases/win-x64 records.

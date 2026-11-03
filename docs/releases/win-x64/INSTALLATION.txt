@@ -1,0 +1,55 @@
+Always Active Chromium 156.0.8078.80 — Windows x64
+
+Verified development package: Chromium, not official Google Chrome. Native
+always-active behavior is enabled by default, with the ordinary interface and
+extension system. No extension, debugging connection or helper is needed in
+normal use.
+
+DOWNLOAD
+https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-db57e5eed15a0d547e9d
+This is a draft release. Sign in to GitHub with repository release access.
+
+VERIFY
+File: always-active-chromium-156.0.8078.80-win-x64-installer.exe
+Bytes: 215424512
+SHA-256: 4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3
+
+In PowerShell, from the download directory:
+  Get-FileHash .\always-active-chromium-156.0.8078.80-win-x64-installer.exe -Algorithm SHA256
+Compare the entire hash with this value and the matching release SHA256SUMS
+manifest. The six original build assets and five manifest entries were verified.
+
+INSTALL
+Run the installer as the current user. The normal per-user app is:
+  %LOCALAPPDATA%\Chromium\Application\chrome.exe
+Launch Chromium normally. The installed browser is x64; fresh verification ran
+on the standard Windows 2025 hosted image with its default sandbox enabled.
+
+Do not replace an existing standalone Chromium installation. Google Chrome has
+separate app/profile paths and should remain untouched. Do not point Chromium
+at Google Chrome's profile or copy Chrome's profile into it. If needed, choose
+an empty dedicated profile directory through --user-data-dir. Native always-
+active behavior needs no flags. Choose this app as the default only if desired.
+
+The installer has no Windows Authenticode publisher certificate. A checksum
+match establishes agreement with the release manifest, not publisher trust.
+Use normal Windows approval UI; do not disable system protections. Browser-
+download security prompts were not exercised by the hosted command-line install.
+
+EXTENSIONS AND UPDATES
+Use normal Chrome Web Store Add and permission prompts. Fresh per-user delivery
+passed all 20 phases for uBlock Origin Lite 2026.1026.1812: normal installation,
+audited source/worker execution, restart persistence, ordinary update check,
+normal native removal and persisted registration absence, and owned-process
+cleanup. no_update does not prove a newer-version upgrade. Removed-extension
+identifier metadata can remain without a registered or running extension.
+
+There is no automatic project browser updater. Install a newly built and verified
+package to update. Chromium branding, restricted Google services, account sync
+and DRM differ from official Chrome. Always-active behavior does not prevent
+OS sleep, freezing or tab discard.
+
+Use Windows Installed apps to uninstall Chromium if desired. Preserve Google
+Chrome and any profiles you intend to keep. The repository verification.json
+and visual-review.json link exact source/build/delivery evidence; original CI
+reports remain unchanged. macOS Apple Silicon has its own package and records.

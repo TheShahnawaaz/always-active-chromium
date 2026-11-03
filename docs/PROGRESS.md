@@ -2,6 +2,29 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows actual installer delivery and visual review passed.**
+[41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196)
+installed the 215,424,512-byte native x64 package through its normal per-user
+installer, then passed 32 baseline, 38 native, 55 optional and paired no-debug
+7/7 checks per mode, plus **20/20** normal Store phases. All seven delivery
+assets/six sums and all six original build assets/five sums were downloaded/hash
+verified. Codex visually inspected the actual 1044×788 normal native window:
+standard controls and rendered fixture, no added always-active UI. See platform
+release records and UI-REVIEW.md; original CI review fields remain unchanged.
+
+Original build 41638453497's actual test outcome is **failure**, not its effective
+REST success: AppContainer access to the uninstalled build-tree executable was
+denied (0x5), causing sandbox-policy startup failure and no fixture loads. Native
+revision reporting was correct. Its unchanged normal installer passed the full
+fresh test/Store matrix with the sandbox enabled. The remaining CI correction
+installs the packaged app before build-core checks, reusing existing guarded
+installer/x64/version checks and recording source/hash provenance. Four new
+host/workflow/mutation guards and all **148** Python tests pass (15 skips); YAML
+parses and both native fingerprints are unchanged. Preserve the ongoing complete
+checkpoint save, then admit one corrected incremental replay after verification.
+Mac delivery remains unchanged. Installation instructions and separate review/
+verification records for both platforms are in docs/releases/.
+
 **Windows compilation and packaging completed at 19:51 IST / 14:21 UTC** in
 [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497).
 All three finite compiler assets and two checksum entries were independently

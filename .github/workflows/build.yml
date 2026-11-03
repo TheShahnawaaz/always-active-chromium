@@ -143,14 +143,19 @@ jobs:
         env:
           AA_DIAGNOSTIC_PHASE: package
           AA_PACKAGE_OUTCOME: ${{ steps.package.outcome }}
+      - name: Install the actual Windows package before core verification
+        id: windows_install
+        if: ${{ matrix.platform == 'win-x64' && steps.package.outcome == 'success' }}
+        timeout-minutes: 8
+        run: python ci/install_build.py
       - name: Verify native behavior, MV3 extensions, and zero-debugger operation
         id: tests
-        if: ${{ steps.package.outcome == 'success' }}
+        if: ${{ steps.package.outcome == 'success' && (matrix.platform != 'win-x64' || steps.windows_install.outcome == 'success') }}
         continue-on-error: true
         timeout-minutes: 20
         shell: bash
         env:
-          AA_BROWSER: ${{ steps.package.outputs.browser || steps.prepare.outputs.browser }}
+          AA_BROWSER: ${{ steps.windows_install.outputs.browser || steps.package.outputs.browser || steps.prepare.outputs.browser }}
         run: python ci/verify.py --browser "$AA_BROWSER" --output "reports/${{ matrix.platform }}"
       - name: Upload packages, checksums, and selected evidence to a draft
         if: ${{ always() && steps.package.outcome == 'success' }}
@@ -165,8 +170,8 @@ jobs:
         if: ${{ inputs.auto_resume && !inputs.bootstrap_only && steps.compile.outputs.status == 'pending' && steps.checkpoint.outcome == 'success' }}
         run: python ci/continue.py
       - name: Report unresolved build or browser test failure
-        if: ${{ always() && (steps.audit.outcome == 'failure' || steps.compile.outcome == 'failure' || steps.tests.outcome == 'failure') }}
+        if: ${{ always() && (steps.audit.outcome == 'failure' || steps.compile.outcome == 'failure' || steps.windows_install.outcome == 'failure' || steps.tests.outcome == 'failure') }}
         shell: bash
         run: |
-          echo 'The input audit, build or browser tests failed; inspect finite diagnostics, logs and any retained compiler checkpoint.' >&2
+          echo 'The input audit, build, installation or browser tests failed; inspect finite diagnostics, logs and any retained compiler checkpoint.' >&2
           exit 1

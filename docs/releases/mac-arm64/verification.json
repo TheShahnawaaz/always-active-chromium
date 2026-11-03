@@ -70,7 +70,9 @@
     "No project automatic browser updater; updates are manual.",
     "Finite extension/behavior/UI coverage; see original evidence."
   ],
-  "windows_status": "Not delivered yet; existing standard hosted Windows compilation continues.",
+  "windows_status": "Verified per-user Windows delivery in run 41654101196; see ../win-x64/verification.json.",
   "minimum_macos_declared": "13.0",
-  "tested_runner": "macos-26 arm64"
+  "tested_runner": "macos-26 arm64",
+  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-4eebb053bab880d711db",
+  "draft_release": true
 }

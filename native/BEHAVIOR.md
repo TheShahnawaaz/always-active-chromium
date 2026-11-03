@@ -169,10 +169,10 @@ force captured content to stop painting. The upstream fullscreen-within-tab
 capture mode is outside the exclusive-tab ordering guard. Headful Mac/Windows
 checks must verify natural snapshot retention, real OS/CSS fullscreen exit,
 foreground reset, event filtering, input-focus restoration, split panes,
-drag/close behavior, rapid reactivation, and cross-process frames. The Mac core
-run covers natural tab switches, rapid reactivation and ordinary frame behavior;
+drag/close behavior, rapid reactivation, and cross-process frames. The delivered Mac and Windows core
+runs cover natural tab switches, rapid reactivation and ordinary frame behavior;
 split-pane/drag/close and fullscreen cross-process-frame scenarios remain outside
-that finite result, and Windows runtime verification remains pending.
+those finite results.
 
 The optional background reload mode cancels a Navigation API `reload` event
 only for an eligible actually hidden main-frame document, when the navigation
@@ -232,7 +232,10 @@ The staged package's 16 Mach-O parts pass strict ad-hoc verification while
 compiler outputs remain unchanged. This is Mac core/package evidence only:
 fresh extraction, all behavior modes and 20 normal Store phases subsequently
 passed in delivery 41533441385, with separate review of actual native UI pixels
-in docs/UI-REVIEW.md. Windows compilation/runtime verification remains pending.
+in docs/UI-REVIEW.md. Windows fresh per-user delivery 41654101196 also passes
+all four modes (32/38/55 checks and paired no-debug 7/7), 20 normal Store phases
+and separate review of its actual installed-browser window. The original
+uninstalled build-tree startup failure is documented in PROGRESS.md.
 
 Future Chromium revisions require acquiring only the selected new source files,
 reviewing implementation/API changes, regenerating the patch with

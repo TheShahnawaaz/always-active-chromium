@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "platform": "win-x64",
+  "status": "verified-development-package",
+  "package": "always-active-chromium-156.0.8078.80-win-x64-installer.exe",
+  "bytes": 215424512,
+  "sha256": "4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3",
+  "version": "156.0.8078.80",
+  "source_tag": "ci-source-dd4dfe7709ce",
+  "upstream_revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
+  "repository": "https://github.com/TheShahnawaaz/always-active-chromium",
+  "build_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497",
+  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196",
+  "delivery_evidence_tag": "delivery-verification-win-x64-41654101196-1",
+  "installation": {
+    "method": "real-mini-installer-default-per-user",
+    "installer_exit_code": 0,
+    "architecture": "x64",
+    "version": "156.0.8078.80",
+    "setup_present": true,
+    "executable_sha256": "a622201cb3501ea22b2851878f144c2a70270bccc58cef333f8bcfa6727030b4",
+    "executable_size": 4200448,
+    "authenticode_verified": false
+  },
+  "core_checks": {
+    "baseline": 32,
+    "native": 38,
+    "optional": 55,
+    "no_debug_control": 7,
+    "no_debug_native": 7
+  },
+  "store": {
+    "extension": "uBlock Origin Lite",
+    "version": "2026.1026.1812",
+    "phases_passed": 20,
+    "operations": [
+      "normal installation and native permission approval",
+      "audited source and worker execution",
+      "restart persistence",
+      "ordinary update check",
+      "normal native removal and restarted/persisted registration absence",
+      "verified owned-process cleanup"
+    ],
+    "update_result": "no_update",
+    "genuine_newer_version_transition_verified": false,
+    "all_identifier_metadata_removed": false
+  },
+  "visual_review": {
+    "schema": 1,
+    "platform": "win-x64",
+    "reviewed_at": "2026-11-03",
+    "reviewed_by": "Codex visual inspection of the actual installed-browser window PNG",
+    "source_tag": "ci-source-dd4dfe7709ce",
+    "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196",
+    "image": "win-x64-delivery-browser-window.png",
+    "image_sha256": "dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343",
+    "dimensions": [
+      1044,
+      788
+    ],
+    "visual_review_complete": true,
+    "observations": [
+      "Complete normal window and rendered expected fixture heading/body are visible.",
+      "Standard Windows window controls, Chromium tab strip, navigation/address bar, bookmark, profile and menu controls are visible.",
+      "No added always-active toolbar controls, badges or startup banners are visible."
+    ],
+    "limits": [
+      "One light-mode normal-window view; no pixel-equivalence claim against proprietary Google Chrome.",
+      "Other themes/settings views and downloaded-installer Windows security approval dialogs are outside this image.",
+      "Original automated reports retain pending manual-review fields; this is a separate visual review."
+    ],
+    "image_release_tag": "delivery-verification-win-x64-41654101196-1"
+  },
+  "signing": {
+    "authenticode_verified": false
+  },
+  "build_core_layout_observation": {
+    "original_build_tree_checks": "failed: AppContainer cannot read the build-directory executable",
+    "fresh_installed_delivery_checks": "passed with unchanged sandbox and browser flags",
+    "ci_target_repair": "prepared; incremental hosted validation pending"
+  },
+  "limitations": [
+    "Chromium branding/restricted Google services differ from official Chrome.",
+    "No project automatic browser updater; updates are manual.",
+    "Finite extension/behavior/UI coverage; see original evidence.",
+    "Downloaded unsigned installer approval UI was not exercised by the hosted command-line installation."
+  ],
+  "tested_runner": "windows-2025-vs2026 x64",
+  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-db57e5eed15a0d547e9d",
+  "draft_release": true
+}
