@@ -49,144 +49,79 @@ fixtures, a compile, a package, or reference Chrome results alone.
 
 ## Current source and observed results
 
-**Active final Windows CI replay: [41657571863](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41657571863),
-source `ci-source-07fb6c3f9ed7`.** Full source/workflow commit:
-`07fb6c3f9ed75340048ae6aeb0df5696c5b59fde`. Both matching final build tags are
-pushed and independently resolved to that commit. Exactly one dispatch was
-admitted **14:49:55 UTC / 20:19 IST**, after the old run was terminal and the
-completed checkpoint verified. Inputs: win-x64, bootstrap false, migrate false,
-auto-resume true, stage 0/max 48. Preserve this replay; do not duplicate it or
-rebuild Mac. It validates the normal installed-app core target from cached outputs.
-Latest package bytes/provenance and hosted core/fresh-delivery results still
-need inspection before closeout. The already-verified Windows installer below
-remains available and unchanged while this CI correction is validated.
+**Verified native development installers for both platforms are delivered.**
+No further browser rebuild is required for this delivery. The user's Mac focus
+report was caused by opening the demo as a standalone file document. The user
+confirmed it works when served over loopback HTTP and explicitly accepted
+HTTP/HTTPS scope without file:// support. Native behavior and Mac bytes remain
+unchanged; no Mac diagnostic/rebuild was dispatched for that resolved report.
 
-**Both actual development packages have passed fresh delivery and UI review.**
-Mac remains the unchanged e146 package below. Windows source
-`ci-source-dd4dfe7709ce` passed real default per-user installation, baseline
-**32/32**, native **38/38**, optional **55/55**, paired no-debug control/native
-**7/7 each**, and all **20/20** normal uBlock Origin Lite Store phases in
-[41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196).
-Controller: `03dc3d717e0cac1035e00f8bf717687513dce36d`. All seven finite delivery
-assets and six checksum entries were independently downloaded/hash verified.
-The actual **1044×788** installed-browser PNG was visually inspected: full
-standard Chromium controls and rendered fixture, with no added always-active
-controls/banners. Original automated review fields remain unchanged; see
-`docs/releases/win-x64/`, `docs/UI-REVIEW.md` and the separate visual review.
+- **Mac Apple Silicon:** unchanged source `ci-source-e146fe41bca3`, build
+  41524595935, final fresh delivery 41533441385. ZIP **252,685,495 bytes**, SHA-256
+  `7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8`.
+  Download: https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-82fe1e763809e6742669
+- **Windows x64:** corrected source `ci-source-07fb6c3f9ed7`, full commit
+  `07fb6c3f9ed75340048ae6aeb0df5696c5b59fde`, core/build 41657571863, final fresh
+  delivery **41663769161**, controller `d3cbe0964f4e204ceabcc782ad75c71fbe035c44`.
+  Installer **215,424,512 bytes**, SHA-256
+  `4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3`.
+  Download: https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-fde85267f992fce5ce86
 
-Windows installer draft **432796940**, tag
-`build-156.0.8078.80-win-x64-cfc3210920f1-dd4dfe7709ce`, has six independently
-hash-verified build assets/five checksum entries. Installer asset **705879122**
-is **215,424,512 bytes**, SHA-256
-`4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3`.
-Installed x64 executable: **4,200,448 bytes**, SHA-256
+Both actual delivered apps pass baseline **32/32**, native **38/38**, optional
+**55/55**, paired no-debug control/native **7/7 each**, and **20/20** normal
+uBlock Origin Lite Store phases. Actual native window images were visually
+reviewed: standard Chromium controls and rendered fixture, no new always-active
+UI. Mac's original 1000×677 image is unchanged. Final Windows image is 1044×788,
+asset **706095670**, 24,357 bytes, SHA-256
+`b8fc371bfbe5de081acbaa416477e550d264adedc211739bbc2ee06efa495d19` in delivery
+draft **432879456**. All six build assets/five manifest entries per platform,
+and seven final delivery assets/six entries per platform, were independently
+verified. Instructions, separate visual reviews, provenance and shared installer
+checksums are in `docs/releases/`; see `docs/UI-REVIEW.md` for actual pixels.
+Draft downloads require repository release access; stable tag-based CLI download
+commands are included because draft web URLs can change when notes are edited.
+
+The original Windows run 41638453497 compiled/packaged but failed its uninstalled
+build-tree core checks: AppContainer could not read/execute the build-directory
+chrome.exe (0x5), causing sandbox-policy startup failure. Original reports and
+assets remain unchanged. The corrected workflow now installs the actual package
+through guarded default per-user installation before core tests. Its published
+`workflow_test_outcome` is **success**, all four modes pass on the installed app,
+and the manifest records real installation/x64/version and executable hashes.
+The installer is byte-for-byte identical to the earlier dd4dfe package. The
+installed executable remains 4,200,448 bytes, SHA-256
 `a622201cb3501ea22b2851878f144c2a70270bccc58cef333f8bcfa6727030b4`.
-Delivery draft **432809252** contains the verified evidence and PNG, asset
-**705910479**, SHA-256
-`dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343`.
-Store `no_update` is not a genuine newer-version upgrade. Persisted registration
-absence is verified; absence of every removed-extension identifier is not claimed.
+No sandbox, browser flags, compiler pins, native source or fingerprint changed.
+All 148 local Python tests pass (15 platform/tool/source skips); hosted core and
+final installed/Store checks validate the fix, rather than an effective REST label.
 
-**One CI layout correction remains to validate before final closeout.** Original
-build [41638453497](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497)
-compiled at 14:21:41 UTC and packaged at 14:21:50: actual complete/exit 0, no
-compiler events, all finite diagnostics verified. Its core checks against the
-uninstalled `D:\aacc\src\out\AlwaysActive\chrome.exe` failed at startup:
-Chromium's AppContainer `AccessCheck` cannot read/execute that build-tree file,
-error 0x5, followed by a sandbox policy fatal check. The actual published
-`workflow_test_outcome` is failure despite the REST effective step success under
-`continue-on-error`. Do not relabel that build-tree failure. The unchanged
-normal installer passed every fresh test with the sandbox and flags unchanged.
+**Nonblocking checkpoint backup remains active as of 15:43 UTC / 21:13 IST.**
+Preserve [41657571863](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41657571863).
+Compilation, real installation, core verification and package/evidence publication
+have completed; only its completed-output backup is running. Draft **432870875**,
+tag `checkpoint-win-x64-cfc3210920f1d83aa4ac-41657571863-1`, had three full parts
+and no ready marker at that observation. Do not call it complete yet or cancel
+it. Its eventual ready manifest should be byte/hash/identity/part verified if
+continuing archival supervision. This does not block the verified installers.
+The prior complete six-part **10,669,016,313-byte** cache is draft **432797322**;
+ready asset 705955160 (6,192 bytes), SHA-256
+`316cedd7a10bd83ab5d88ed3ae79fd247feb7f025243b942e42e9e179fcf6f5a`, was verified
+against exact native/version/revision/source, complete state and all part server
+digests/sizes. It remains a fallback until normal new-generation cleanup.
 
-The committed/pushed correction adds `ci/install_build.py` and a Windows-only workflow
-step to install the actual task-owned mini-installer before core checks, using
-the same already-proven clean-identity/per-user/x64/version guards as delivery.
-It binds source/workflow/manifest, unchanged installer bytes and installed exe
-hash, records installation provenance in the build manifest, and selects that
-executable for the unchanged tests. It refuses existing Chromium and preserves
-stock Google Chrome. No ACL, sandbox, native source, compiler pin or fingerprint
-is changed. **148 local Python tests pass (15 platform/tool/source skips)**,
-including four new host/provenance/mutation guards; workflow YAML parses.
+Only standard GitHub-hosted runners were used; no AWS, external/paid builders,
+upgrades or extra paid storage. No healthy compile/save was cancelled or blindly
+duplicated. Mac is ad-hoc signed (strict verification of all 16 parts), without
+Developer ID/notarization; Windows has no Authenticode certificate. Updates are
+manual. `no_update` verifies a completed ordinary Store check, not a real newer
+version upgrade. Coverage remains finite and no proprietary Chrome pixel/service
+equality is claimed. Stock Google Chrome and its profiles remain separate.
 
-The completed output cache is draft **432797322**, tag
-`checkpoint-win-x64-cfc3210920f1d83aa4ac-41638453497-1`, six parts totaling
-**10,669,016,313 bytes**. Downloaded ready asset **705955160** is **6,192 bytes**,
-SHA-256 `316cedd7a10bd83ab5d88ed3ae79fd247feb7f025243b942e42e9e179fcf6f5a`.
-Its bytes, source dd4dfe, native16 fingerprint/version/revision, build-ready/
-complete state, authenticated revision metadata and every part's server size/
-digest were verified. Save completed **14:47:39 UTC** in **24m56s**. The old job
-ended **failure at 14:47:46 UTC** because of the real uninstalled-layout core
-failure; automatic continuation was skipped for completed compilation. Final
-Ninja counter was **3,243/3,243**, including the real mini-installer link.
-All native outputs are retained; no cold rebuild or tag retarget is authorized.
-The corrected immutable source/replay above now reuses this verified cache.
-
-Earlier stages and the positive WebAuthn repair proof are retained in
-PROGRESS.md. Standard-hosted independent audit 41638507119 and its finite receipt
-`docs/evidence/windows-41598060999-audit.json` verified the preceding pending
-checkpoint (8,849,247,927 bytes). It is superseded when this complete cache is
-ready; normal cleanup may remove older same-configuration drafts.
-
-**Coordinator execution was restored at 13:03 UTC / 18:33 IST.** A new workspace
-message arrived, `pwd` succeeded, and the clean local checkout fast-forwarded to
-main `638fe1f`. The reconnection request is resolved; no answer or new approval
-is needed. Between 11:13 and 13:03 UTC the executor reported unavailable while
-the provider reported running/connected with no failure/retained diagnostics.
-Its underlying cause was not exposed. No credential or network-policy change
-was made, and healthy GitHub jobs were never restarted or cancelled.
-
-The bounded read-only audit filled that gap through
-`.github/workflows/audit-current-windows-stage.yml` on standard `ubuntu-latest`,
-using the repository's own scoped job token. Its receipt above is actual small
-asset download/hash evidence, not browser runtime proof. This historical audit
-is pinned to stage 1 and is useful only while that cache exists; do not rerun a
-retired checkpoint or confuse its failure with a browser failure. Direct CLI
-and the existing final-delivery workflow can now be used normally.
-
-**Mac is delivered as a verified development package; Windows remains active.**
-Final Mac delivery **41533441385**, controller `68a55d8132e9`, passed real
-extraction, all four behavior modes and 20/20 normal Store phases. Its actual
-1000×677 normal-window PNG was visually inspected: complete standard Chromium
-toolbar/tab strip/profile/menu and rendered fixture, with no added always-active
-controls or banners. All seven evidence assets and six manifest entries match
-their server sizes/digests and downloaded hashes. See `docs/UI-REVIEW.md` and
-`docs/releases/mac-arm64/` for the separate review, verification and installation
-records. Screenshot SHA-256:
-`540fbca5d806231a06c3a759f8b8b60a6fd5b6a5caf89e8da0a12b142c1f6f52`.
-The original automated review fields were preserved; the later visual review is
-separate evidence, not an alteration of CI results.
-
-Mac package draft 431995111 has its verified download/checksum assets and updated
-installation/review notes at
-https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-4eebb053bab880d711db
-All six original asset IDs, sizes and digests remain unchanged; its original
-five-entry manifest is still valid. Extra document uploads from the coordinator
-were rejected at `uploads.github.com` by the runtime's network policy. No asset
-was changed by those failed uploads. The permitted API path successfully updated
-draft notes, while instructions/review records and the exact screenshot are
-committed to the repository. Do not bypass the network policy or move credentials.
-The client projectless `/codex/.../output` path also cannot be created by this
-runtime's non-root user; use the existing GitHub release/repository route, not
-broken local output links. No permission request is needed for this fallback.
-
-Latest Mac progress: **run 41524595935** at `ci-source-e146fe41bca3` compiled
-successfully, sealed all 16 Mach-O parts with compiler outputs unchanged, and
-passed core baseline **32/32**, native **38/38**, optional **55/55**, paired
-no-debug control/native **7/7 each**. The correct pinned upstream revision is
-reported. Its complete draft is **431995111**, tag
-`build-156.0.8078.80-mac-arm64-c9ac6366f39a-e146fe41bca3`.
-ZIP asset **703257988** is **252,685,495 bytes**, SHA-256
-`7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8`.
-All six downloaded assets match server sizes/digests and all five manifest
-entries. The entire build run is now green. Its incremental rebuild completed
-**271/271 actions**, then saved a complete six-part **9,901,553,400-byte**
-checkpoint in draft **431995372**, tag
-`checkpoint-mac-arm64-c9ac6366f39a2bdd17c3-41524595935-1`.
-Ready asset **703318165** is 5,942 bytes, SHA-256
-`8da87fdafdc63eb430ddaa65fbe89ff2ab3687e6514b1a5fdef574ca515d7e83`.
-Its bytes, source/native/revision identity and all server part digests/sizes
-were verified. This newest complete e146 cache supersedes the older caches;
-normal checkpoint cleanup may have removed earlier drafts.
+The coordinator execution gap was resolved at 13:03 UTC, with no credential or
+network-policy change. Its successful standard-hosted read-only audit 41638507119
+and finite receipt `docs/evidence/windows-41598060999-audit.json` remain history.
+The temporary audit workflow was removed after it served its purpose. Current
+CLI execution works and no clarification or additional approval is pending.
 
 ## Earlier observations (historical; current state is above)
 
@@ -304,37 +239,17 @@ avoid racing an existing automatic continuation with a second queued job.
 
 ## Next actions
 
-1. Inspect actual live runs and queued jobs before dispatching anything.
-   Preserve final CI replay 41657571863 at source ci-source-07fb6c3f9ed7.
-   Its prior completed cache is already verified; do not duplicate or cold build.
-2. Use the latest committed fix with a matching immutable `ci-source-<HEAD12>`
-   tag and both `build.final_release_tag(platform, HEAD)` tags. Never retarget
-   an existing tag. Push commits/tags before dispatch. Keep `migrate_native=false`
-   for exact native16 caches, `bootstrap_only=false`, `auto_resume=true`.
-3. Mac metadata rebuild, fresh-delivery/Store verification and native UI review
-   are complete. Its source is still e146 and its original ZIP is unchanged.
-   Do not dispatch another Mac compile or verifier without a new concrete issue.
-4. Finish Windows through standard hosted stages. Read real failure diagnostics
-   and preserve completed checkpoints; no blind repeated reference trials.
-5. For each real package with passing core tests, dispatch
-   `verify-delivery.yml` with its exact source tag and one platform. Verify the
-   fresh extracted/installed executable in all four modes, normal Web Store
-   installation/execution/restart/update-check/removal, hashes and cleanup.
-   Reference Chrome/fixture results are not native delivery evidence.
-6. Review actual native UI captures/manual evidence for both targets, then
-   complete installation/limitations docs. Document Chromium branding,
-   restricted Google services, ad-hoc/unsigned distribution and manual updates.
-   A genuine future extension version upgrade remains separate from `no_update`.
-
-The cloud handoff itself is complete only when a published environment and a
-real independent hosted coding task are visibly running. GitHub build jobs
-already survive laptop shutdown; a local Codex conversation does not.
-
-The user reported the environment published and then chose to hand the goal
-to Dot. Verify the selected environment and GitHub API access in Dot's actual
-runtime; the onboarding's earlier Forbidden responses predate the API-domain
-configuration. Main also contains documentation-only commit `0fc07ef` after
-the immutable e146 build source; preserve later work.
+1. Deliver/use the verified installers, checksums and instructions above; no new
+   native build or file:// support change is requested.
+2. Preserve healthy Windows checkpoint backup 41657571863. If continuing archival
+   supervision, wait for its terminal result/ready marker, then verify manifest
+   bytes, exact source/native identity and all server part sizes/digests.
+3. A backup failure is separate from the already-verified installer. Diagnose
+   its exact storage/transport failure and preserve the preceding complete cache;
+   do not restart compilation blindly or use paid/external infrastructure.
+4. Future native/version changes require immutable source/final tags, exact cache
+   identity, fresh delivered-app behavior/normal Store checks and real UI review.
+   Never retarget an existing source tag or overwrite original evidence.
 
 ## Hosted takeover observations
 

@@ -2,7 +2,7 @@
 
 The Mac development package passed fresh extraction, native behavior and normal
 Store verification in run 41533441385. Windows passed real per-user installation,
-all behavior modes and normal Store verification in run 41654101196. Both actual
+all behavior modes and normal Store verification in run 41663769161. Both actual
 normal-window images were visually reviewed. Exact results and limits are in
 PROGRESS.md, UI-REVIEW.md and the platform release documentation.
 

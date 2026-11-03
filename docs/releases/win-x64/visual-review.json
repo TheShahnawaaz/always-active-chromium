@@ -3,10 +3,10 @@
   "platform": "win-x64",
   "reviewed_at": "2026-11-03",
   "reviewed_by": "Codex visual inspection of the actual installed-browser window PNG",
-  "source_tag": "ci-source-dd4dfe7709ce",
-  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196",
+  "source_tag": "ci-source-07fb6c3f9ed7",
+  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41663769161",
   "image": "win-x64-delivery-browser-window.png",
-  "image_sha256": "dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343",
+  "image_sha256": "b8fc371bfbe5de081acbaa416477e550d264adedc211739bbc2ee06efa495d19",
   "dimensions": [
     1044,
     788
@@ -22,5 +22,5 @@
     "Other themes/settings views and downloaded-installer Windows security approval dialogs are outside this image.",
     "Original automated reports retain pending manual-review fields; this is a separate visual review."
   ],
-  "image_release_tag": "delivery-verification-win-x64-41654101196-1"
+  "image_release_tag": "delivery-verification-win-x64-41663769161-1"
 }

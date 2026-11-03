@@ -1,0 +1,2 @@
+7dbfafec37054e029848f1cedff431244b3031f96ae2cc6b076305119986d2b8  always-active-chromium-156.0.8078.80-mac-arm64.zip
+4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3  always-active-chromium-156.0.8078.80-win-x64-installer.exe

@@ -1,18 +1,23 @@
 # Always Active Chromium
 
-Work in progress: a desktop Chromium build with native always-visible/focused
+A desktop Chromium build with native always-visible/focused
 behavior for macOS Apple Silicon and Windows x64, while retaining Chromium's
 standard interface and extension support.
 
 **Both native development packages have passed fresh delivery verification.**
 Mac [41533441385](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41533441385)
-and Windows [41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196)
+and Windows [41663769161](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41663769161)
 pass baseline 32/32, native 38/38, optional 55/55 and paired no-debug 7/7 per
 mode, plus 20 normal Store phases. Their actual native windows were
 [visually reviewed](docs/UI-REVIEW.md). See the [Mac installation](docs/releases/mac-arm64/INSTALLATION.txt)
 and [Windows installation](docs/releases/win-x64/INSTALLATION.txt) records.
-The Windows build-core target is being corrected to use that normal installed
-layout; final incremental CI validation remains active in the progress ledger.
+The Windows build-core startup issue was fixed by testing its normal installed
+layout; the actual core report passes. Checkpoint backup continues independently.
+
+[Windows x64 download](https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-fde85267f992fce5ce86) ·
+[Mac Apple Silicon download](https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-82fe1e763809e6742669) ·
+[SHA-256 checksums](docs/releases/SHA256SUMS.txt). Draft downloads require GitHub release access.
+Native focus covers HTTP/HTTPS documents; file:// support is deliberately outside scope.
 The repository contains the native patch and its exact-source applicator,
 a resumable GitHub-hosted build workflow and behavior tests. Build and runtime results are tracked in
 [the progress ledger](docs/PROGRESS.md).

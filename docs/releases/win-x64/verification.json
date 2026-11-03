@@ -6,12 +6,12 @@
   "bytes": 215424512,
   "sha256": "4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3",
   "version": "156.0.8078.80",
-  "source_tag": "ci-source-dd4dfe7709ce",
+  "source_tag": "ci-source-07fb6c3f9ed7",
   "upstream_revision": "fb096c0011f9d50f0a264a9376420cdea9c421e3",
   "repository": "https://github.com/TheShahnawaaz/always-active-chromium",
-  "build_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41638453497",
-  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196",
-  "delivery_evidence_tag": "delivery-verification-win-x64-41654101196-1",
+  "build_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41657571863",
+  "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41663769161",
+  "delivery_evidence_tag": "delivery-verification-win-x64-41663769161-1",
   "installation": {
     "method": "real-mini-installer-default-per-user",
     "installer_exit_code": 0,
@@ -50,10 +50,10 @@
     "platform": "win-x64",
     "reviewed_at": "2026-11-03",
     "reviewed_by": "Codex visual inspection of the actual installed-browser window PNG",
-    "source_tag": "ci-source-dd4dfe7709ce",
-    "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196",
+    "source_tag": "ci-source-07fb6c3f9ed7",
+    "delivery_run": "https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41663769161",
     "image": "win-x64-delivery-browser-window.png",
-    "image_sha256": "dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343",
+    "image_sha256": "b8fc371bfbe5de081acbaa416477e550d264adedc211739bbc2ee06efa495d19",
     "dimensions": [
       1044,
       788
@@ -69,15 +69,18 @@
       "Other themes/settings views and downloaded-installer Windows security approval dialogs are outside this image.",
       "Original automated reports retain pending manual-review fields; this is a separate visual review."
     ],
-    "image_release_tag": "delivery-verification-win-x64-41654101196-1"
+    "image_release_tag": "delivery-verification-win-x64-41663769161-1"
   },
   "signing": {
     "authenticode_verified": false
   },
   "build_core_layout_observation": {
-    "original_build_tree_checks": "failed: AppContainer cannot read the build-directory executable",
-    "fresh_installed_delivery_checks": "passed with unchanged sandbox and browser flags",
-    "ci_target_repair": "prepared; incremental hosted validation pending"
+    "original_build_run": "41638453497",
+    "original_build_tree_checks": "failed: AppContainer could not read the uninstalled build-directory executable",
+    "corrected_build_run": "41657571863",
+    "corrected_core_checks": "passed against the normal per-user installation",
+    "original_installer_bytes_unchanged": true,
+    "ci_target_repair": "verified on the standard hosted Windows runner"
   },
   "limitations": [
     "Chromium branding/restricted Google services differ from official Chrome.",
@@ -86,6 +89,26 @@
     "Downloaded unsigned installer approval UI was not exercised by the hosted command-line installation."
   ],
   "tested_runner": "windows-2025-vs2026 x64",
-  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-6802c945109d0b8fbddc",
-  "draft_release": true
+  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-fde85267f992fce5ce86",
+  "draft_release": true,
+  "build_installation_provenance": {
+    "source_commit": "07fb6c3f9ed75340048ae6aeb0df5696c5b59fde",
+    "source_tag": "ci-source-07fb6c3f9ed7",
+    "installer_sha256": "4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3",
+    "browser": "C:\\Users\\runneradmin\\AppData\\Local\\Chromium\\Application\\chrome.exe",
+    "method": "real-mini-installer-default-per-user",
+    "installer_exit_code": 0,
+    "architecture": "x64",
+    "version": "156.0.8078.80",
+    "setup_present": true,
+    "executable_sha256": "a622201cb3501ea22b2851878f144c2a70270bccc58cef333f8bcfa6727030b4",
+    "executable_size": 4200448,
+    "authenticode_verified": false,
+    "scope": "Actual default per-user package installation for core checks; behavior is verified separately."
+  },
+  "previous_verified_delivery": {
+    "source_tag": "ci-source-dd4dfe7709ce",
+    "run": "41654101196",
+    "installer_sha256": "4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3"
+  }
 }

@@ -42,24 +42,24 @@ remains a documented product difference.
 ## Windows x64
 
 The actual x64 app installed by the normal per-user mini-installer from
-`ci-source-dd4dfe7709ce` passed fresh delivery and normal Store verification in
-[41654101196](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41654101196).
+`ci-source-07fb6c3f9ed7` passed fresh delivery and normal Store verification in
+[41663769161](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41663769161).
 Installer SHA-256:
 `4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3`.
 
 ![Actual installed native Windows normal window](images/native-win-x64.png)
 
-Codex visually inspected this actual **1044×788** PNG, asset **705910479** in
-draft **432809252**, SHA-256
-`dd4178db02d8dbb4f4961fc5be7fe42cabf2c675e21f7624c1a30f1b7e30c343`.
+Codex visually inspected this actual **1044×788** PNG, asset **706095670** in
+draft **432879456**, SHA-256
+`b8fc371bfbe5de081acbaa416477e550d264adedc211739bbc2ee06efa495d19`.
 The complete normal window shows standard Windows controls, two Chromium tabs,
 navigation/address bar, bookmark, profile and menu controls, plus the rendered
 expected fixture heading and body. No added always-active controls, badges or
 startup banners appear. This is the actual installed custom browser, not the
 earlier CFT reference window.
 
-The receipt binds the per-user executable/profile, PID **4580**, kernel start
-identity and foreground normal window handle **8022e**. Ownership, session,
+The receipt binds the per-user executable/profile, PID **1972**, kernel start
+identity and foreground normal window handle **9017c**. Ownership, session,
 title context and geometry were revalidated before/after the one window-only
 `PrintWindow` flags-2 capture. All seven delivery assets and six checksum entries
 were independently downloaded/hash verified.

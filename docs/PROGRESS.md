@@ -2,6 +2,28 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Both verified development installers are ready for delivery.** Windows final
+fresh [41663769161](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41663769161),
+source `ci-source-07fb6c3f9ed7`, passed actual per-user x64 installation, all four
+behavior modes (32/38/55 and paired no-debug 7/7), 20 normal Store phases and
+owned-window capture. All seven evidence assets/six sums were independently
+hash verified; Codex visually reviewed the real 1044×788 native window. Its PNG
+SHA-256 is `b8fc371bfbe5de081acbaa416477e550d264adedc211739bbc2ee06efa495d19`.
+The corrected build's actual published core outcome is success; its installation
+receipt binds the unchanged 215,424,512-byte installer, SHA-256
+`4e0ae88f4b45b1ea5e6c1725320fb5a851a25c63e42c299889dee2963aba0ad3`.
+Original dd4dfe build-tree failure evidence remains unchanged. Mac installer and
+native behavior are unchanged and verified. Release notes, installation records,
+separate reviews and shared installer SHA256SUMS are complete.
+
+The user confirmed the Mac demo works over loopback HTTP and explicitly declined
+file:// support. The report is resolved as the documented protocol scope, with
+no Mac rebuild or native change; no diagnostic workflow was dispatched. Only
+Windows 41657571863's nonblocking completed-output checkpoint backup remains
+active (draft 432870875, no ready marker at 21:13 IST). Preserve that backup;
+its completion does not gate these already verified downloads. No approval is
+pending and no paid/external compute or credential workaround was used.
+
 **Final Windows CI target replay admitted at 20:19 IST / 14:49:55 UTC.**
 [41657571863](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41657571863)
 uses immutable `ci-source-07fb6c3f9ed7`, full commit

@@ -70,9 +70,16 @@
     "No project automatic browser updater; updates are manual.",
     "Finite extension/behavior/UI coverage; see original evidence."
   ],
-  "windows_status": "Verified per-user Windows delivery in run 41654101196; see ../win-x64/verification.json.",
+  "windows_status": "Verified corrected Windows core run 41657571863 and final fresh delivery 41663769161; see ../win-x64/verification.json.",
   "minimum_macos_declared": "13.0",
   "tested_runner": "macos-26 arm64",
-  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-4eebb053bab880d711db",
-  "draft_release": true
+  "release_url": "https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-82fe1e763809e6742669",
+  "draft_release": true,
+  "user_focus_report": {
+    "date": "2026-11-03",
+    "cause": "The demo was opened as a standalone file document, outside the intended HTTP/HTTPS scope.",
+    "confirmation": "User confirmed the same demo works over loopback HTTP and accepted HTTP/HTTPS scope.",
+    "file_support_requested": false,
+    "native_changes_needed": false
+  }
 }

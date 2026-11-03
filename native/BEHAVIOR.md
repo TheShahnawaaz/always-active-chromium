@@ -232,7 +232,7 @@ The staged package's 16 Mach-O parts pass strict ad-hoc verification while
 compiler outputs remain unchanged. This is Mac core/package evidence only:
 fresh extraction, all behavior modes and 20 normal Store phases subsequently
 passed in delivery 41533441385, with separate review of actual native UI pixels
-in docs/UI-REVIEW.md. Windows fresh per-user delivery 41654101196 also passes
+in docs/UI-REVIEW.md. Windows fresh per-user delivery 41663769161 also passes
 all four modes (32/38/55 checks and paired no-debug 7/7), 20 normal Store phases
 and separate review of its actual installed-browser window. The original
 uninstalled build-tree startup failure is documented in PROGRESS.md.

@@ -3,13 +3,14 @@ Always Active Chromium 156.0.8078.80 — Windows x64
 Verified development package: Chromium, not official Google Chrome. Native
 always-active behavior is enabled by default, with the ordinary interface and
 extension system. No extension, debugging connection or helper is needed in
-normal use.
+normal use. Native focus applies to HTTP/HTTPS pages and eligible web-origin
+frames. Standalone file:// pages and browser/extension UI retain real focus.
 
 DOWNLOAD
-https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-6802c945109d0b8fbddc
+https://github.com/TheShahnawaaz/always-active-chromium/releases/tag/untagged-fde85267f992fce5ce86
 This is a draft release. Sign in to GitHub with repository release access.
 A stable tag-based CLI alternative is:
-  gh release download build-156.0.8078.80-win-x64-cfc3210920f1-dd4dfe7709ce --repo TheShahnawaaz/always-active-chromium --pattern always-active-chromium-156.0.8078.80-win-x64-installer.exe
+  gh release download build-156.0.8078.80-win-x64-cfc3210920f1-07fb6c3f9ed7 --repo TheShahnawaaz/always-active-chromium --pattern always-active-chromium-156.0.8078.80-win-x64-installer.exe
 
 VERIFY
 File: always-active-chromium-156.0.8078.80-win-x64-installer.exe
