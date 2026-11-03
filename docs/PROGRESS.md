@@ -2,6 +2,18 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Windows stage 1 41598060999 is saving its checkpoint.** Compilation ended
+at **12:12:35 UTC**, near its configured deadline; save began **12:12:42 UTC**.
+Compiler diagnostic draft **432649898**, tag `build-compile-win-x64-41598060999-1`,
+has all three assets, but their bytes and explicit outcome have not yet been
+independently read/hash-verified because coordinator execution is unavailable.
+Do not infer a clean cutoff from the REST step's effective success under
+`continue-on-error`. Inspect the actual report and terminal job log. New cache
+is draft **432649986**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41598060999-1`; no ready marker was
+present at 12:13 UTC. Preserve the save and configured automatic continuation;
+do not manually dispatch a duplicate. No Windows installer exists yet.
+
 **Windows stage 1 resumed at 13:40 IST** in
 [41598060999](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41598060999).
 The verified checkpoint restored 07:45:12–08:08:51 UTC, mandatory preparation
