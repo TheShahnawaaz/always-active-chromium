@@ -2,6 +2,18 @@
 
 ## Hosted continuation — 2026-11-03 IST
 
+**Corrected Windows reached its normal cutoff at 12:42 IST** in
+[41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474).
+The actual compiler report is **pending/exit 2, complete capture, no events**,
+no logging error and no normal compiler failure. All three finite assets and
+two manifest entries match downloaded hashes, server sizes/digests and exact
+`dd4dfe7709ce` source/workflow. The valid Ninja log grew 9,749,935 → 12,986,938
+bytes. The earlier WebAuthn error is absent from this capture; positive proof
+of the two affected object actions awaits the terminal job log. Checkpoint
+draft **432375839** began saving at 07:12:43 UTC and is not complete until its
+ready manifest is verified. Preserve the save and automatic continuation;
+no manual duplicate or Mac rebuild is needed. No Windows installer exists yet.
+
 **Corrected Windows compilation began at 08:39 IST** in
 [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474).
 It restored its verified checkpoint in 22m48s, passed mandatory source/tool/native/

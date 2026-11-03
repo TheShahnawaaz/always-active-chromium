@@ -50,7 +50,20 @@ fixtures, a compile, a package, or reference Chrome results alone.
 ## Current source and observed results
 
 **Corrected Windows run [41567711474](https://github.com/TheShahnawaaz/always-active-chromium/actions/runs/41567711474)
-is compiling at immutable `ci-source-dd4dfe7709ce`.** It was dispatched exactly
+is saving its normal-cutoff checkpoint at immutable `ci-source-dd4dfe7709ce`.**
+Compilation ended **07:12:37 UTC / 12:42 IST** at the configured absolute budget.
+All three compiler diagnostic assets and both checksum entries were independently
+verified against bytes, server sizes/digests and exact source/workflow. The actual
+report says **pending, exit 2, no events, complete capture**, with no logging
+error or normal compiler failure. Its valid Ninja log grew from **9,749,935** to
+**12,986,938 bytes**. The prior WebAuthn error did not recur in this captured
+stage; inspect the terminal job log for the two affected FIDO object actions
+before claiming that specific compiler repair exercised successfully.
+
+Save began **07:12:43 UTC** to draft **432375839**, tag
+`checkpoint-win-x64-cfc3210920f1d83aa4ac-41567711474-1`. It has no verified ready
+manifest yet. Preserve this save and its configured automatic continuation;
+do not manually duplicate it. No installer exists yet. The run was dispatched
 once at **02:41:57 UTC / 08:11 IST November 3**, after failed run 41541479553
 was terminal and its completed checkpoint independently verified. Preserve this
 healthy run; do not dispatch a competing retry or cancel its eventual save.
@@ -65,10 +78,9 @@ the declared-input audit: **75,790 checked, zero missing, no errors**, 31.719s.
 All six preparation/input assets and four manifest entries were independently
 verified against downloaded bytes, API sizes/digests and exact source/workflow.
 The preparation report is complete with no diagnostic events. Real compilation
-started **03:09:33 UTC / 08:39 IST**. This establishes resumed compilation, not
-yet successful FIDO objects or a completed browser. The new 270-minute absolute
-cutoff is approximately **07:12 UTC / 12:42 IST**; the six-hour job limit is
-approximately **08:42 UTC / 14:12 IST**. These are stage limits, not finish ETAs.
+started **03:09:33 UTC / 08:39 IST** and reached its normal budget cutoff above.
+The six-hour job limit is approximately **08:42 UTC / 14:12 IST**; this is a
+stage limit, not a finish ETA.
 
 The selected failed-stage checkpoint is complete in draft **432206655**, tag
 `checkpoint-win-x64-cfc3210920f1d83aa4ac-41541479553-1`: five parts totaling
